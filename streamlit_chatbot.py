@@ -1,13 +1,15 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 import time
 import json
 import pandas as pd
 from typing import List
 import uuid
+import numpy as np
 
+# Initialize OpenAI client
+client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
-openai.api_key = st.secrets["openai"]["api_key"]
 st.set_page_config(page_title="Survey Chatbot")
 
 @st.cache_resource
@@ -18,17 +20,16 @@ def load_embedding_data():
 
 data = load_embedding_data()
 
-
+# Get embedding using OpenAI SDK v1
 def get_embedding(text: str) -> List[float]:
-    response = openai.Embedding.create(
+    response = client.embeddings.create(
         input=text,
         model="text-embedding-3-small"
     )
-    return response['data'][0]['embedding']
+    return response.data[0].embedding
 
 # Similarity Calculation
 def cosine_similarity(vec1, vec2):
-    import numpy as np
     a = np.array(vec1)
     b = np.array(vec2)
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
@@ -77,15 +78,13 @@ Reply in this format:
 "Recommendation: <text>"
 "Reason: <brief explanation>"
 """
-    
-    response = openai.ChatCompletion.create(
+
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
-    return response.choices[0].message['content']
-
-
+    return response.choices[0].message.content
 
 # Get query parameters
 query_params = st.query_params
@@ -95,9 +94,9 @@ options_raw = query_params.get("opts", ["Option A|Option B|Option C"])
 options = options_raw[0].split("|")
 
 # Display Question and Options
-st.markdown(f"## Survey Help Chatbot")
-st.markdown(f"**Survey Question ({question_id}):** {question_text}")
-st.markdown("**Options:**")
+st.markdown(f"Survey Help Chatbot")
+st.markdown(f"Survey Question ({question_id}):** {question_text}")
+st.markdown("Options:")
 for i, opt in enumerate(options):
     st.markdown(f"{i+1}. {opt}")
 
@@ -112,5 +111,5 @@ user_input = st.text_input("Ask a follow-up question:")
 
 if user_input:
     validation_feedback = validate_followup(user_input, question_id=question_id)
-    st.write(f"### Chatbot Follow-up:")
+    st.write(f"Chatbot Follow-up:")
     st.write(validation_feedback)
