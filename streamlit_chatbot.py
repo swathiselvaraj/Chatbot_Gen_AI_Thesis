@@ -97,6 +97,9 @@ Reply in this format:
 # Decode the options and question parameters
 
 
+
+from urllib.parse import unquote
+
 # Get query parameters
 query_params = st.query_params
 
@@ -119,8 +122,11 @@ if "opts" in query_params:
 else:
     options_raw = "Option A|Option B|Option C"  # Default value
 
-# Decode the options and split by the '|' character
-options = unquote(options_raw).split("|")
+# Decode the options (Ensure we get the entire options string decoded correctly)
+decoded_options = unquote(options_raw)
+
+# Split the options by the '|' character to get them into a list
+options = decoded_options.split("|")
 
 # Display the decoded options and other params for debugging
 st.write("Decoded Options:", options)
