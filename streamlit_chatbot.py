@@ -88,51 +88,13 @@ Reply in this format:
     return response.choices[0].message.content
 
 # Get query parameters
-#query_params = st.query_params
-#question_id = query_params.get("qid", ["Q1"])[0]
-#question_text = query_params.get("qtext", ["What is your decision?"])[0]
-#options_raw = query_params.get("opts", ["Option A|Option B|Option C"])
-#options = options_raw[0].split("|")
+query_params = st.query_params
+question_id = query_params.get("qid", ["Q1"])[0]
+question_text = query_params.get("qtext", ["What is your decision?"])[0]
+options_raw = query_params.get("opts", ["Option A|Option B|Option C"])
+options = options_raw[0].split("|")
 
 # Decode the options and question parameters
-
-
-
-from urllib.parse import unquote
-
-# Get query parameters
-query_params = st.query_params
-
-# Debugging: print the entire query_params to check its structure
-st.write("Query Params:", query_params)
-
-# Check if the query_params actually contains the expected values
-if "qid" in query_params:
-    question_id = query_params["qid"][0]
-else:
-    question_id = "Q1"  # Default value
-
-if "qtext" in query_params:
-    question_text = query_params["qtext"][0]
-else:
-    question_text = "What is your decision?"  # Default value
-
-if "opts" in query_params:
-    options_raw = query_params["opts"][0]
-else:
-    options_raw = "Option A|Option B|Option C"  # Default value
-
-# Decode the options (Ensure we get the entire options string decoded correctly)
-decoded_options = unquote(options_raw)
-
-# Split the options by the '|' character to get them into a list
-options = decoded_options.split("|")
-
-# Display the decoded options and other params for debugging
-st.write("Decoded Options:", options)
-st.write("Question Text:", question_text)
-
-
 # Display Question and Options
 st.markdown(f"Survey Help Chatbot")
 st.markdown(f"**Survey Question ({question_id}):** {question_text}")
