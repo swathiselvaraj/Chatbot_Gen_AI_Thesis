@@ -95,8 +95,8 @@ options = options_raw[0].split("|")
 
 # Display Question and Options
 st.markdown(f"Survey Help Chatbot")
-st.markdown(f"Survey Question ({question_id}):** {question_text}")
-st.markdown("Options:")
+st.markdown(f"**Survey Question ({question_id}):** {question_text}")
+st.markdown("**Options:**")
 for i, opt in enumerate(options):
     st.markdown(f"{i+1}. {opt}")
 
