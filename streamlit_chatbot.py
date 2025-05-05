@@ -91,11 +91,16 @@ Reply in this format:
 # Modern Streamlit: no need for experimental version or unquote
 query_params = st.query_params
 
-question_id = query_params.get("qid", ["Q1"])[0]
-question_text = query_params.get("qtext", ["What is your decision?"])[0]
-options_raw = query_params.get("opts", ["Option A|Option B|Option C"])[0]
+# Safely access values with proper defaults
+question_id = query_params.get("qid", ["Q1"])[0] if isinstance(query_params.get("qid"), list) else query_params.get("qid", "Q1")
+question_text = query_params.get("qtext", ["What is your decision?"])[0] if isinstance(query_params.get("qtext"), list) else query_params.get("qtext", "What is your decision?")
+options_raw = query_params.get("opts", ["Option A|Option B|Option C"])[0] if isinstance(query_params.get("opts"), list) else query_params.get("opts", "Option A|Option B|Option C")
+
+# Split the options
 options = options_raw.split("|")
 
+# Display for debugging
+st.write("DEBUG PARAMS:", query_params)
 
 # Decode the options and question parameters
 # Display Question and Options
