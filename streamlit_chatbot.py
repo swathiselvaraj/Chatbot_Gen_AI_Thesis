@@ -88,7 +88,7 @@ Reply in this format:
 
 
 # Get query parameters
-query_params = st.experimental_get_query_params()
+query_params = st.query_params()
 question_id = query_params.get("qid", ["Q1"])[0]
 question_text = query_params.get("qtext", ["What is your decision?"])[0]
 options_raw = query_params.get("opts", ["Option A|Option B|Option C"])
