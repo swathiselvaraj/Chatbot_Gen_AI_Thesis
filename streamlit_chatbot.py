@@ -87,11 +87,23 @@ Reply in this format:
     return response.choices[0].message.content
 
 # Get query parameters
-query_params = st.query_params
+#query_params = st.query_params
+#question_id = query_params.get("qid", ["Q1"])[0]
+#question_text = query_params.get("qtext", ["What is your decision?"])[0]
+#options_raw = query_params.get("opts", ["Option A|Option B|Option C"])
+#options = options_raw[0].split("|")
+
+# Decode the options and question parameters
 question_id = query_params.get("qid", ["Q1"])[0]
 question_text = query_params.get("qtext", ["What is your decision?"])[0]
-options_raw = query_params.get("opts", ["Option A|Option B|Option C"])
-options = options_raw[0].split("|")
+options_raw = query_params.get("opts", ["Option A|Option B|Option C"])[0]
+
+# Decode the options and split by the '|' character
+options = unquote(options_raw).split("|")
+
+# Display Debug Info (for testing)
+st.write("Query Params:", query_params)
+st.write("Decoded Options:", options)
 
 # Display Question and Options
 st.markdown(f"Survey Help Chatbot")
