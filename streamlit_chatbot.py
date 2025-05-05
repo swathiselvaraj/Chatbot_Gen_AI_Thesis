@@ -89,10 +89,10 @@ Reply in this format:
 
 # Get query parameters
 query_params = st.query_params
-question_id = query_params.get("qid", ["Q1"])[0]
-question_text = query_params.get("qtext", ["What is your decision?"])[0]
+question_id = unquote(query_params.get("qid", ["Q1"])[0])
+question_text = unquote(query_params.get("qtext", ["What is your decision?"])[0])
 options_raw = query_params.get("opts", ["Option A|Option B|Option C"])
-options = options_raw[0].split("|")
+options = unquote(options_raw[0]).split("|")
 
 # Decode the options and question parameters
 # Display Question and Options
