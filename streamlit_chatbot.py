@@ -6,6 +6,7 @@ import pandas as pd
 from typing import List
 import uuid
 import numpy as np
+from urllib.parse import unquote
 
 # Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
@@ -94,16 +95,37 @@ Reply in this format:
 #options = options_raw[0].split("|")
 
 # Decode the options and question parameters
-question_id = query_params.get("qid", ["Q1"])[0]
-question_text = query_params.get("qtext", ["What is your decision?"])[0]
-options_raw = query_params.get("opts", ["Option A|Option B|Option C"])[0]
+
+
+# Get query parameters
+query_params = st.query_params
+
+# Debugging: print the entire query_params to check its structure
+st.write("Query Params:", query_params)
+
+# Check if the query_params actually contains the expected values
+if "qid" in query_params:
+    question_id = query_params["qid"][0]
+else:
+    question_id = "Q1"  # Default value
+
+if "qtext" in query_params:
+    question_text = query_params["qtext"][0]
+else:
+    question_text = "What is your decision?"  # Default value
+
+if "opts" in query_params:
+    options_raw = query_params["opts"][0]
+else:
+    options_raw = "Option A|Option B|Option C"  # Default value
 
 # Decode the options and split by the '|' character
 options = unquote(options_raw).split("|")
 
-# Display Debug Info (for testing)
-st.write("Query Params:", query_params)
+# Display the decoded options and other params for debugging
 st.write("Decoded Options:", options)
+st.write("Question Text:", question_text)
+
 
 # Display Question and Options
 st.markdown(f"Survey Help Chatbot")
