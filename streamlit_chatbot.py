@@ -56,7 +56,7 @@ def validate_followup(user_question: str, question_id: str) -> str:
     return "Sorry, can you ask a question related to the survey?"
 
 # GPT Recommendation Function
-def get_gpt_recommendation(question, options=None):
+'''def get_gpt_recommendation(question, options=None):
     if options:
         options_text = f"The available options are:\n{chr(10).join([f'{i+1}. {opt}' for i, opt in enumerate(options)])}"
         prompt = f"""
@@ -84,7 +84,54 @@ Reply in this format:
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
+    return response.choices[0].message.content'''
+
+def get_gpt_recommendation(question, options=None, history=None):
+    messages = []
+
+    # If there is previous conversation, include it
+    if history:
+        for q, a in history:
+            messages.append({"role": "user", "content": q})
+            messages.append({"role": "assistant", "content": a})
+
+    if options:
+        options_text = f"The available options are:\n{chr(10).join([f'{i+1}. {opt}' for i, opt in enumerate(options)])}"
+        messages.append({
+            "role": "user",
+            "content": f"""
+You are helping a user complete a survey.
+The question is: "{question}"
+{options_text}
+
+Based on general best practices or knowledge, recommend the best option.
+Reply in this format:
+"Recommended option: <text>"
+"Reason: <brief explanation>"
+""".strip()
+        })
+    else:
+        messages.append({
+            "role": "user",
+            "content": f"""
+You are helping a user complete a survey.
+The user may ask follow-up questions after your first recommendation.
+
+The current question is: "{question}"
+
+Provide an answer.
+Reply in this format:
+"Explanation: <text>"
+""".strip()
+        })
+
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.7
+    )
     return response.choices[0].message.content
+
 
 # Get query parameters
 # Modern Streamlit: no need for experimental version or unquote
