@@ -89,7 +89,8 @@ Reply in this format:
 
 # Get query parameters
 # Modern Streamlit: no need for experimental version or unquote
-query_params = st.query_params
+#query_params = st.query_params
+query_params = st.experimental_get_query_params()
 
 # Safely access values with proper defaults
 question_id = query_params.get("qid", ["Q1"])[0] if isinstance(query_params.get("qid"), list) else query_params.get("qid", "Q1")
@@ -98,9 +99,6 @@ options_raw = query_params.get("opts", ["Option A|Option B|Option C"])[0] if isi
 
 # Split the options
 options = options_raw.split("|")
-
-# Display for debugging
-st.write("DEBUG PARAMS:", query_params)
 
 # Decode the options and question parameters
 # Display Question and Options
