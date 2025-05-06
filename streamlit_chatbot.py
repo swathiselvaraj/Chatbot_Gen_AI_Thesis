@@ -89,20 +89,37 @@ Reply in this format:
 
 # Get query parameters
 # Modern Streamlit: no need for experimental version or unquote
-#query_params = st.query_params
-query_params = st.experimental_get_query_params()
+query_params = st.query_params
 
 # Safely access values with proper defaults
-question_id = query_params.get("qid", ["Q1"])[0] if isinstance(query_params.get("qid"), list) else query_params.get("qid", "Q1")
-question_text = query_params.get("qtext", ["What is your decision?"])[0] if isinstance(query_params.get("qtext"), list) else query_params.get("qtext", "What is your decision?")
-options_raw = query_params.get("opts", ["Option A|Option B|Option C"])[0] if isinstance(query_params.get("opts"), list) else query_params.get("opts", "Option A|Option B|Option C")
+#question_id = query_params.get("qid", ["Q1"])[0] if isinstance(query_params.get("qid"), list) else query_params.get("qid", "Q1")
+#question_text = query_params.get("qtext", ["What is your decision?"])[0] if isinstance(query_params.get("qtext"), list) else query_params.get("qtext", "What is your decision?")
+#options_raw = query_params.get("opts", ["Option A|Option B|Option C"])[0] if isinstance(query_params.get("opts"), list) else query_params.get("opts", "Option A|Option B|Option C")
 
 # Split the options
-options = options_raw.split("|")
+#options = options_raw.split("|")
 
 # Decode the options and question parameters
 # Display Question and Options
-st.markdown(f"Survey Help Chatbot")
+#st.markdown(f"Survey Help Chatbot")
+#st.markdown(f"**Survey Question ({question_id}):** {question_text}")
+#st.markdown("**Options:**")
+#for i, opt in enumerate(options):
+    #st.markdown(f"{i+1}. {opt}")
+
+# Modern Streamlit: get query parameters (already decoded)
+query_params = st.query_params
+
+# Safely access values with defaults
+question_id = query_params.get("qid", "Q1")
+question_text = query_params.get("qtext", "What is your decision?")
+options_raw = query_params.get("opts", "Option A|Option B|Option C")
+
+# Split the options using pipe delimiter
+options = options_raw.split("|")
+
+# Display Question and Options
+st.markdown("### Survey Help Chatbot")
 st.markdown(f"**Survey Question ({question_id}):** {question_text}")
 st.markdown("**Options:**")
 for i, opt in enumerate(options):
