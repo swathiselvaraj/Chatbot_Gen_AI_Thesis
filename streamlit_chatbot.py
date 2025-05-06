@@ -43,7 +43,7 @@ def validate_followup(user_question: str, question_id: str) -> str:
         general_embedding = general.get("embedding")
         if general_embedding:
             score = cosine_similarity(user_embedding, general_embedding)
-            if score >= 0.80:
+            if score >= 0.70:
                 return get_gpt_recommendation(user_question)
 
     for question in data["questions"]:
@@ -51,7 +51,7 @@ def validate_followup(user_question: str, question_id: str) -> str:
             followup_embedding = question.get("embedding")
             if followup_embedding:
                 score = cosine_similarity(user_embedding, followup_embedding)
-                if score >= 0.80:
+                if score >= 0.70:
                     return get_gpt_recommendation(user_question)
     return "Sorry, can you ask a question related to the survey?"
 
