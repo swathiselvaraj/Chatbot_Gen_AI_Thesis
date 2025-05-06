@@ -38,24 +38,42 @@ def cosine_similarity(vec1, vec2):
 
 # Follow-Up questions Validation
 
+import re
+
+# Utility: Extract a referenced option by number (e.g., "option 1")
+def extract_referenced_option(user_input: str, options: List[str]) -> str:
+    match = re.search(r"option\s*(\d+)", user_input.lower())
+    if match:
+        idx = int(match.group(1)) - 1
+        if 0 <= idx < len(options):
+            return options[idx]
+    return None
+
+# Main follow-up validation function
 def validate_followup(user_question: str, question_id: str) -> str:
     user_embedding = get_embedding(user_question)
 
-    # Find a match among general followups
+    # Try to detect if user is referring to a specific option
+    referenced_option = extract_referenced_option(user_question, options)
+
+    # If general follow-up matches
     for general in data["general_followups"]:
         general_embedding = general.get("embedding")
         if general_embedding:
             score = cosine_similarity(user_embedding, general_embedding)
             if score >= 0.70:
-                # Get original question and recommendation to build context
-                original_question = question_text  # pulled from Streamlit earlier
+                original_question = question_text
                 original_recommendation = get_gpt_recommendation(original_question, options)
 
-                # Provide both as history to follow-up question
+                # Add referenced option context if found
                 history = [(original_question, original_recommendation)]
+                if referenced_option:
+                    clarification = f'The user is asking why this option was not recommended: "{referenced_option}"'
+                    history.append((clarification, "Okay."))
+
                 return get_gpt_recommendation(user_question, history=history)
 
-    # Check question-specific followups
+    # If question-specific follow-up matches
     for question in data["questions"]:
         if question["question_id"] == question_id:
             followup_embedding = question.get("embedding")
@@ -64,10 +82,16 @@ def validate_followup(user_question: str, question_id: str) -> str:
                 if score >= 0.70:
                     original_question = question_text
                     original_recommendation = get_gpt_recommendation(original_question, options)
+
                     history = [(original_question, original_recommendation)]
+                    if referenced_option:
+                        clarification = f'The user is asking why this option was not recommended: "{referenced_option}"'
+                        history.append((clarification, "Okay."))
+
                     return get_gpt_recommendation(user_question, history=history)
 
     return "Sorry, can you ask a question related to the survey?"
+
 
 
 
