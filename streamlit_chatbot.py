@@ -36,55 +36,39 @@ def cosine_similarity(vec1, vec2):
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
 
 # Follow-Up questions Validation
+
 def validate_followup(user_question: str, question_id: str) -> str:
     user_embedding = get_embedding(user_question)
 
+    # Find a match among general followups
     for general in data["general_followups"]:
         general_embedding = general.get("embedding")
         if general_embedding:
             score = cosine_similarity(user_embedding, general_embedding)
             if score >= 0.70:
-                return get_gpt_recommendation(user_question)
+                # Get original question and recommendation to build context
+                original_question = question_text  # pulled from Streamlit earlier
+                original_recommendation = get_gpt_recommendation(original_question, options)
 
+                # Provide both as history to follow-up question
+                history = [(original_question, original_recommendation)]
+                return get_gpt_recommendation(user_question, history=history)
+
+    # Check question-specific followups
     for question in data["questions"]:
         if question["question_id"] == question_id:
             followup_embedding = question.get("embedding")
             if followup_embedding:
                 score = cosine_similarity(user_embedding, followup_embedding)
                 if score >= 0.70:
-                    return get_gpt_recommendation(user_question)
+                    original_question = question_text
+                    original_recommendation = get_gpt_recommendation(original_question, options)
+                    history = [(original_question, original_recommendation)]
+                    return get_gpt_recommendation(user_question, history=history)
+
     return "Sorry, can you ask a question related to the survey?"
 
-# GPT Recommendation Function
-'''def get_gpt_recommendation(question, options=None):
-    if options:
-        options_text = f"The available options are:\n{chr(10).join([f'{i+1}. {opt}' for i, opt in enumerate(options)])}"
-        prompt = f"""
-You are helping a user complete a survey.
-The question is: "{question}"
-{options_text}
 
-Based on general best practices or knowledge, recommend the best option.
-Reply in this format:
-"Recommended option: <text>"
-"Reason: <brief explanation>"
-"""
-    else:
-        prompt = f"""
-You are helping a user complete a survey.
-The question is: "{question}"
-
-Provide an answer to this question.
-Reply in this format:
-"Explanation: <text>"
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
-    )
-    return response.choices[0].message.content'''
 
 def get_gpt_recommendation(question, options=None, history=None):
     messages = []
