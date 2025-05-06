@@ -117,7 +117,7 @@ def cosine_similarity(vec1, vec2):
 #     )
 #     return response.choices[0].message.content
 
-***
+
 
 # Add this at the top of your file
 
