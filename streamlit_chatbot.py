@@ -119,11 +119,12 @@ options_raw = query_params.get("opts", "Option A|Option B|Option C")
 options = options_raw.split("|")
 
 # Display Question and Options
-st.markdown("### Survey Help Chatbot")
-st.markdown(f"**Survey Question ({question_id}):** {question_text}")
-st.markdown("**Options:**")
+st.write("### Survey Help Chatbot")
+st.write(f"**Survey Question ({question_id}):** {question_text}")
+st.write("**Options:**")
 for i, opt in enumerate(options):
-    st.markdown(f"{i+1}. {opt}")
+    st.write(f"{i+1}. {opt}")
+
 
 # Handle Recommendation Button
 if st.button(" Get Recommendation"):
