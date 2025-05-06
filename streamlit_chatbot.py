@@ -3,236 +3,251 @@ from openai import OpenAI
 import time
 import json
 import pandas as pd
-from typing import List
-import uuid
 import numpy as np
 from urllib.parse import unquote
-from typing import Tuple, List
 import gspread
 from gspread_dataframe import set_with_dataframe
+import re
+from typing import List, Dict, Optional, Tuple
 
 # Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+st.set_page_config(page_title="Survey Chatbot", layout="wide")
 
-st.set_page_config(page_title="Survey Chatbot")
+# --- Session State Initialization ---
+if 'conversation' not in st.session_state:
+    st.session_state.conversation = []
+if 'last_recommendation' not in st.session_state:
+    st.session_state.last_recommendation = None
+if 'usage_data' not in st.session_state:
+    st.session_state.usage_data = {
+        'start_time': None,
+        'questions_asked': 0,
+        'followups_asked': 0
+    }
 
+# --- Data Loading ---
 @st.cache_resource
 def load_embedding_data():
-    file_path = "data/followup_embeddings_list.json"
-    with open(file_path, "r") as f:
-        return json.load(f)
+    try:
+        with open("data/followup_embeddings_list.json", "r") as f:
+            return json.load(f)
+    except Exception as e:
+        st.error(f"Failed to load embeddings: {str(e)}")
+        return {"general_followups": [], "questions": []}
 
 data = load_embedding_data()
 
-# Get embedding using OpenAI SDK v1
+# --- Utility Functions ---
 def get_embedding(text: str) -> List[float]:
-    response = client.embeddings.create(
-        input=text,
-        model="text-embedding-3-small"
-    )
-    return response.data[0].embedding
+    try:
+        response = client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        st.error(f"Embedding generation failed: {str(e)}")
+        return []
 
-# Similarity Calculation
-def cosine_similarity(vec1, vec2):
-    a = np.array(vec1)
-    b = np.array(vec2)
-    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+    try:
+        a = np.array(vec1)
+        b = np.array(vec2)
+        return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+    except Exception as e:
+        st.error(f"Similarity calculation failed: {str(e)}")
+        return 0.0
 
+def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
+    try:
+        match = re.search(r"option\s*(\d+)", user_input.lower())
+        if match:
+            idx = int(match.group(1)) - 1
+            if 0 <= idx < len(options):
+                return options[idx]
+        return None
+    except:
+        return None
+
+# --- Google Sheets Integration ---
 def connect_to_gsheet():
-    gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-    sh = gc.open("Chatbot Usage Log")
-    return sh.sheet1
+    try:
+        gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+        return gc.open("Chatbot Usage Log").sheet1
+    except Exception as e:
+        st.error(f"Google Sheets connection failed: {str(e)}")
+        return None
 
-def save_to_gsheet(data_dict):
-    worksheet = connect_to_gsheet()
-    records = worksheet.get_all_records()
-    df = pd.DataFrame(records)
-    new_df = pd.DataFrame([data_dict])
-    updated_df = pd.concat([df, new_df], ignore_index=True)
-    worksheet.clear()
-    set_with_dataframe(worksheet, updated_df)
+def save_to_gsheet(data_dict: Dict):
+    try:
+        worksheet = connect_to_gsheet()
+        if worksheet:
+            records = worksheet.get_all_records()
+            df = pd.DataFrame(records)
+            new_df = pd.DataFrame([data_dict])
+            updated_df = pd.concat([df, new_df], ignore_index=True)
+            worksheet.clear()
+            set_with_dataframe(worksheet, updated_df)
+    except Exception as e:
+        st.error(f"Failed to save to Google Sheets: {str(e)}")
 
-# Follow-Up questions Validation
-
-import re
-
-# Utility: Extract a referenced option by number (e.g., "option 1")
-def extract_referenced_option(user_input: str, options: List[str]) -> str:
-    match = re.search(r"option\s*(\d+)", user_input.lower())
-    if match:
-        idx = int(match.group(1)) - 1
-        if 0 <= idx < len(options):
-            return options[idx]
-    return None
-
-# Main follow-up validation function
-def validate_followup(user_question: str, question_id: str) -> str:
-    user_embedding = get_embedding(user_question)
-
-    # Try to detect if user is referring to a specific option
-    referenced_option = extract_referenced_option(user_question, options)
-
-    # If general follow-up matches
-    for general in data["general_followups"]:
-        general_embedding = general.get("embedding")
-        if general_embedding:
-            score = cosine_similarity(user_embedding, general_embedding)
-            if score >= 0.70:
-                original_question = question_text
-                original_recommendation = get_gpt_recommendation(original_question, options)
-
-                # Add referenced option context if found
-                history = [(original_question, original_recommendation)]
-                if referenced_option:
-                    clarification = f'The user is asking why this option was not recommended: "{referenced_option}"'
-                    history.append((clarification, "Okay."))
-
-                return get_gpt_recommendation(user_question, history=history)
-
-    # If question-specific follow-up matches
-    for question in data["questions"]:
-        if question["question_id"] == question_id:
-            followup_embedding = question.get("embedding")
-            if followup_embedding:
-                score = cosine_similarity(user_embedding, followup_embedding)
+# --- Core Chatbot Functions ---
+def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
+    try:
+        user_embedding = get_embedding(user_question)
+        referenced_option = extract_referenced_option(user_question, options)
+        
+        # Build conversation history
+        history = []
+        if st.session_state.last_recommendation:
+            history.append((question_text, st.session_state.last_recommendation))
+            if referenced_option:
+                history.append((f"User referenced option: {referenced_option}", "Noted."))
+        
+        # Check general followups
+        for general in data["general_followups"]:
+            if general.get("embedding"):
+                score = cosine_similarity(user_embedding, general["embedding"])
                 if score >= 0.70:
-                    original_question = question_text
-                    original_recommendation = get_gpt_recommendation(original_question, options)
+                    return get_gpt_recommendation(
+                        user_question, 
+                        options=options,
+                        history=history
+                    )
+        
+        # Check question-specific followups
+        for question in data["questions"]:
+            if question["question_id"] == question_id and question.get("embedding"):
+                score = cosine_similarity(user_embedding, question["embedding"])
+                if score >= 0.70:
+                    return get_gpt_recommendation(
+                        user_question,
+                        options=options,
+                        history=history
+                    )
+        
+        return "Please ask a question related to the current survey topic."
+    except Exception as e:
+        st.error(f"Follow-up validation failed: {str(e)}")
+        return "Sorry, I encountered an error processing your question."
 
-                    history = [(original_question, original_recommendation)]
-                    if referenced_option:
-                        clarification = f'The user is asking why this option was not recommended: "{referenced_option}"'
-                        history.append((clarification, "Okay."))
-
-                    return get_gpt_recommendation(user_question, history=history)
-
-    return "Sorry, can you ask a question related to the survey?"
-
-
-
-
-def get_gpt_recommendation(question, options=None, history=None):
-    messages = []
-
-    # If there is previous conversation, include it
-    if history:
-        for q, a in history:
-            messages.append({"role": "user", "content": q})
-            messages.append({"role": "assistant", "content": a})
-
-    if options:
-        options_text = f"The available options are:\n{chr(10).join([f'{i+1}. {opt}' for i, opt in enumerate(options)])}"
-        messages.append({
-            "role": "user",
-            "content": f"""
-You are helping a user complete a survey.
-The question is: "{question}"
+def get_gpt_recommendation(question: str, options: List[str] = None, history: List[Tuple[str, str]] = None) -> str:
+    try:
+        messages = []
+        
+        # Add conversation history if exists
+        if history:
+            for q, a in history:
+                messages.extend([
+                    {"role": "user", "content": q},
+                    {"role": "assistant", "content": a}
+                ])
+        
+        # Build the prompt
+        if options:
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
+            prompt = f"""Survey Question: {question}
+Available Options:
 {options_text}
 
-Based on general best practices or knowledge, recommend the best option.
-Reply in this format:
+Please recommend the best option with reasoning in this format:
 "Recommended option: <text>"
-"Reason: <brief explanation>"
-""".strip()
-        })
-    else:
-        messages.append({
-            "role": "user",
-            "content": f"""
-You are helping a user complete a survey.
-The user may ask follow-up questions after your first recommendation.
+"Reason: <detailed explanation>"
+"""
+        else:
+            prompt = f"""Survey Question: {question}
+Please provide your recommendation with reasoning in this format:
+"Recommendation: <text>"
+"Reason: <detailed explanation>"
+"""
+        
+        messages.append({"role": "user", "content": prompt})
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=0.7
+        )
+        
+        result = response.choices[0].message.content
+        st.session_state.last_recommendation = result  # Store the last recommendation
+        return result
+    except Exception as e:
+        st.error(f"Recommendation generation failed: {str(e)}")
+        return "Sorry, I couldn't generate a recommendation due to an error."
 
-The current question is: "{question}"
+# --- UI Components ---
+def display_conversation():
+    st.write("### Conversation History")
+    for role, message in st.session_state.conversation:
+        if role == "user":
+            st.markdown(f"**You:** {message}")
+        else:
+            st.markdown(f"**Chatbot:** {message}")
 
-Provide an answer.
-Reply in this format:
-"Explanation: <text>"
-""".strip()
-        })
-
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        temperature=0.7
-    )
-    return response.choices[0].message.content
-
-
-
-# Add this at the top of your file
-
-
-
+# --- Main App Logic ---
 # Get query parameters
-# Modern Streamlit: no need for experimental version or unquote
 query_params = st.query_params
-
-# Safely access values with proper defaults
-#question_id = query_params.get("qid", ["Q1"])[0] if isinstance(query_params.get("qid"), list) else query_params.get("qid", "Q1")
-#question_text = query_params.get("qtext", ["What is your decision?"])[0] if isinstance(query_params.get("qtext"), list) else query_params.get("qtext", "What is your decision?")
-#options_raw = query_params.get("opts", ["Option A|Option B|Option C"])[0] if isinstance(query_params.get("opts"), list) else query_params.get("opts", "Option A|Option B|Option C")
-
-# Split the options
-#options = options_raw.split("|")
-
-# Decode the options and question parameters
-# Display Question and Options
-#st.markdown(f"Survey Help Chatbot")
-#st.markdown(f"**Survey Question ({question_id}):** {question_text}")
-#st.markdown("**Options:**")
-#for i, opt in enumerate(options):
-    #st.markdown(f"{i+1}. {opt}")
-
-# Modern Streamlit: get query parameters (already decoded)
-query_params = st.query_params
-
-# Safely access values with defaults
 question_id = query_params.get("qid", "Q1")
 question_text = query_params.get("qtext", "What is your decision?")
 options_raw = query_params.get("opts", "Option A|Option B|Option C")
-
-# Split the options using pipe delimiter
 options = options_raw.split("|")
 
-# Display Question and Options
-st.write("### Survey Help Chatbot")
-st.write(f"**Survey Question ({question_id}):** {question_text}")
-st.write("**Options:**")
-for i, opt in enumerate(options):
-    st.write(f"{i+1}. {opt}")
+# Display survey question
+st.write(f"### Survey Question ({question_id})")
+st.write(question_text)
+if options:
+    st.write("**Options:**")
+    for i, opt in enumerate(options):
+        st.write(f"{i+1}. {opt}")
 
-
-# Handle Recommendation Button
-if st.button(" Get Recommendation"):
+# Recommendation button
+if st.button("Get Recommendation"):
+    if st.session_state.usage_data['start_time'] is None:
+        st.session_state.usage_data['start_time'] = time.time()
+    
     recommendation = get_gpt_recommendation(question_text, options)
-    st.write(f"### Chatbot Recommendation:")
-    st.write(recommendation)
+    st.session_state.conversation.append(("assistant", recommendation))
+    st.session_state.usage_data['questions_asked'] += 1
 
-    # ✅ Save to Google Sheets
-    save_to_gsheet({
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "event": "recommendation",
-        "question_id": question_id,
-        "question_text": question_text,
-        "user_input": "",
-        "response": recommendation
-    })
-
-
-# User Input for Follow-Up Questions
+# Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
-
 if user_input:
-    validation_feedback = validate_followup(user_input, question_id=question_id)
-    st.write(f"Chatbot Follow-up:")
-    st.write(validation_feedback)
+    if st.session_state.usage_data['start_time'] is None:
+        st.session_state.usage_data['start_time'] = time.time()
+    
+    st.session_state.conversation.append(("user", user_input))
+    response = validate_followup(user_input, question_id, options)
+    st.session_state.conversation.append(("assistant", response))
+    st.session_state.usage_data['followups_asked'] += 1
 
-    # ✅ Save to Google Sheets
-    save_to_gsheet({
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "event": "followup",
-        "question_id": question_id,
-        "question_text": question_text,
-        "user_input": user_input,
-        "response": validation_feedback
-    })
+# Display conversation
+display_conversation()
+
+# Save data when done
+if st.button("Finish Survey"):
+    if st.session_state.usage_data['start_time']:
+        duration = time.time() - st.session_state.usage_data['start_time']
+        
+        usage_data = {
+            "participant_id": str(uuid.uuid4()),
+            "question_id": question_id,
+            "timestamp": pd.Timestamp.now().isoformat(),
+            "duration_seconds": round(duration, 2),
+            "questions_asked": st.session_state.usage_data['questions_asked'],
+            "followups_asked": st.session_state.usage_data['followups_asked'],
+            "last_recommendation": st.session_state.last_recommendation[:500] if st.session_state.last_recommendation else None
+        }
+        
+        save_to_gsheet(usage_data)
+        st.success("Survey completed! Data saved.")
+        
+        # Reset session state
+        st.session_state.conversation = []
+        st.session_state.last_recommendation = None
+        st.session_state.usage_data = {
+            'start_time': None,
+            'questions_asked': 0,
+            'followups_asked': 0
+        }
