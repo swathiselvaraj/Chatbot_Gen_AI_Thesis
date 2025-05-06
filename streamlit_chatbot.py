@@ -8,6 +8,8 @@ import uuid
 import numpy as np
 from urllib.parse import unquote
 from typing import Tuple, List
+import gspread
+from gspread_dataframe import set_with_dataframe
 
 # Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
@@ -35,6 +37,20 @@ def cosine_similarity(vec1, vec2):
     a = np.array(vec1)
     b = np.array(vec2)
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+def connect_to_gsheet():
+    gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+    sh = gc.open("Chatbot Usage Log")
+    return sh.sheet1
+
+def save_to_gsheet(data_dict):
+    worksheet = connect_to_gsheet()
+    records = worksheet.get_all_records()
+    df = pd.DataFrame(records)
+    new_df = pd.DataFrame([data_dict])
+    updated_df = pd.concat([df, new_df], ignore_index=True)
+    worksheet.clear()
+    set_with_dataframe(worksheet, updated_df)
 
 # Follow-Up questions Validation
 
@@ -192,6 +208,17 @@ if st.button(" Get Recommendation"):
     st.write(f"### Chatbot Recommendation:")
     st.write(recommendation)
 
+    # ✅ Save to Google Sheets
+    save_to_gsheet({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "event": "recommendation",
+        "question_id": question_id,
+        "question_text": question_text,
+        "user_input": "",
+        "response": recommendation
+    })
+
+
 # User Input for Follow-Up Questions
 user_input = st.text_input("Ask a follow-up question:")
 
@@ -199,3 +226,13 @@ if user_input:
     validation_feedback = validate_followup(user_input, question_id=question_id)
     st.write(f"Chatbot Follow-up:")
     st.write(validation_feedback)
+
+    # ✅ Save to Google Sheets
+    save_to_gsheet({
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "event": "followup",
+        "question_id": question_id,
+        "question_text": question_text,
+        "user_input": user_input,
+        "response": validation_feedback
+    })
