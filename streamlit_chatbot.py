@@ -7,6 +7,7 @@ from typing import List
 import uuid
 import numpy as np
 from urllib.parse import unquote
+from typing import Tuple, List
 
 # Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
@@ -37,83 +38,175 @@ def cosine_similarity(vec1, vec2):
 
 # Follow-Up questions Validation
 
-def validate_followup(user_question: str, question_id: str) -> str:
+# def validate_followup(user_question: str, question_id: str) -> str:
+#     user_embedding = get_embedding(user_question)
+
+#     # Find a match among general followups
+#     for general in data["general_followups"]:
+#         general_embedding = general.get("embedding")
+#         if general_embedding:
+#             score = cosine_similarity(user_embedding, general_embedding)
+#             if score >= 0.70:
+#                 # Get original question and recommendation to build context
+#                 original_question = question_text  # pulled from Streamlit earlier
+#                 original_recommendation = get_gpt_recommendation(original_question, options)
+
+#                 # Provide both as history to follow-up question
+#                 history = [(original_question, original_recommendation)]
+#                 return get_gpt_recommendation(user_question, history=history)
+
+#     # Check question-specific followups
+#     for question in data["questions"]:
+#         if question["question_id"] == question_id:
+#             followup_embedding = question.get("embedding")
+#             if followup_embedding:
+#                 score = cosine_similarity(user_embedding, followup_embedding)
+#                 if score >= 0.70:
+#                     original_question = question_text
+#                     original_recommendation = get_gpt_recommendation(original_question, options)
+#                     history = [(original_question, original_recommendation)]
+#                     return get_gpt_recommendation(user_question, history=history)
+
+#     return "Sorry, can you ask a question related to the survey?"
+
+
+
+# def get_gpt_recommendation(question, options=None, history=None):
+#     messages = []
+
+#     # If there is previous conversation, include it
+#     if history:
+#         for q, a in history:
+#             messages.append({"role": "user", "content": q})
+#             messages.append({"role": "assistant", "content": a})
+
+#     if options:
+#         options_text = f"The available options are:\n{chr(10).join([f'{i+1}. {opt}' for i, opt in enumerate(options)])}"
+#         messages.append({
+#             "role": "user",
+#             "content": f"""
+# You are helping a user complete a survey.
+# The question is: "{question}"
+# {options_text}
+
+# Based on general best practices or knowledge, recommend the best option.
+# Reply in this format:
+# "Recommended option: <text>"
+# "Reason: <brief explanation>"
+# """.strip()
+#         })
+#     else:
+#         messages.append({
+#             "role": "user",
+#             "content": f"""
+# You are helping a user complete a survey.
+# The user may ask follow-up questions after your first recommendation.
+
+# The current question is: "{question}"
+
+# Provide an answer.
+# Reply in this format:
+# "Explanation: <text>"
+# """.strip()
+#         })
+
+#     response = client.chat.completions.create(
+#         model="gpt-3.5-turbo",
+#         messages=messages,
+#         temperature=0.7
+#     )
+#     return response.choices[0].message.content
+
+***
+
+# Add this at the top of your file
+
+
+# Conversation history tracker
+conversation_history = {}
+
+def validate_followup(user_question: str, question_id: str, 
+                     original_question: str, original_options: List[str],
+                     previous_recommendation: str = None) -> str:
+    """
+    Args:
+        user_question: Current follow-up question
+        question_id: Current survey question ID
+        original_question: The main survey question text
+        original_options: List of answer options
+        previous_recommendation: GPT's last recommendation (if any)
+    """
     user_embedding = get_embedding(user_question)
-
-    # Find a match among general followups
+    
+    # Store current context
+    current_context = {
+        "original_question": original_question,
+        "original_options": original_options,
+        "previous_recommendation": previous_recommendation
+    }
+    
+    # Build conversation history
+    messages = []
+    if previous_recommendation:
+        messages.extend([
+            {"role": "user", "content": original_question},
+            {"role": "assistant", "content": previous_recommendation}
+        ])
+    
+    # Check general followups first
     for general in data["general_followups"]:
-        general_embedding = general.get("embedding")
-        if general_embedding:
-            score = cosine_similarity(user_embedding, general_embedding)
+        if general.get("embedding"):
+            score = cosine_similarity(user_embedding, general["embedding"])
             if score >= 0.70:
-                # Get original question and recommendation to build context
-                original_question = question_text  # pulled from Streamlit earlier
-                original_recommendation = get_gpt_recommendation(original_question, options)
-
-                # Provide both as history to follow-up question
-                history = [(original_question, original_recommendation)]
-                return get_gpt_recommendation(user_question, history=history)
-
+                return get_gpt_recommendation(
+                    user_question,
+                    options=original_options,
+                    history=messages
+                )
+    
     # Check question-specific followups
     for question in data["questions"]:
-        if question["question_id"] == question_id:
-            followup_embedding = question.get("embedding")
-            if followup_embedding:
-                score = cosine_similarity(user_embedding, followup_embedding)
-                if score >= 0.70:
-                    original_question = question_text
-                    original_recommendation = get_gpt_recommendation(original_question, options)
-                    history = [(original_question, original_recommendation)]
-                    return get_gpt_recommendation(user_question, history=history)
+        if question["question_id"] == question_id and question.get("embedding"):
+            score = cosine_similarity(user_embedding, question["embedding"])
+            if score >= 0.70:
+                return get_gpt_recommendation(
+                    user_question,
+                    options=original_options,
+                    history=messages
+                )
+    
+    return "Please ask a question related to the current survey topic."
 
-    return "Sorry, can you ask a question related to the survey?"
-
-
-
-def get_gpt_recommendation(question, options=None, history=None):
-    messages = []
-
-    # If there is previous conversation, include it
-    if history:
-        for q, a in history:
-            messages.append({"role": "user", "content": q})
-            messages.append({"role": "assistant", "content": a})
-
+def get_gpt_recommendation(question: str, 
+                         options: List[str] = None, 
+                         history: List[dict] = None) -> str:
+    """Enhanced with proper history handling"""
+    messages = history or []
+    
     if options:
-        options_text = f"The available options are:\n{chr(10).join([f'{i+1}. {opt}' for i, opt in enumerate(options)])}"
-        messages.append({
-            "role": "user",
-            "content": f"""
-You are helping a user complete a survey.
-The question is: "{question}"
-{options_text}
+        prompt = f"""Survey Context:
+Question: {history[0]['content'] if history else question}
+Options: {chr(10).join(f'{i+1}. {opt}' for i, opt in enumerate(options))}
 
-Based on general best practices or knowledge, recommend the best option.
-Reply in this format:
-"Recommended option: <text>"
-"Reason: <brief explanation>"
-""".strip()
-        })
+Current Query: {question}
+
+Please provide recommendation considering:
+1. The original question and options
+2. Any previous discussion
+3. General best practices"""
     else:
-        messages.append({
-            "role": "user",
-            "content": f"""
-You are helping a user complete a survey.
-The user may ask follow-up questions after your first recommendation.
-
-The current question is: "{question}"
-
-Provide an answer.
-Reply in this format:
-"Explanation: <text>"
-""".strip()
-        })
-
+        prompt = f"""Follow-up Question: {question}
+        
+Please provide additional explanation considering the previous discussion."""
+    
+    messages.append({"role": "user", "content": prompt})
+    
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages,
         temperature=0.7
     )
+    
     return response.choices[0].message.content
 
 
