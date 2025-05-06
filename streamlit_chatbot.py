@@ -74,10 +74,9 @@ Reply in this format:
 You are helping a user complete a survey.
 The question is: "{question}"
 
-Based on general best practices or knowledge, provide a recommendation or an answer to this question.
+Provide an answer to this question.
 Reply in this format:
-"Recommendation: <text>"
-"Reason: <brief explanation>"
+"Explanation: <text>"
 """
 
     response = client.chat.completions.create(
