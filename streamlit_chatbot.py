@@ -190,21 +190,31 @@ Please provide your recommendation with reasoning in this format:
 def display_conversation():
     messages = st.session_state.get("conversation", [])
 
+    # Check if there are messages and display only the chatbot response
     if len(messages) >= 2:
-        role, message = messages[-2]
-        if role == "user":
-            st.markdown(f"**You:** {message}")
-
-        role, message = messages[-1]
+        role, message = messages[-1]  # Get the last message (chatbot's response)
         if role == "assistant":
+            # Truncate the reason to 35 characters for brevity
+            if "Reason:" in message:
+                split_message = message.split("Reason:")
+                reason = split_message[1] if len(split_message) > 1 else ""
+                truncated_reason = reason[:35]  # Limit to 35 characters
+                message = f"Recommended option: {split_message[0]}Reason: {truncated_reason}..."
+            
             st.markdown(f"**Chatbot:** {message}")
 
     elif len(messages) == 1:
         role, message = messages[0]
-        if role == "user":
-            st.markdown(f"**You:** {message}")
-        elif role == "assistant":
+        if role == "assistant":
+            # Truncate the reason to 35 characters for brevity
+            if "Reason:" in message:
+                split_message = message.split("Reason:")
+                reason = split_message[1] if len(split_message) > 1 else ""
+                truncated_reason = reason[:35]  # Limit to 35 characters
+                message = f"Recommended option: {split_message[0]}Reason: {truncated_reason}..."
+            
             st.markdown(f"**Chatbot:** {message}")
+
 
 # --- Main App Logic ---
 # Get query parameters
