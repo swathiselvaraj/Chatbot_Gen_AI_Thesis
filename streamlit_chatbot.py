@@ -8,6 +8,7 @@ from urllib.parse import unquote
 import gspread
 from gspread_dataframe import set_with_dataframe
 import re
+import uuid
 from typing import List, Dict, Optional, Tuple
 
 # Initialize OpenAI client
