@@ -188,13 +188,22 @@ Please provide your recommendation with reasoning in this format:
 #             st.markdown(f"**Chatbot:** {message}")
 
 def display_conversation():
-    if st.session_state.conversation:
-        role, message = st.session_state.conversation[-2]  # Last user message
+    messages = st.session_state.get("conversation", [])
+
+    if len(messages) >= 2:
+        role, message = messages[-2]
         if role == "user":
             st.markdown(f"**You:** {message}")
 
-        role, message = st.session_state.conversation[-1]  # Last bot message
+        role, message = messages[-1]
         if role == "assistant":
+            st.markdown(f"**Chatbot:** {message}")
+
+    elif len(messages) == 1:
+        role, message = messages[0]
+        if role == "user":
+            st.markdown(f"**You:** {message}")
+        elif role == "assistant":
             st.markdown(f"**Chatbot:** {message}")
 
 # --- Main App Logic ---
