@@ -152,15 +152,14 @@ def get_gpt_recommendation(question: str, options: List[str] = None, history: Li
 Available Options:
 {options_text}
 
-Please recommend the best option with reasoning in this format:
+Please recommend the best option with reasoning with a word limit of 50 words in this format:
 "Recommended option: <text>"
 "Reason: <detailed explanation>"
 """
         else:
             prompt = f"""Survey Question: {question}
-Please provide your recommendation with reasoning in this format:
-"Recommendation: <text>"
-"Reason: <detailed explanation>"
+Please provide the answer to the user question with a word limit below 50 wordsin this format:
+"Answer: <detailed explanation>"
 """
         
         messages.append({"role": "user", "content": prompt})
