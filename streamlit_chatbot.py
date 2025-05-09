@@ -197,9 +197,10 @@ def display_conversation():
             # Truncate the reason to 35 characters for brevity
             if "Reason:" in message:
                 split_message = message.split("Reason:")
+                recommended_option = split_message[0] if len(split_message) > 0 else ""
                 reason = split_message[1] if len(split_message) > 1 else ""
                 truncated_reason = reason[:35]  # Limit to 35 characters
-                message = f"Recommended option: {split_message[0]}Reason: {truncated_reason}..."
+                message = f"Recommended option: {recommended_option} Reason: {truncated_reason}..."
             
             st.markdown(f"**Chatbot:** {message}")
 
@@ -209,9 +210,10 @@ def display_conversation():
             # Truncate the reason to 35 characters for brevity
             if "Reason:" in message:
                 split_message = message.split("Reason:")
+                recommended_option = split_message[0] if len(split_message) > 0 else ""
                 reason = split_message[1] if len(split_message) > 1 else ""
                 truncated_reason = reason[:35]  # Limit to 35 characters
-                message = f"Recommended option: {split_message[0]}Reason: {truncated_reason}..."
+                message = f"Recommended option: {recommended_option} Reason: {truncated_reason}..."
             
             st.markdown(f"**Chatbot:** {message}")
 
