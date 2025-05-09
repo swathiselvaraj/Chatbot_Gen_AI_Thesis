@@ -179,12 +179,22 @@ Please provide your recommendation with reasoning in this format:
         return "Sorry, I couldn't generate a recommendation due to an error."
 
 # --- UI Components ---
+# def display_conversation():
+#     #st.write("### Conversation History")
+#     for role, message in st.session_state.conversation:
+#         if role == "user":
+#             st.markdown(f"**You:** {message}")
+#         else:
+#             st.markdown(f"**Chatbot:** {message}")
+
 def display_conversation():
-    st.write("### Conversation History")
-    for role, message in st.session_state.conversation:
+    if st.session_state.conversation:
+        role, message = st.session_state.conversation[-2]  # Last user message
         if role == "user":
             st.markdown(f"**You:** {message}")
-        else:
+
+        role, message = st.session_state.conversation[-1]  # Last bot message
+        if role == "assistant":
             st.markdown(f"**Chatbot:** {message}")
 
 # --- Main App Logic ---
