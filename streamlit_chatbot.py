@@ -178,14 +178,25 @@ Please provide your recommendation with reasoning in this format:
         st.error(f"Recommendation generation failed: {str(e)}")
         return "Sorry, I couldn't generate a recommendation due to an error."
 
-#--- UI Components ---
+# #--- UI Components ---
+# def display_conversation():
+#     #st.write("### Conversation History")
+#     for role, message in st.session_state.conversation:
+#         if role == "user":
+#             st.markdown(f"**You:** {message}")
+#         else:
+#             st.markdown(f"**Chatbot:** {message}")
+
+
 def display_conversation():
-    #st.write("### Conversation History")
+    # Clear conversation at the start of each function call
+    st.session_state.conversation = []  # This will clear the chat history
+
+    # Display each message from the conversation
     for role, message in st.session_state.conversation:
-        if role == "user":
-            st.markdown(f"**You:** {message}")
-        else:
-            st.markdown(f"**Chatbot:** {message}")
+        if role == "assistant":
+            st.markdown(message)
+
 
 # def display_conversation():
 #     messages = st.session_state.get("conversation", [])
