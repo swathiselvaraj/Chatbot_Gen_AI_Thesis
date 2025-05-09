@@ -195,12 +195,12 @@ options_raw = query_params.get("opts", "Option A|Option B|Option C")
 options = options_raw.split("|")
 
 # Display survey question
-st.write(f"### Survey Question ({question_id})")
-st.write(question_text)
-if options:
-    st.write("**Options:**")
-    for i, opt in enumerate(options):
-        st.write(f"{i+1}. {opt}")
+# st.write(f"### Survey Question ({question_id})")
+# st.write(question_text)
+# if options:
+#     st.write("**Options:**")
+#     for i, opt in enumerate(options):
+#         st.write(f"{i+1}. {opt}")
 
 # Recommendation button
 if st.button("Get Recommendation"):
@@ -226,12 +226,15 @@ if user_input:
 display_conversation()
 
 # Save data when done
-if st.button("Finish Survey"):
+auto_finish = query_params.get("auto_finish") == "true"
+participant_id = query_params.get("pid", str(uuid.uuid4()))  # Will default only if pid is missing
+
+if auto_finish:
     if st.session_state.usage_data['start_time']:
         duration = time.time() - st.session_state.usage_data['start_time']
         
         usage_data = {
-            "participant_id": str(uuid.uuid4()),
+            "participant_id": participant_id,  # ✅ Use the real Prolific ID
             "question_id": question_id,
             "timestamp": pd.Timestamp.now().isoformat(),
             "duration_seconds": round(duration, 2),
@@ -239,6 +242,7 @@ if st.button("Finish Survey"):
             "followups_asked": st.session_state.usage_data['followups_asked'],
             "last_recommendation": st.session_state.last_recommendation[:500] if st.session_state.last_recommendation else None
         }
+
         
         save_to_gsheet(usage_data)
         st.success("Survey completed! Data saved.")
