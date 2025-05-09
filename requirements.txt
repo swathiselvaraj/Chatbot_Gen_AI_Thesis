@@ -10,6 +10,10 @@ click==8.1.8
 distro==1.9.0
 gitdb==4.0.12
 GitPython==3.1.44
+google-auth==2.40.1
+google-auth-oauthlib==1.2.2
+gspread==5.4.0
+gspread-dataframe==3.1.0
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
@@ -21,12 +25,15 @@ jsonschema-specifications==2025.4.1
 MarkupSafe==3.0.2
 narwhals==1.37.1
 numpy==2.2.5
+oauthlib==3.2.2
 openai==1.77.0
 packaging==24.2
 pandas==2.2.3
 pillow==11.2.1
 protobuf==6.30.2
 pyarrow==20.0.0
+pyasn1==0.6.1
+pyasn1_modules==0.4.2
 pydantic==2.11.4
 pydantic_core==2.33.2
 pydeck==0.9.1
@@ -34,7 +41,9 @@ python-dateutil==2.9.0.post0
 pytz==2025.2
 referencing==0.36.2
 requests==2.32.3
+requests-oauthlib==2.0.0
 rpds-py==0.24.0
+rsa==4.9.1
 six==1.17.0
 smmap==5.0.2
 sniffio==1.3.1
@@ -47,5 +56,3 @@ typing-inspection==0.4.0
 typing_extensions==4.13.2
 tzdata==2025.2
 urllib3==2.4.0
-gspread==5.4.0
-gspread_dataframe==3.1.0
