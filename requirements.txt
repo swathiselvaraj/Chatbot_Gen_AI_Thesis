@@ -47,3 +47,5 @@ typing-inspection==0.4.0
 typing_extensions==4.13.2
 tzdata==2025.2
 urllib3==2.4.0
+gspread==5.4.0
+gspread_dataframe==3.1.0
