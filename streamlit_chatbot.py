@@ -188,45 +188,42 @@ Please provide your recommendation with reasoning in this format:
 #             st.markdown(f"**Chatbot:** {message}")
 
 
-def display_conversation():
-    # Clear conversation at the start of each function call
-    st.session_state.conversation = []  # This will clear the chat history
-
-    # Display each message from the conversation
-    for role, message in st.session_state.conversation:
-        if role == "assistant":
-            st.markdown(message)
-
-
 # def display_conversation():
-#     messages = st.session_state.get("conversation", [])
+#     # Clear conversation at the start of each function call
+#   # This will clear the chat history
 
-#     # Check if there are messages and display only the chatbot response
-#     if len(messages) >= 2:
-#         role, message = messages[-1]  # Get the last message (chatbot's response)
+#     # Display each message from the conversation
+#     for role, message in st.session_state.conversation:
 #         if role == "assistant":
-#             # Truncate the reason to 35 characters for brevity
-#             if "Reason:" in message:
-#                 split_message = message.split("Reason:")
-#                 recommended_option = split_message[0] if len(split_message) > 0 else ""
-#                 reason = split_message[1] if len(split_message) > 1 else ""
-#                 truncated_reason = reason[:35]  # Limit to 35 characters
-#                 message = f"Recommended option: {recommended_option} Reason: {truncated_reason}..."
-            
-#             st.markdown(f"**Chatbot:** {message}")
+#             st.markdown(message)
 
-#     elif len(messages) == 1:
-#         role, message = messages[0]
-#         if role == "assistant":
-#             # Truncate the reason to 35 characters for brevity
-#             if "Reason:" in message:
-#                 split_message = message.split("Reason:")
-#                 recommended_option = split_message[0] if len(split_message) > 0 else ""
-#                 reason = split_message[1] if len(split_message) > 1 else ""
-#                 truncated_reason = reason[:35]  # Limit to 35 characters
-#                 message = f"Recommended option: {recommended_option} Reason: {truncated_reason}..."
+def display_conversation():
+    messages = st.session_state.get("conversation", [])
+
+    # Check if there are messages and display only the chatbot response
+    if len(messages) >= 2:
+        role, message = messages[-1]  # Get the last message (chatbot's response)
+        if role == "assistant":
+            # Truncate the reason to 35 characters for brevity
+            if "Reason:" in message:
+                split_message = message.split("Reason:")
+                reason = split_message[1] if len(split_message) > 1 else ""
+                truncated_reason = reason[:35]  # Limit to 35 characters
+                message = f"Recommended option: {split_message[0]}Reason: {truncated_reason}..."
             
-#             st.markdown(f"**Chatbot:** {message}")
+            st.markdown(f"**Chatbot:** {message}")
+
+    elif len(messages) == 1:
+        role, message = messages[0]
+        if role == "assistant":
+            # Truncate the reason to 35 characters for brevity
+            if "Reason:" in message:
+                split_message = message.split("Reason:")
+                reason = split_message[1] if len(split_message) > 1 else ""
+                truncated_reason = reason[:35]  # Limit to 35 characters
+                message = f"Recommended option: {split_message[0]}Reason: {truncated_reason}..."
+            
+            st.markdown(f"**Chatbot:** {message}")
 
 
 # --- Main App Logic ---
