@@ -75,6 +75,7 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
         return None
 
 # --- Google Sheets Integration ---
+
 def connect_to_gsheet():
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
@@ -83,34 +84,46 @@ def connect_to_gsheet():
         st.error(f"Google Sheets connection failed: {str(e)}")
         return None
 
-def save_to_gsheet(data_dict: Dict):
+def save_to_gsheet(data_dict: Dict) -> bool:
+    """Improved save function that prevents duplicate and test entries"""
     try:
+        # Skip saving if no meaningful interaction occurred
+        if data_dict["questions_asked"] == 0 and data_dict["followups_asked"] == 0:
+            return False
+            
         worksheet = connect_to_gsheet()
         if not worksheet:
-            st.error("Failed to connect to worksheet")
             return False
             
-        # Try a simple operation first to verify connection
-        try:
-            worksheet.append_row(["Connection test"])
-        except Exception as test_error:
-            st.error(f"Google Sheets write test failed: {str(test_error)}")
-            return False
-            
-        # Now proceed with actual data saving
+        # Get existing data
         try:
             records = worksheet.get_all_records()
             df = pd.DataFrame(records)
+            
+            # Check if this is a duplicate entry (same participant, question, and timestamp within 5 seconds)
+            last_entry = df.iloc[-1] if len(df) > 0 else None
+            if last_entry and all([
+                last_entry["participant_id"] == data_dict["participant_id"],
+                last_entry["question_id"] == data_dict["question_id"],
+                pd.Timestamp(last_entry["timestamp"]) > pd.Timestamp(data_dict["timestamp"]) - pd.Timedelta(seconds=5)
+            ]):
+                return False
+                
+            # Prepare new data
             new_df = pd.DataFrame([data_dict])
             updated_df = pd.concat([df, new_df], ignore_index=True)
+            
+            # Clear and update worksheet
             worksheet.clear()
             set_with_dataframe(worksheet, updated_df)
             return True
+            
         except Exception as e:
-            st.error(f"Data saving failed: {str(e)}")
+            st.error(f"Data processing failed: {str(e)}")
             return False
+            
     except Exception as e:
-        st.error(f"Google Sheets operation failed completely: {str(e)}")
+        st.error(f"Google Sheets operation failed: {str(e)}")
         return False
 
 # --- Core Chatbot Functions ---
@@ -199,35 +212,38 @@ def display_conversation():
             st.markdown(f"**Chatbot:** {message}")
 
 def save_progress():
-    """Save current state to Google Sheets"""
+    """Improved progress saving with better validation"""
     if not st.session_state.usage_data['start_time']:
-        return
-    
+        return False
+        
     try:
         duration = time.time() - st.session_state.usage_data['start_time']
         
-        usage_data = {
-            "participant_id": participant_id,
-            "question_id": question_id,
-            "timestamp": pd.Timestamp.now().isoformat(),
-            "duration_seconds": round(duration, 2),
-            "questions_asked": st.session_state.usage_data['questions_asked'],
-            "followups_asked": st.session_state.usage_data['followups_asked'],
-            "last_recommendation": (
-                str(st.session_state.last_recommendation)[:500] 
-                if st.session_state.last_recommendation is not None 
-                else None
-            ),
-            "conversation_snapshot": json.dumps(st.session_state.conversation[-3:])
-        }
-        
-        if save_to_gsheet(usage_data):
-            st.session_state.usage_data['start_time'] = time.time()  # Reset timer
-        else:
-            st.error("Failed to save progress to Google Sheets")
+        # Only save if there was actual interaction
+        if st.session_state.usage_data['questions_asked'] > 0 or st.session_state.usage_data['followups_asked'] > 0:
+            usage_data = {
+                "participant_id": participant_id,
+                "question_id": question_id,
+                "timestamp": pd.Timestamp.now().isoformat(),
+                "duration_seconds": round(duration, 2),
+                "questions_asked": st.session_state.usage_data['questions_asked'],
+                "followups_asked": st.session_state.usage_data['followups_asked'],
+                "last_recommendation": (
+                    str(st.session_state.last_recommendation)[:500] 
+                    if st.session_state.last_recommendation is not None 
+                    else None
+                ),
+                "conversation_snapshot": json.dumps(st.session_state.conversation[-3:])
+            }
             
+            if save_to_gsheet(usage_data):
+                st.session_state.usage_data['start_time'] = time.time()  # Reset timer
+                return True
+        return False
+        
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
+        return False
 
 # --- Main App Logic ---
 # Get query parameters
