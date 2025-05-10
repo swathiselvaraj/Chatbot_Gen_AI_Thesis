@@ -99,35 +99,26 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         user_embedding = get_embedding(user_question)
         referenced_option = extract_referenced_option(user_question, options)
         
-        # Build conversation history
         history = []
+        
+        # Include original question + recommendation only once
         if st.session_state.last_recommendation:
-            history.append((question_text, st.session_state.last_recommendation))
-            if referenced_option:
-                history.append((f"User referenced option: {referenced_option}", "Noted."))
-        
-        # Check general followups
-        for general in data["general_followups"]:
-            if general.get("embedding"):
-                score = cosine_similarity(user_embedding, general["embedding"])
+            history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
+
+        # Add the user's follow-up question explicitly
+        history.append((f"Follow-up: {user_question}", ""))
+
+        # If a referenced option is mentioned, add that too
+        if referenced_option:
+            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
+
+        # Only call GPT if the follow-up is semantically relevant
+        for source in data["general_followups"] + data["questions"]:
+            if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
+                score = cosine_similarity(user_embedding, source["embedding"])
                 if score >= 0.70:
-                    return get_gpt_recommendation(
-                        user_question, 
-                        options=options,
-                        history=history
-                    )
-        
-        # Check question-specific followups
-        for question in data["questions"]:
-            if question["question_id"] == question_id and question.get("embedding"):
-                score = cosine_similarity(user_embedding, question["embedding"])
-                if score >= 0.70:
-                    return get_gpt_recommendation(
-                        user_question,
-                        options=options,
-                        history=history
-                    )
-        
+                    return get_gpt_recommendation(user_question, options=options, history=history)
+
         return "Please ask a question related to the current survey topic."
     except Exception as e:
         st.error(f"Follow-up validation failed: {str(e)}")
@@ -136,46 +127,58 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
 def get_gpt_recommendation(question: str, options: List[str] = None, history: List[Tuple[str, str]] = None) -> str:
     try:
         messages = []
-        
+        followup_mode = False
+
         # Add conversation history if exists
         if history:
             for q, a in history:
-                messages.extend([
-                    {"role": "user", "content": q},
-                    {"role": "assistant", "content": a}
-                ])
-        
-        # Build the prompt
-        if options:
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
+                if "Follow-up:" in q:
+                    followup_mode = True
+                if q.strip():
+                    messages.append({"role": "user", "content": q})
+                if a.strip():
+                    messages.append({"role": "assistant", "content": a})
+
+        # Build the prompt depending on context
+        if followup_mode:
+            # It's a follow-up question
+            prompt = f"""The user has asked a follow-up question about a survey recommendation.
+You must use prior context and reasoning to answer concisely in under 50 words.
+
+Respond in this format:
+"Answer: <your answer to the follow-up question>"
+
+Now, answer the user's latest question.
+"""
+        else:
+            # It's the initial survey question
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
             prompt = f"""Survey Question: {question}
 Available Options:
 {options_text}
 
-Please recommend the best option with reasoning with a word limit of 50 words in this format:
+Please recommend the best option with reasoning. Limit your response to 50 words.
+
+Respond in this format:
 "Recommended option: <text>"
-"Reason: <detailed explanation>"
+"Reason: <short explanation>"
 """
-        else:
-            prompt = f"""Survey Question: {question}
-Please provide the answer to the user question with a word limit below 50 wordsin this format:
-"Answer: <detailed explanation>"
-"""
-        
+
         messages.append({"role": "user", "content": prompt})
-        
+
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
             temperature=0.7
         )
-        
+
         result = response.choices[0].message.content
-        st.session_state.last_recommendation = result  # Store the last recommendation
+        st.session_state.last_recommendation = result  # Store last full output
         return result
     except Exception as e:
         st.error(f"Recommendation generation failed: {str(e)}")
         return "Sorry, I couldn't generate a recommendation due to an error."
+
 
 # #--- UI Components ---
 # def display_conversation():
