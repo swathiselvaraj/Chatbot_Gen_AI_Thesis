@@ -30,10 +30,44 @@ if 'chatbot_question_count' not in st.session_state:
     st.session_state.chatbot_question_count = 0
 if 'chatbot_use_total_time' not in st.session_state:
     st.session_state.chatbot_use_total_time = 0.0
-if 'chatbot_start_time' not in st.session_state:
-    st.session_state.chatbot_start_time = time.time()
 if 'question_start_time' not in st.session_state:
     st.session_state.question_start_time = time.time()
+
+# --- Core Chatbot Functions ---
+def get_gpt_recommendation(question: str, options: List[str] = None) -> str:
+    try:
+        options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+        prompt = f"""Survey Question: {question}
+Available Options:
+{options_text}
+
+Please recommend the best option with reasoning. Limit your response to 50 words.
+
+Respond in this format:
+"Recommended option: <text>"
+"Reason: <short explanation>"
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+
+        result = response.choices[0].message.content
+        st.session_state.last_recommendation = result
+        return result
+    except Exception as e:
+        st.error(f"Recommendation generation failed: {str(e)}")
+        return "Sorry, I couldn't generate a recommendation due to an error."
+
+def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
+    try:
+        # Simple implementation - you can add your embedding logic here if needed
+        return get_gpt_recommendation(user_question, options)
+    except Exception as e:
+        st.error(f"Follow-up validation failed: {str(e)}")
+        return "Sorry, I encountered an error processing your question."
 
 # --- Google Sheets Integration ---
 def initialize_gsheet():
@@ -170,7 +204,14 @@ if user_input:
     st.session_state.conversation.append(("assistant", response))
     st.session_state.chatbot_question_count += 1
 
-# Final save when leaving the page (handled by question change tracking)
+# Display conversation
+if st.session_state.conversation:
+    st.write("### Chat History")
+    for role, message in st.session_state.conversation:
+        if role == "user":
+            st.markdown(f"**You:** {message}")
+        else:
+            st.markdown(f"**Chatbot:** {message}")
 
 # Debug information
 if query_params.get("debug", "false") == "true":
