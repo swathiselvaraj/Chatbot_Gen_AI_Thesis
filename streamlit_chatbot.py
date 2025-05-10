@@ -20,6 +20,8 @@ if 'conversation' not in st.session_state:
     st.session_state.conversation = []
 if 'last_recommendation' not in st.session_state:
     st.session_state.last_recommendation = None
+
+
 if 'usage_data' not in st.session_state:
     st.session_state.usage_data = {
         'start_time': None,
@@ -268,7 +270,12 @@ if auto_finish:
             "duration_seconds": round(duration, 2),
             "questions_asked": st.session_state.usage_data['questions_asked'],
             "followups_asked": st.session_state.usage_data['followups_asked'],
-            "last_recommendation": st.session_state.last_recommendation[:500] if st.session_state.last_recommendation else None
+            #"last_recommendation": st.session_state.last_recommendation[:500] if st.session_state.last_recommendation else None
+            "last_recommendation": (
+                str(st.session_state.last_recommendation)[:500] 
+                if st.session_state.last_recommendation is not None 
+                else None
+            )
         }
 
         
