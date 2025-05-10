@@ -79,16 +79,35 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
 def connect_to_gsheet():
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-        return gc.open("Chatbot Usage Log").sheet1
+        sheet = gc.open("Chatbot Usage Log")
+        
+        # First try to access the sheet normally
+        try:
+            return sheet.sheet1
+        except:
+            # If sheet1 doesn't exist, create it with headers
+            worksheet = sheet.add_worksheet(title="Logs", rows=100, cols=20)
+            headers = [
+                "participant_id", "question_id", "timestamp", 
+                "duration_seconds", "questions_asked", 
+                "followups_asked", "last_recommendation", 
+                "conversation_snapshot"
+            ]
+            worksheet.append_row(headers)
+            return worksheet
+            
     except Exception as e:
         st.error(f"Google Sheets connection failed: {str(e)}")
         return None
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-    """Improved save function that prevents duplicate and test entries"""
+    """Improved save function that prevents test entries and duplicates"""
     try:
-        # Skip saving if no meaningful interaction occurred
-        if data_dict["questions_asked"] == 0 and data_dict["followups_asked"] == 0:
+        # Skip saving connection tests and empty interactions
+        if "Connection test" in str(data_dict.values()) or (
+            data_dict["questions_asked"] == 0 
+            and data_dict["followups_asked"] == 0
+        ):
             return False
             
         worksheet = connect_to_gsheet()
@@ -96,34 +115,29 @@ def save_to_gsheet(data_dict: Dict) -> bool:
             return False
             
         # Get existing data
-        try:
-            records = worksheet.get_all_records()
-            df = pd.DataFrame(records)
+        records = worksheet.get_all_records()
+        df = pd.DataFrame(records)
+        
+        # Check for duplicates (same participant, question, and similar timestamp)
+        if len(df) > 0:
+            last_entry = df.iloc[-1]
+            time_diff = (
+                pd.Timestamp(data_dict["timestamp"]) - 
+                pd.Timestamp(last_entry["timestamp"])
+            ).total_seconds()
             
-            # Check if this is a duplicate entry (same participant, question, and timestamp within 5 seconds)
-            last_entry = df.iloc[-1] if len(df) > 0 else None
-            if last_entry and all([
-                last_entry["participant_id"] == data_dict["participant_id"],
-                last_entry["question_id"] == data_dict["question_id"],
-                pd.Timestamp(last_entry["timestamp"]) > pd.Timestamp(data_dict["timestamp"]) - pd.Timedelta(seconds=5)
-            ]):
+            if (last_entry["participant_id"] == data_dict["participant_id"] and
+                last_entry["question_id"] == data_dict["question_id"] and
+                time_diff < 5 and
+                last_entry["last_recommendation"] == data_dict["last_recommendation"]):
                 return False
-                
-            # Prepare new data
-            new_df = pd.DataFrame([data_dict])
-            updated_df = pd.concat([df, new_df], ignore_index=True)
-            
-            # Clear and update worksheet
-            worksheet.clear()
-            set_with_dataframe(worksheet, updated_df)
-            return True
-            
-        except Exception as e:
-            st.error(f"Data processing failed: {str(e)}")
-            return False
-            
+        
+        # Append new data
+        worksheet.append_row(list(data_dict.values()))
+        return True
+        
     except Exception as e:
-        st.error(f"Google Sheets operation failed: {str(e)}")
+        st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
 
 # --- Core Chatbot Functions ---
@@ -256,25 +270,24 @@ options_raw = query_params.get("opts", "Option A|Option B|Option C")
 options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 
-# Add this new section for save mode control
-save_mode = query_params.get("save_mode", "auto")  # Add this line
+# Initialize save tracking
+if 'last_save_time' not in st.session_state:
+    st.session_state.last_save_time = 0
+if 'needs_save' not in st.session_state:
+    st.session_state.needs_save = False
 
-# Track if this is a new question
+# Track question changes
 if question_id != st.session_state.get('last_question_id'):
     st.session_state.conversation = []
     st.session_state.last_question_id = question_id
-    if save_mode != "on_interaction":  # Only auto-save if not in on_interaction mode
-        save_progress()
+    st.session_state.needs_save = True
 
 # Recommendation button
 if st.button("Get Recommendation"):
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
     st.session_state.usage_data['questions_asked'] += 1
-    st.session_state.user_interacted = True  # Set interaction flag
-    if save_mode == "on_interaction":
-        save_progress()
-        st.session_state.user_interacted = False
+    st.session_state.needs_save = True
 
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
@@ -283,17 +296,19 @@ if user_input:
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
-    st.session_state.user_interacted = True  # Set interaction flag
-    if save_mode == "on_interaction":
-        save_progress()
-        st.session_state.user_interacted = False
+    st.session_state.needs_save = True
 
 # Display conversation
 display_conversation()
 
-# Save in auto mode (for non-interaction saves)
-if save_mode != "on_interaction":
-    save_progress()
+# Controlled saving - only save if needed and at least 5 seconds since last save
+current_time = time.time()
+if (st.session_state.needs_save and 
+    current_time - st.session_state.last_save_time > 5):
+    
+    if save_progress():  # Modified to return True on success
+        st.session_state.last_save_time = current_time
+        st.session_state.needs_save = False
 
 # Debug information
 if query_params.get("debug", "false") == "true":
