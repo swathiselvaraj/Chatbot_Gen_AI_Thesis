@@ -22,10 +22,14 @@ if 'last_recommendation' not in st.session_state:
     st.session_state.last_recommendation = None
 if 'last_question_id' not in st.session_state:
     st.session_state.last_question_id = None
+if 'first_load' not in st.session_state:
+    st.session_state.first_load = True
+if 'sheet_initialized' not in st.session_state:
+    st.session_state.sheet_initialized = False
 
 if 'usage_data' not in st.session_state:
     st.session_state.usage_data = {
-        'start_time': time.time(),  # Start timer immediately
+        'start_time': time.time(),
         'questions_asked': 0,
         'followups_asked': 0
     }
@@ -75,65 +79,86 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
         return None
 
 # --- Google Sheets Integration ---
-
-def connect_to_gsheet():
+def initialize_gsheet():
+    """Initialize the Google Sheet with proper headers"""
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
         sheet = gc.open("Chatbot Usage Log")
         
-        # First try to access the sheet normally
         try:
-            return sheet.sheet1
+            worksheet = sheet.worksheet("Logs")
         except:
-            # If sheet1 doesn't exist, create it with headers
-            worksheet = sheet.add_worksheet(title="Logs", rows=100, cols=20)
-            headers = [
-                "participant_id", "question_id", "timestamp", 
-                "duration_seconds", "questions_asked", 
-                "followups_asked", "last_recommendation", 
-                "conversation_snapshot"
-            ]
-            worksheet.append_row(headers)
-            return worksheet
-            
+            worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=20)
+        
+        # Define and verify headers
+        expected_headers = [
+            "participant_id", "question_id", "timestamp",
+            "duration_seconds", "questions_asked",
+            "followups_asked", "last_recommendation",
+            "conversation_snapshot"
+        ]
+        
+        current_headers = worksheet.row_values(1)
+        
+        if not current_headers or current_headers != expected_headers:
+            worksheet.clear()
+            worksheet.append_row(expected_headers)
+        
+        return worksheet
+        
     except Exception as e:
-        st.error(f"Google Sheets connection failed: {str(e)}")
+        st.error(f"Google Sheets initialization failed: {str(e)}")
         return None
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-    """Improved save function that prevents test entries and duplicates"""
+    """Save data to Google Sheets with duplicate prevention"""
     try:
-        # Skip saving connection tests and empty interactions
-        if "Connection test" in str(data_dict.values()) or (
-            data_dict["questions_asked"] == 0 
-            and data_dict["followups_asked"] == 0
-        ):
+        # Skip empty interactions
+        if data_dict["questions_asked"] == 0 and data_dict["followups_asked"] == 0:
             return False
             
-        worksheet = connect_to_gsheet()
+        worksheet = initialize_gsheet()
         if not worksheet:
             return False
             
-        # Get existing data
-        records = worksheet.get_all_records()
-        df = pd.DataFrame(records)
+        # Get existing records with header validation
+        expected_headers = [
+            "participant_id", "question_id", "timestamp",
+            "duration_seconds", "questions_asked",
+            "followups_asked", "last_recommendation",
+            "conversation_snapshot"
+        ]
         
-        # Check for duplicates (same participant, question, and similar timestamp)
-        if len(df) > 0:
-            last_entry = df.iloc[-1]
-            time_diff = (
-                pd.Timestamp(data_dict["timestamp"]) - 
-                pd.Timestamp(last_entry["timestamp"])
-            ).total_seconds()
+        try:
+            records = worksheet.get_all_records(expected_headers=expected_headers)
+        except:
+            # If headers don't match, reinitialize sheet
+            worksheet = initialize_gsheet()
+            records = []
+        
+        # Convert timestamp strings to datetime for comparison
+        data_dict["timestamp"] = pd.to_datetime(data_dict["timestamp"]).isoformat()
+        
+        # Check for duplicates (same participant, question, and similar content)
+        if records:
+            last_entry = records[-1]
+            last_time = pd.to_datetime(last_entry["timestamp"])
+            current_time = pd.to_datetime(data_dict["timestamp"])
+            time_diff = (current_time - last_time).total_seconds()
             
-            if (last_entry["participant_id"] == data_dict["participant_id"] and
+            is_duplicate = (
+                last_entry["participant_id"] == data_dict["participant_id"] and
                 last_entry["question_id"] == data_dict["question_id"] and
-                time_diff < 5 and
-                last_entry["last_recommendation"] == data_dict["last_recommendation"]):
-                return False
+                time_diff < 10 and  # 10 second window for duplicate check
+                last_entry["last_recommendation"] == data_dict.get("last_recommendation", "")
+            )
+            
+            if is_duplicate:
+                return True  # Consider it a success but don't save again
         
-        # Append new data
-        worksheet.append_row(list(data_dict.values()))
+        # Prepare data in correct order
+        ordered_data = [data_dict.get(h, "") for h in expected_headers]
+        worksheet.append_row(ordered_data)
         return True
         
     except Exception as e:
@@ -226,7 +251,7 @@ def display_conversation():
             st.markdown(f"**Chatbot:** {message}")
 
 def save_progress():
-    """Improved progress saving with better validation"""
+    """Save progress to Google Sheets with proper data formatting"""
     if not st.session_state.usage_data['start_time']:
         return False
         
@@ -245,21 +270,19 @@ def save_progress():
                 "last_recommendation": (
                     str(st.session_state.last_recommendation)[:500] 
                     if st.session_state.last_recommendation is not None 
-                    else None
+                    else ""
                 ),
-                "conversation_snapshot": json.dumps(st.session_state.conversation[-3:])
+                "conversation_snapshot": json.dumps(st.session_state.conversation[-3:], ensure_ascii=False)
             }
             
             if save_to_gsheet(usage_data):
-                st.session_state.usage_data['start_time'] = time.time()  # Reset timer
+                st.session_state.usage_data['start_time'] = time.time()
                 return True
         return False
         
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
         return False
-
-
 
 # --- Main App Logic ---
 # Get query parameters
@@ -270,24 +293,25 @@ options_raw = query_params.get("opts", "Option A|Option B|Option C")
 options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 
-# Initialize save tracking
-if 'last_save_time' not in st.session_state:
-    st.session_state.last_save_time = 0
-if 'needs_save' not in st.session_state:
-    st.session_state.needs_save = False
+# Initialize Google Sheet on first load
+if st.session_state.first_load and not st.session_state.sheet_initialized:
+    initialize_gsheet()
+    st.session_state.sheet_initialized = True
 
 # Track question changes
 if question_id != st.session_state.get('last_question_id'):
     st.session_state.conversation = []
     st.session_state.last_question_id = question_id
-    st.session_state.needs_save = True
+    if not st.session_state.first_load:
+        save_progress()
 
 # Recommendation button
 if st.button("Get Recommendation"):
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
     st.session_state.usage_data['questions_asked'] += 1
-    st.session_state.needs_save = True
+    st.session_state.first_load = False
+    save_progress()
 
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
@@ -296,19 +320,16 @@ if user_input:
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
-    st.session_state.needs_save = True
+    st.session_state.first_load = False
+    save_progress()
 
 # Display conversation
 display_conversation()
 
-# Controlled saving - only save if needed and at least 5 seconds since last save
-current_time = time.time()
-if (st.session_state.needs_save and 
-    current_time - st.session_state.last_save_time > 5):
-    
-    if save_progress():  # Modified to return True on success
-        st.session_state.last_save_time = current_time
-        st.session_state.needs_save = False
+# Final save when leaving the page
+if not st.session_state.first_load and (st.session_state.usage_data['questions_asked'] > 0 or 
+                                      st.session_state.usage_data['followups_asked'] > 0):
+    save_progress()
 
 # Debug information
 if query_params.get("debug", "false") == "true":
