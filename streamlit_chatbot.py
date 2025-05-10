@@ -245,6 +245,8 @@ def save_progress():
         st.error(f"Progress save failed: {str(e)}")
         return False
 
+
+
 # --- Main App Logic ---
 # Get query parameters
 query_params = st.query_params
@@ -254,18 +256,25 @@ options_raw = query_params.get("opts", "Option A|Option B|Option C")
 options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 
+# Add this new section for save mode control
+save_mode = query_params.get("save_mode", "auto")  # Add this line
+
 # Track if this is a new question
 if question_id != st.session_state.get('last_question_id'):
     st.session_state.conversation = []
     st.session_state.last_question_id = question_id
-    save_progress()  # Save when moving to new question
+    if save_mode != "on_interaction":  # Only auto-save if not in on_interaction mode
+        save_progress()
 
 # Recommendation button
 if st.button("Get Recommendation"):
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
     st.session_state.usage_data['questions_asked'] += 1
-    save_progress()  # Save after getting recommendation
+    st.session_state.user_interacted = True  # Set interaction flag
+    if save_mode == "on_interaction":
+        save_progress()
+        st.session_state.user_interacted = False
 
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
@@ -274,13 +283,17 @@ if user_input:
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
-    save_progress()  # Save after follow-up
+    st.session_state.user_interacted = True  # Set interaction flag
+    if save_mode == "on_interaction":
+        save_progress()
+        st.session_state.user_interacted = False
 
 # Display conversation
 display_conversation()
 
-# Save on every render (when LimeSurvey loads the iframe on Next click)
-save_progress()
+# Save in auto mode (for non-interaction saves)
+if save_mode != "on_interaction":
+    save_progress()
 
 # Debug information
 if query_params.get("debug", "false") == "true":
