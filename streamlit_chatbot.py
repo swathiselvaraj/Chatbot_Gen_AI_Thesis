@@ -111,59 +111,56 @@ def initialize_gsheet():
         return None
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-    """Save data to Google Sheets with duplicate prevention"""
+    """Save data to Google Sheets with debug logging and always-attempt behavior"""
     try:
-        # Skip empty interactions
-        if data_dict["questions_asked"] == 0 and data_dict["followups_asked"] == 0:
-            return False
-            
         worksheet = initialize_gsheet()
         if not worksheet:
+            st.warning("Google Sheet not initialized.")
             return False
-            
-        # Get existing records with header validation
+
         expected_headers = [
             "participant_id", "question_id", "timestamp",
             "duration_seconds", "questions_asked",
             "followups_asked", "last_recommendation",
             "conversation_snapshot"
         ]
-        
+
         try:
             records = worksheet.get_all_records(expected_headers=expected_headers)
         except:
-            # If headers don't match, reinitialize sheet
             worksheet = initialize_gsheet()
             records = []
-        
-        # Convert timestamp strings to datetime for comparison
+
+        # Convert timestamp for comparison
         data_dict["timestamp"] = pd.to_datetime(data_dict["timestamp"]).isoformat()
-        
-        # Check for duplicates (same participant, question, and similar content)
+
+        # Check for duplicates
         if records:
             last_entry = records[-1]
             last_time = pd.to_datetime(last_entry["timestamp"])
             current_time = pd.to_datetime(data_dict["timestamp"])
             time_diff = (current_time - last_time).total_seconds()
-            
+
             is_duplicate = (
                 last_entry["participant_id"] == data_dict["participant_id"] and
                 last_entry["question_id"] == data_dict["question_id"] and
-                time_diff < 10 and  # 10 second window for duplicate check
+                time_diff < 10 and
                 last_entry["last_recommendation"] == data_dict.get("last_recommendation", "")
             )
-            
+
             if is_duplicate:
-                return True  # Consider it a success but don't save again
-        
-        # Prepare data in correct order
+                st.info("Duplicate detected — skipping save.")
+                return True
+
+        # Write data
         ordered_data = [data_dict.get(h, "") for h in expected_headers]
         worksheet.append_row(ordered_data)
         return True
-        
+
     except Exception as e:
-        st.error(f"Failed to save to Google Sheets: {str(e)}")
+        st.error(f"Google Sheets save failed: {str(e)}")
         return False
+
 
 # --- Core Chatbot Functions ---
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
@@ -276,7 +273,7 @@ def save_progress():
         success = save_to_gsheet(usage_data)
 
         if success:
-            st.success(" Data saved to Google Sheet!")
+            st.success("✅ Data saved to Google Sheet!")
             st.session_state.usage_data['start_time'] = time.time()
         else:
             st.warning("⚠️ Data was not saved (possibly skipped due to duplicate or logic condition).")
