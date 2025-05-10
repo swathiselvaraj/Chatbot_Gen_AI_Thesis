@@ -26,6 +26,8 @@ if 'first_load' not in st.session_state:
     st.session_state.first_load = True
 if 'sheet_initialized' not in st.session_state:
     st.session_state.sheet_initialized = False
+if 'already_saved' not in st.session_state:  # New flag to track saves
+    st.session_state.already_saved = False
 
 if 'usage_data' not in st.session_state:
     st.session_state.usage_data = {
@@ -111,56 +113,28 @@ def initialize_gsheet():
         return None
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-    """Save data to Google Sheets with debug logging and always-attempt behavior"""
+    """Save data to Google Sheets with duplicate prevention"""
     try:
         worksheet = initialize_gsheet()
         if not worksheet:
-            st.warning("Google Sheet not initialized.")
             return False
-
-        expected_headers = [
-            "participant_id", "question_id", "timestamp",
-            "duration_seconds", "questions_asked",
-            "followups_asked", "last_recommendation",
-            "conversation_snapshot"
-        ]
-
-        try:
-            records = worksheet.get_all_records(expected_headers=expected_headers)
-        except:
-            worksheet = initialize_gsheet()
-            records = []
-
-        # Convert timestamp for comparison
-        data_dict["timestamp"] = pd.to_datetime(data_dict["timestamp"]).isoformat()
-
-        # Check for duplicates
-        if records:
-            last_entry = records[-1]
-            last_time = pd.to_datetime(last_entry["timestamp"])
-            current_time = pd.to_datetime(data_dict["timestamp"])
-            time_diff = (current_time - last_time).total_seconds()
-
-            is_duplicate = (
-                last_entry["participant_id"] == data_dict["participant_id"] and
-                last_entry["question_id"] == data_dict["question_id"] and
-                time_diff < 10 and
-                last_entry["last_recommendation"] == data_dict.get("last_recommendation", "")
-            )
-
-            if is_duplicate:
-                st.info("Duplicate detected — skipping save.")
-                return True
-
-        # Write data
-        ordered_data = [data_dict.get(h, "") for h in expected_headers]
-        worksheet.append_row(ordered_data)
+            
+        # Get existing records
+        records = worksheet.get_all_records()
+        
+        # Check if this question has already been saved for this participant
+        for record in records:
+            if (record["participant_id"] == data_dict["participant_id"] and
+                record["question_id"] == data_dict["question_id"]):
+                return True  # Consider it a success but don't save again
+                
+        # If not found, append new row
+        worksheet.append_row(list(data_dict.values()))
         return True
-
+        
     except Exception as e:
-        st.error(f"Google Sheets save failed: {str(e)}")
+        st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
-
 
 # --- Core Chatbot Functions ---
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
@@ -248,10 +222,16 @@ def display_conversation():
             st.markdown(f"**Chatbot:** {message}")
 
 def save_progress():
-    """Save progress to Google Sheets, even if no question or follow-up asked"""
+    """Save progress to Google Sheets only if not already saved"""
+    if st.session_state.already_saved:
+        return True
+        
+    if not st.session_state.usage_data['start_time']:
+        return False
+        
     try:
         duration = time.time() - st.session_state.usage_data['start_time']
-
+        
         usage_data = {
             "participant_id": participant_id,
             "question_id": question_id,
@@ -266,22 +246,15 @@ def save_progress():
             ),
             "conversation_snapshot": json.dumps(st.session_state.conversation[-3:], ensure_ascii=False)
         }
-
-        st.write("🔍 Debug: Attempting to save the following data:")
-        st.json(usage_data)
-
-        success = save_to_gsheet(usage_data)
-
-        if success:
-            st.success("✅ Data saved to Google Sheet!")
+        
+        if save_to_gsheet(usage_data):
             st.session_state.usage_data['start_time'] = time.time()
-        else:
-            st.warning("⚠️ Data was not saved (possibly skipped due to duplicate or logic condition).")
-
-        return success
-
+            st.session_state.already_saved = True
+            return True
+        return False
+        
     except Exception as e:
-        st.error(f"Save error: {str(e)}")
+        st.error(f"Progress save failed: {str(e)}")
         return False
 
 # --- Main App Logic ---
@@ -302,6 +275,7 @@ if st.session_state.first_load and not st.session_state.sheet_initialized:
 if question_id != st.session_state.get('last_question_id'):
     st.session_state.conversation = []
     st.session_state.last_question_id = question_id
+    st.session_state.already_saved = False  # Reset saved flag for new question
     if not st.session_state.first_load:
         save_progress()
 
@@ -327,8 +301,7 @@ if user_input:
 display_conversation()
 
 # Final save when leaving the page
-if not st.session_state.first_load and (st.session_state.usage_data['questions_asked'] > 0 or 
-                                      st.session_state.usage_data['followups_asked'] > 0):
+if not st.session_state.first_load and not st.session_state.already_saved:
     save_progress()
 
 # Debug information
