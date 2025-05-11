@@ -288,8 +288,8 @@ if question_id != st.session_state.get('last_question_id'):
     st.session_state.conversation = []
     st.session_state.last_question_id = question_id
     st.session_state.already_saved = False  # Reset saved flag for new question
-    if not st.session_state.first_load:
-        save_progress()
+    # if not st.session_state.first_load:
+    #     save_progress()
 
 # Recommendation button
 if st.button("Get Recommendation"):
@@ -313,8 +313,8 @@ if user_input:
 display_conversation()
 
 # Final save when leaving the page
-if not st.session_state.first_load and not st.session_state.already_saved:
-    save_progress()
+# if not st.session_state.first_load and not st.session_state.already_saved:
+#     save_progress()
 
 # Debug information
 if query_params.get("debug", "false") == "true":
@@ -326,3 +326,10 @@ if query_params.get("debug", "false") == "true":
         k: v for k, v in st.session_state.items() 
         if k not in ['conversation', '_secrets']
     })
+
+if st.button("Next"):
+    st.session_state.interaction_end_time = time.time()
+    if save_progress():
+        st.success("Progress saved. You may proceed.")
+    else:
+        st.error("Failed to save progress. Please try again.")
