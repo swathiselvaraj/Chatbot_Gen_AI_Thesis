@@ -244,6 +244,13 @@ def display_conversation():
         if role != "user":
             st.markdown(f"**Chatbot:** {message}")
 
+query_params = st.query_params
+question_id = query_params.get("qid", "Q1")
+question_text = query_params.get("qtext", "What is your decision?")
+options_raw = query_params.get("opts", "Option A|Option B|Option C")
+options = options_raw.split("|")
+participant_id = query_params.get("pid", str(uuid.uuid4()))
+
 def save_progress():
     """Save or update progress in Google Sheets"""
     if st.session_state.already_saved:
@@ -287,12 +294,7 @@ def save_progress():
 
 # --- Main App Logic ---
 # Get query parameters
-query_params = st.query_params
-question_id = query_params.get("qid", "Q1")
-question_text = query_params.get("qtext", "What is your decision?")
-options_raw = query_params.get("opts", "Option A|Option B|Option C")
-options = options_raw.split("|")
-participant_id = query_params.get("pid", str(uuid.uuid4()))
+
 
 
 # Initialize Google Sheet on first load
