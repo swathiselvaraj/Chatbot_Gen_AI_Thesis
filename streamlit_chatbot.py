@@ -122,42 +122,28 @@ def initialize_gsheet():
         return None
 
 def save_to_gsheet(data_dict: Dict) -> bool:
+    """Save data to Google Sheets with duplicate prevention"""
     try:
         worksheet = initialize_gsheet()
         if not worksheet:
             return False
-
-        headers = worksheet.row_values(1)
+            
+        # Get existing records
         records = worksheet.get_all_records()
-
-        target_row = None
-        for i, record in enumerate(records):
+        
+        # Check if this question has already been saved for this participant
+        for record in records:
             if (record["participant_id"] == data_dict["participant_id"] and
                 record["question_id"] == data_dict["question_id"]):
-                target_row = i + 2  # +2 because gspread is 1-indexed and skips headers
-                break
-
-        if target_row:
-            # Row exists – update each column in data_dict
-            for key, value in data_dict.items():
-                if key in headers:
-                    col_index = headers.index(key) + 1
-                    worksheet.update_cell(target_row, col_index, value)
-        else:
-            # Row doesn't exist – fill in row with defaults
-            new_row = ["" for _ in headers]
-            for key, value in data_dict.items():
-                if key in headers:
-                    idx = headers.index(key)
-                    new_row[idx] = value
-            worksheet.append_row(new_row)
-
+                return True  # Consider it a success but don't save again
+                
+        # If not found, append new row
+        worksheet.append_row(list(data_dict.values()))
         return True
-
+        
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
-
 
 # --- Core Chatbot Functions ---
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
@@ -244,13 +230,6 @@ def display_conversation():
         if role != "user":
             st.markdown(f"**Chatbot:** {message}")
 
-query_params = st.query_params
-question_id = query_params.get("qid", "Q1")
-question_text = query_params.get("qtext", "What is your decision?")
-options_raw = query_params.get("opts", "Option A|Option B|Option C")
-options = options_raw.split("|")
-participant_id = query_params.get("pid", str(uuid.uuid4()))
-
 def save_progress():
     """Save or update progress in Google Sheets"""
     if st.session_state.already_saved:
@@ -260,13 +239,14 @@ def save_progress():
         return False
 
     try:
-        # Ensure timing variables are defined
-        if st.session_state.interaction_start_time and st.session_state.interaction_end_time:
+        total_time = 0
+        if (
+            st.session_state.get("interaction_start_time") is not None and
+            st.session_state.get("interaction_end_time") is not None
+        ):
             total_time = round(
                 st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2
             )
-        else:
-            total_time = 0
 
         usage_data = {
             "participant_id": participant_id,
@@ -290,12 +270,15 @@ def save_progress():
         st.error(f"Progress save failed: {str(e)}")
         return False
 
-
-
 # --- Main App Logic ---
 # Get query parameters
 
-
+query_params = st.query_params
+question_id = query_params.get("qid", "Q1")
+question_text = query_params.get("qtext", "What is your decision?")
+options_raw = query_params.get("opts", "Option A|Option B|Option C")
+options = options_raw.split("|")
+participant_id = query_params.get("pid", str(uuid.uuid4()))
 
 # Initialize Google Sheet on first load
 if st.session_state.first_load and not st.session_state.sheet_initialized:
