@@ -231,11 +231,12 @@ def display_conversation():
             st.markdown(f"**Chatbot:** {message}")
 
 def save_progress():
-    """Save progress to Google Sheets only if not already saved"""
+    """Save progress to Google Sheets only when explicitly requested via query param"""
     if st.session_state.already_saved:
         return True
         
-    if not st.session_state.usage_data['start_time']:
+    # Only save when explicitly requested via query param
+    if st.query_params.get("save_now") != "true":
         return False
         
     try:
@@ -249,7 +250,7 @@ def save_progress():
             "participant_id": participant_id,
             "question_id": question_id,
             "chatbot_used": "yes" if (st.session_state.get_recommendation_used or st.session_state.followup_used) else "no",
-            "questions_asked_to_chatbot": st.session_state.usage_data['questions_asked'] + st.session_state.usage_data['followups_asked'],
+            "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
             "total_chatbot_time_seconds": total_time,
             "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
             "further_question_asked": "yes" if st.session_state.followup_used else "no",
@@ -257,7 +258,6 @@ def save_progress():
         }
         
         if save_to_gsheet(usage_data):
-            st.session_state.usage_data['start_time'] = time.time()
             st.session_state.already_saved = True
             return True
         return False
@@ -265,7 +265,6 @@ def save_progress():
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
         return False
-
 
 
 # --- Main App Logic ---
@@ -276,6 +275,10 @@ question_text = query_params.get("qtext", "What is your decision?")
 options_raw = query_params.get("opts", "Option A|Option B|Option C")
 options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
+
+if st.query_params.get("save_now") == "true":
+    st.session_state.interaction_end_time = time.time()
+    save_progress()
 
 # Initialize Google Sheet on first load
 if st.session_state.first_load and not st.session_state.sheet_initialized:
@@ -292,11 +295,11 @@ if question_id != st.session_state.get('last_question_id'):
 
 # Recommendation button
 if st.button("Get Recommendation"):
+    st.session_state.interaction_start_time = time.time()  # Start timing
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
-    st.session_state.usage_data['questions_asked'] += 1
-    st.session_state.first_load = False
-    save_progress()
+    st.session_state.get_recommendation_used = True  # Mark that recommendation was used
+    # Don't save here - will be saved when Next is pressed
 
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
@@ -305,8 +308,7 @@ if user_input:
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
-    st.session_state.first_load = False
-    save_progress()
+    st.session_state.followup_used = True 
 
 # Display conversation
 display_conversation()
@@ -315,6 +317,9 @@ display_conversation()
 if not st.session_state.first_load and not st.session_state.already_saved:
     save_progress()
 
+if st.query_params.get("save_now") == "true":
+    st.session_state.interaction_end_time = time.time()
+    save_progress()
 # Debug information
 if query_params.get("debug", "false") == "true":
     st.write("### Debug Information")
@@ -325,3 +330,4 @@ if query_params.get("debug", "false") == "true":
         k: v for k, v in st.session_state.items() 
         if k not in ['conversation', '_secrets']
     })
+
