@@ -277,9 +277,6 @@ options_raw = query_params.get("opts", "Option A|Option B|Option C")
 options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 
-if st.query_params.get("save_now") == "true":
-    st.session_state.interaction_end_time = time.time()
-    save_progress()
 
 # Initialize Google Sheet on first load
 if st.session_state.first_load and not st.session_state.sheet_initialized:
@@ -300,7 +297,7 @@ if st.button("Get Recommendation"):
     st.session_state.conversation.append(("assistant", recommendation))
     st.session_state.usage_data['questions_asked'] += 1
     st.session_state.first_load = False
-    save_progress()
+    #save_progress()
 
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
@@ -310,7 +307,7 @@ if user_input:
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
     st.session_state.first_load = False
-    save_progress()
+    #save_progress()
 
 # Display conversation
 display_conversation()
