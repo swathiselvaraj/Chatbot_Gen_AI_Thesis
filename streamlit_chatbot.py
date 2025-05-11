@@ -36,6 +36,16 @@ if 'usage_data' not in st.session_state:
         'followups_asked': 0
     }
 
+# --- New Session State Initialization for Time Tracking ---
+if 'interaction_start_time' not in st.session_state:
+    st.session_state.interaction_start_time = None
+if 'interaction_end_time' not in st.session_state:
+    st.session_state.interaction_end_time = None
+if 'get_recommendation_used' not in st.session_state:
+    st.session_state.get_recommendation_used = False
+if 'followup_used' not in st.session_state:
+    st.session_state.followup_used = False
+
 # --- Data Loading ---
 @st.cache_resource
 def load_embedding_data():
@@ -80,54 +90,60 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
     except:
         return None
 
+# --- Google Sheets Integration ---
 def initialize_gsheet():
-    """Ensure Google Sheet and headers are ready"""
+    """Initialize the Google Sheet with proper headers"""
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
         sheet = gc.open("Chatbot Usage Log")
-
+        
         try:
             worksheet = sheet.worksheet("Logs")
         except:
-            worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=10)
-
-        headers = [
-            "participant_id",
-            "question_id",
-            "chatbot_used",
-            "questions_asked_to_chatbot",
-            "total_chatbot_time_seconds",
-            "timestamp"
+            worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=20)
+        
+        # Define and verify headers
+        expected_headers = [
+            "participant_id", "question_id", "chatbot_used",
+            "questions_asked_to_chatbot", "total_chatbot_time_seconds",
+            "get_recommendation", "further_question_asked", "timestamp"
         ]
+        
         current_headers = worksheet.row_values(1)
-
-        if current_headers != headers:
+        
+        if not current_headers or current_headers != expected_headers:
             worksheet.clear()
-            worksheet.append_row(headers)
-
+            worksheet.append_row(expected_headers)
+        
         return worksheet
+        
     except Exception as e:
-        st.error(f"Google Sheets init failed: {str(e)}")
+        st.error(f"Google Sheets initialization failed: {str(e)}")
         return None
 
-def save_to_gsheet(participant_id: str, question_id: str, questions_asked: int, start_time: float) -> bool:
-    """Save minimal data to Google Sheets"""
+def save_to_gsheet(data_dict: Dict) -> bool:
+    """Save data to Google Sheets with duplicate prevention"""
     try:
         worksheet = initialize_gsheet()
         if not worksheet:
             return False
-
-        chatbot_used = "yes" if questions_asked > 0 else "no"
-        total_time = round(time.time() - start_time, 2) if questions_asked > 0 else 0
-        timestamp = pd.Timestamp.now().isoformat()
-
-        row = [participant_id, question_id, chatbot_used, questions_asked, total_time, timestamp]
-        worksheet.append_row(row)
+            
+        # Get existing records
+        records = worksheet.get_all_records()
+        
+        # Check if this question has already been saved for this participant
+        for record in records:
+            if (record["participant_id"] == data_dict["participant_id"] and
+                record["question_id"] == data_dict["question_id"]):
+                return True  # Consider it a success but don't save again
+                
+        # If not found, append new row
+        worksheet.append_row(list(data_dict.values()))
         return True
+        
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
-
 
 # --- Core Chatbot Functions ---
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
@@ -223,24 +239,24 @@ def save_progress():
         return False
         
     try:
-        duration = time.time() - st.session_state.usage_data['start_time']
+        total_time = (
+            round(st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2)
+            if st.session_state.interaction_start_time and st.session_state.interaction_end_time
+            else 0
+        )
         
         usage_data = {
             "participant_id": participant_id,
             "question_id": question_id,
-            "timestamp": pd.Timestamp.now().isoformat(),
-            "duration_seconds": round(duration, 2),
-            "questions_asked": st.session_state.usage_data['questions_asked'],
-            "followups_asked": st.session_state.usage_data['followups_asked'],
-            "last_recommendation": (
-                str(st.session_state.last_recommendation)[:500] 
-                if st.session_state.last_recommendation is not None 
-                else ""
-            ),
-            "conversation_snapshot": json.dumps(st.session_state.conversation[-3:], ensure_ascii=False)
+            "chatbot_used": "yes" if (st.session_state.get_recommendation_used or st.session_state.followup_used) else "no",
+            "questions_asked_to_chatbot": st.session_state.usage_data['questions_asked'] + st.session_state.usage_data['followups_asked'],
+            "total_chatbot_time_seconds": total_time,
+            "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
+            "further_question_asked": "yes" if st.session_state.followup_used else "no",
+            "timestamp": pd.Timestamp.now().isoformat()
         }
         
-        if save_to_gsheet(participant_id, question_id, st.session_state.usage_data['questions_asked'], st.session_state.usage_data['start_time']):
+        if save_to_gsheet(usage_data):
             st.session_state.usage_data['start_time'] = time.time()
             st.session_state.already_saved = True
             return True
@@ -249,6 +265,8 @@ def save_progress():
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
         return False
+
+
 
 # --- Main App Logic ---
 # Get query parameters
