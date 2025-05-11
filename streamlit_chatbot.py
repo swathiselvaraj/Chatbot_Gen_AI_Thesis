@@ -245,20 +245,22 @@ def display_conversation():
             st.markdown(f"**Chatbot:** {message}")
 
 def save_progress():
-    """Save progress to Google Sheets only if not already saved"""
+    """Save or update progress in Google Sheets"""
     if st.session_state.already_saved:
         return True
-        
+
     if not st.session_state.usage_data['start_time']:
         return False
-        
+
     try:
-        total_time = (
-            round(st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2)
-            if st.session_state.interaction_start_time and st.session_state.interaction_end_time
-            else 0
-        )
-        
+        # Ensure timing variables are defined
+        if st.session_state.interaction_start_time and st.session_state.interaction_end_time:
+            total_time = round(
+                st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2
+            )
+        else:
+            total_time = 0
+
         usage_data = {
             "participant_id": participant_id,
             "question_id": question_id,
@@ -269,13 +271,14 @@ def save_progress():
             "further_question_asked": "yes" if st.session_state.followup_used else "no",
             "timestamp": pd.Timestamp.now().isoformat()
         }
-        
+
         if save_to_gsheet(usage_data):
             st.session_state.usage_data['start_time'] = time.time()
             st.session_state.already_saved = True
             return True
+
         return False
-        
+
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
         return False
