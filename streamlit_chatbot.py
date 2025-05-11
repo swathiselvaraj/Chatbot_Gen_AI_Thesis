@@ -270,6 +270,7 @@ def save_progress():
         st.error(f"Progress save failed: {str(e)}")
         return False
 
+
 # --- Main App Logic ---
 # Get query parameters
 
@@ -350,5 +351,3 @@ save_to_gsheet({
     "timestamp": pd.Timestamp.now().isoformat(),
     "total_chatbot_time_seconds": total_time
 })
-
-
