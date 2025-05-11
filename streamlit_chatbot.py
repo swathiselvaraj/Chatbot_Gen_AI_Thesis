@@ -80,61 +80,54 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
     except:
         return None
 
-# --- Google Sheets Integration ---
 def initialize_gsheet():
-    """Initialize the Google Sheet with proper headers"""
+    """Ensure Google Sheet and headers are ready"""
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
         sheet = gc.open("Chatbot Usage Log")
-        
+
         try:
             worksheet = sheet.worksheet("Logs")
         except:
-            worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=20)
-        
-        # Define and verify headers
-        expected_headers = [
-            "participant_id", "question_id", "timestamp",
-            "duration_seconds", "questions_asked",
-            "followups_asked", "last_recommendation",
-            "conversation_snapshot"
+            worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=10)
+
+        headers = [
+            "participant_id",
+            "question_id",
+            "chatbot_used",
+            "questions_asked_to_chatbot",
+            "total_chatbot_time_seconds",
+            "timestamp"
         ]
-        
         current_headers = worksheet.row_values(1)
-        
-        if not current_headers or current_headers != expected_headers:
+
+        if current_headers != headers:
             worksheet.clear()
-            worksheet.append_row(expected_headers)
-        
+            worksheet.append_row(headers)
+
         return worksheet
-        
     except Exception as e:
-        st.error(f"Google Sheets initialization failed: {str(e)}")
+        st.error(f"Google Sheets init failed: {str(e)}")
         return None
 
-def save_to_gsheet(data_dict: Dict) -> bool:
-    """Save data to Google Sheets with duplicate prevention"""
+def save_to_gsheet(participant_id: str, question_id: str, questions_asked: int, start_time: float) -> bool:
+    """Save minimal data to Google Sheets"""
     try:
         worksheet = initialize_gsheet()
         if not worksheet:
             return False
-            
-        # Get existing records
-        records = worksheet.get_all_records()
-        
-        # Check if this question has already been saved for this participant
-        for record in records:
-            if (record["participant_id"] == data_dict["participant_id"] and
-                record["question_id"] == data_dict["question_id"]):
-                return True  # Consider it a success but don't save again
-                
-        # If not found, append new row
-        worksheet.append_row(list(data_dict.values()))
+
+        chatbot_used = "yes" if questions_asked > 0 else "no"
+        total_time = round(time.time() - start_time, 2) if questions_asked > 0 else 0
+        timestamp = pd.Timestamp.now().isoformat()
+
+        row = [participant_id, question_id, chatbot_used, questions_asked, total_time, timestamp]
+        worksheet.append_row(row)
         return True
-        
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
+
 
 # --- Core Chatbot Functions ---
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
@@ -247,7 +240,7 @@ def save_progress():
             "conversation_snapshot": json.dumps(st.session_state.conversation[-3:], ensure_ascii=False)
         }
         
-        if save_to_gsheet(usage_data):
+        if save_to_gsheet(participant_id, question_id, st.session_state.usage_data['questions_asked'], st.session_state.usage_data['start_time']):
             st.session_state.usage_data['start_time'] = time.time()
             st.session_state.already_saved = True
             return True
