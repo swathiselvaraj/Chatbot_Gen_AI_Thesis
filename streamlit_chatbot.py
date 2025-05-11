@@ -274,12 +274,17 @@ def save_progress():
 # --- Main App Logic ---
 # Get query parameters
 
+# --- Main App Logic (continued) ---
+# Get query parameters
 query_params = st.query_params
+
+# Safely extract participant_id and question_id
 question_id = query_params.get("qid", "Q1")
 question_text = query_params.get("qtext", "What is your decision?")
 options_raw = query_params.get("opts", "Option A|Option B|Option C")
-options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
+options = [opt.strip() for opt in unquote(options_raw).split(";") if opt.strip()]
+
 
 # Initialize Google Sheet on first load
 if st.session_state.first_load and not st.session_state.sheet_initialized:
