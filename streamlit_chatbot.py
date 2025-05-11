@@ -122,28 +122,42 @@ def initialize_gsheet():
         return None
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-    """Save data to Google Sheets with duplicate prevention"""
     try:
         worksheet = initialize_gsheet()
         if not worksheet:
             return False
-            
-        # Get existing records
+
+        headers = worksheet.row_values(1)
         records = worksheet.get_all_records()
-        
-        # Check if this question has already been saved for this participant
-        for record in records:
+
+        target_row = None
+        for i, record in enumerate(records):
             if (record["participant_id"] == data_dict["participant_id"] and
                 record["question_id"] == data_dict["question_id"]):
-                return True  # Consider it a success but don't save again
-                
-        # If not found, append new row
-        worksheet.append_row(list(data_dict.values()))
+                target_row = i + 2  # +2 because gspread is 1-indexed and skips headers
+                break
+
+        if target_row:
+            # Row exists – update each column in data_dict
+            for key, value in data_dict.items():
+                if key in headers:
+                    col_index = headers.index(key) + 1
+                    worksheet.update_cell(target_row, col_index, value)
+        else:
+            # Row doesn't exist – fill in row with defaults
+            new_row = ["" for _ in headers]
+            for key, value in data_dict.items():
+                if key in headers:
+                    idx = headers.index(key)
+                    new_row[idx] = value
+            worksheet.append_row(new_row)
+
         return True
-        
+
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
+
 
 # --- Core Chatbot Functions ---
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
@@ -297,6 +311,13 @@ if st.button("Get Recommendation"):
     st.session_state.conversation.append(("assistant", recommendation))
     st.session_state.usage_data['questions_asked'] += 1
     st.session_state.first_load = False
+    save_to_gsheet({
+    "participant_id": participant_id,
+    "question_id": question_id,
+    "get_recommendation": "yes",
+    "chatbot_used": "yes"
+})
+
     #save_progress()
 
 # Follow-up input
@@ -307,6 +328,14 @@ if user_input:
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
     st.session_state.first_load = False
+    save_to_gsheet({
+    "participant_id": participant_id,
+    "question_id": question_id,
+    "further_question_asked": "yes",
+    "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
+    "chatbot_used": "yes"
+})
+
     #save_progress()
 
 # Display conversation
@@ -327,9 +356,11 @@ if query_params.get("debug", "false") == "true":
         if k not in ['conversation', '_secrets']
     })
 
-if st.button("Next"):
-    st.session_state.interaction_end_time = time.time()
-    if save_progress():
-        st.success("Progress saved. You may proceed.")
-    else:
-        st.error("Failed to save progress. Please try again.")
+save_to_gsheet({
+    "participant_id": participant_id,
+    "question_id": question_id,
+    "timestamp": pd.Timestamp.now().isoformat(),
+    "total_chatbot_time_seconds": total_time
+})
+
+
