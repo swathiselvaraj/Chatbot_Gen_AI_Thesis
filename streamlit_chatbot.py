@@ -574,67 +574,48 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 #         st.error(f"Follow-up validation failed: {str(e)}")
 #&&&
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-    # 1. First handle greetings and very short inputs
-    user_question = user_question.strip()
-    user_question_lower = user_question.lower()
+    user_question = user_question.strip().lower()
     
-    general_scores = []
-    for source in data["general_followups"]:
-        if source.get("embedding"):
-            score = cosine_similarity(user_embedding, source["embedding"])
-            general_scores.append((score, source))
-        
-        # Get the highest scoring general followup if above threshold
-        if general_scores:
-            max_score, best_match = max(general_scores, key=lambda x: x[0])
-            if max_score >= 0.85:  # Higher threshold for general followups
-                if "followup_text" in best_match:
-                    # For greetings, return a simple response
-                    if best_match["followup_text"].lower() in ["hi", "hello", "hey"]:
-                        return "Hello! How can I help you with your survey question?"
-                    # For other general followups, return their response
-                    return best_match.get("response", "How can I help you?")
-        
+    # 1. First handle greetings and very short inputs
+    if user_question in ["hi", "hello", "hey"]:
+        return "Hello! How can I help you with your survey question?"
     
     # 2. Check for option references (e.g., "option 1")
-    option_ref_match = re.search(r"option\s*([1-4])\b", user_question_lower)
+    option_ref_match = re.search(r"option\s*([1-4])\b", user_question)
+    referenced_option = None
     
-    # 3. Prepare conversation history (only if we might use GPT)
-    history = []
-    if option_ref_match or len(user_question.split()) > 1:  # Only prepare if not greeting
-        if st.session_state.last_recommendation:
-            history.append((f"Original question: {question_text}", 
-                          st.session_state.last_recommendation))
-        history.append((f"Follow-up: {user_question}", ""))
-    
-    # 4. Handle direct option references immediately
     if option_ref_match:
         referenced_option_idx = int(option_ref_match.group(1)) - 1
         if 0 <= referenced_option_idx < len(options):
-            history.append((f"User asked about: {options[referenced_option_idx]}", ""))
+            referenced_option = options[referenced_option_idx]
+
+    # 3. Prepare conversation history
+    history = []
+    if st.session_state.last_recommendation:
+        history.append((f"Original question: {question_text}", 
+                      st.session_state.last_recommendation))
+    history.append((f"Follow-up: {user_question}", ""))
+    
+    # 4. Handle direct option references
+    if option_ref_match:
         return get_gpt_recommendation(
             user_question,
             options=options,
             history=history,
-            is_followup=True
+            is_followup=True,
+            referenced_option=referenced_option
         )
     
-    # 5. For non-greeting, non-option questions:
+    # 5. For other questions, get embedding and check similarity
     user_embedding = get_embedding(user_question)
     
-    # First check general followups with high threshold
-    general_scores = []
+    # Check general followups
     for source in data["general_followups"]:
-        if source.get("embedding"):
-            score = cosine_similarity(user_embedding, source["embedding"])
-            if score >= 0.85:  # Very high threshold for general questions
-                general_scores.append((score, source))
+        if (source.get("embedding") and 
+            cosine_similarity(user_embedding, source["embedding"]) >= 0.85):
+            return source.get("response", "How can I help you?")
     
-    if general_scores:
-        best_match = max(general_scores, key=lambda x: x[0])[1]
-        return best_match.get("response", "How can I help with the survey?")
-    
-    # Then check question-specific followups
+    # Check question-specific followups
     for source in data["questions"]:
         if (source.get("embedding") and 
             source.get("question_id") == question_id and
