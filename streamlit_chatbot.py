@@ -318,6 +318,12 @@ def save_progress():
             st.session_state.usage_data['start_time'] = time.time()
             st.session_state.already_saved = True
             return True
+        save_to_gsheet({
+            "participant_id": participant_id,
+            "question_id": question_id,
+            "timestamp": pd.Timestamp.now().isoformat(),
+            "total_chatbot_time_seconds": total_time
+        })
 
         return False
 
@@ -408,9 +414,3 @@ if query_params.get("debug", "false") == "true":
    })
 
 
-save_to_gsheet({
-   "participant_id": participant_id,
-   "question_id": question_id,
-   "timestamp": pd.Timestamp.now().isoformat(),
-   "total_chatbot_time_seconds": total_time
-})
