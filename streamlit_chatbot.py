@@ -737,7 +737,13 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
 #         return "Sorry, I couldn't generate a recommendation due to an error."
 
 ###&&&
-def get_gpt_recommendation(question: str, options: List[str] = None, history: List[Tuple[str, str]] = None) -> str:
+def get_gpt_recommendation(
+    question: str, 
+    options: List[str] = None, 
+    history: List[Tuple[str, str]] = None,
+    is_followup: bool = False,
+    referenced_option: Optional[str] = None
+) -> str:
     try:
         messages = []
         
@@ -748,28 +754,44 @@ def get_gpt_recommendation(question: str, options: List[str] = None, history: Li
                     messages.append({"role": "user", "content": q})
                 if a.strip():
                     messages.append({"role": "assistant", "content": a})
-        
-        # Build the prompt
-        options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
-        
-        prompt = f"""Survey Question: {question_text}
+
+        # Different processing for follow-up vs initial recommendation
+        if is_followup:
+            # Follow-up question mode - focused analysis
+            prompt = f"""The user has asked a follow-up question about a survey recommendation.
+Context:
+- Original question: {question_text}
+- Options: {chr(10).join(options)}
+{f"- Referenced option: {referenced_option}" if referenced_option else ""}
+
+Please answer concisely in under 50 words, focusing on the specific option mentioned if applicable.
+
+Respond in this format:
+"Answer: <your answer>"
+"""
+        else:
+            # Initial recommendation mode - full recommendation
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+            prompt = f"""Survey Question: {question}
 Available Options:
 {options_text}
 
-The user has referenced a specific option. Provide a detailed analysis of why this option might be a good or bad choice. Keep the response under 50 words.
+Please recommend the best option with reasoning. Limit your response to 50 words.
 
 Respond in this format:
-"Analysis: <your detailed response>"
+"Recommended option: <text>"
+
+"Reason: <short explanation>"
 """
-        
+
         messages.append({"role": "user", "content": prompt})
-        
+
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
             temperature=0.7
         )
-        
+
         result = response.choices[0].message.content
         st.session_state.last_recommendation = result
         return result
@@ -777,6 +799,39 @@ Respond in this format:
     except Exception as e:
         st.error(f"Recommendation generation failed: {str(e)}")
         return "Sorry, I couldn't generate a recommendation due to an error."
+
+
+def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
+    try:
+        # Check for option reference
+        option_ref_match = re.search(r"option\s*([1-4])\b", user_question.lower())
+        referenced_option = None
+        
+        if option_ref_match:
+            referenced_option_idx = int(option_ref_match.group(1)) - 1
+            if 0 <= referenced_option_idx < len(options):
+                referenced_option = options[referenced_option_idx]
+
+        # Prepare conversation history
+        history = []
+        if st.session_state.last_recommendation:
+            history.append((f"Original survey question: {question_text}", 
+                           st.session_state.last_recommendation))
+        
+        history.append((f"Follow-up: {user_question}", ""))
+
+        # Process as follow-up question with referenced option
+        return get_gpt_recommendation(
+            question=user_question,
+            options=options,
+            history=history,
+            is_followup=True,
+            referenced_option=referenced_option
+        )
+        
+    except Exception as e:
+        st.error(f"Follow-up validation failed: {str(e)}")
+        return "Sorry, I encountered an error processing your question."
 def display_conversation():
    if 'conversation' not in st.session_state:
        st.session_state.conversation = []
