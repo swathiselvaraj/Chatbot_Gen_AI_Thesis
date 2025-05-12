@@ -138,13 +138,28 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
 #     if st.session_state.interaction_start_time:
 #         st.session_state.total_interaction_time = now - st.session_state.interaction_start_time
 
+# def update_interaction_time():
+#     now = time.time()
+#     if not st.session_state.interaction_active:
+#         st.session_state.interaction_start_time = now
+#         st.session_state.interaction_active = True
+#     st.session_state.last_interaction_time = now
+#     st.session_state.total_interaction_time = now - st.session_state.interaction_start_time
+
 def update_interaction_time():
     now = time.time()
     if not st.session_state.interaction_active:
         st.session_state.interaction_start_time = now
         st.session_state.interaction_active = True
     st.session_state.last_interaction_time = now
-    st.session_state.total_interaction_time = now - st.session_state.interaction_start_time
+
+def end_interaction_and_accumulate_time():
+    if st.session_state.interaction_active and st.session_state.interaction_start_time:
+        now = time.time()
+        duration = now - st.session_state.interaction_start_time
+        st.session_state.total_interaction_time += duration
+        st.session_state.interaction_active = False
+        st.session_state.interaction_start_time = None
 # --- Google Sheets Integration ---
 # def initialize_gsheet():
 #    """Initialize the Google Sheet with proper headers"""
@@ -483,38 +498,32 @@ if question_id != st.session_state.get('last_question_id'):
    #     save_progress()
 
 
-# Recommendation button
-# if st.button("Get Recommendation"):
-#    recommendation = get_gpt_recommendation(question_text, options)
-#    st.session_state.conversation.append(("assistant", recommendation))
-#    st.session_state.usage_data['questions_asked'] += 1
-#    st.session_state.first_load = False
-#    save_to_gsheet({
-#    "participant_id": participant_id,
-#    "question_id": question_id,
-#    "get_recommendation": "yes",
-#    "chatbot_used": "yes"
-# })
+
+
 
 # if st.button("Get Recommendation"):
-#     update_interaction_time()  # Start/update timer
+#     update_interaction_time()
 #     recommendation = get_gpt_recommendation(question_text, options)
 #     st.session_state.conversation.append(("assistant", recommendation))
-#     st.session_state.get_recommendation_used = True
-#     st.session_state.usage_data['questions_asked'] += 1
-#     st.session_state.first_load = False
-#     save_to_gsheet({
-#         "participant_id": participant_id,
-#         "question_id": question_id,
-#         "get_recommendation": "yes",
-#         "chatbot_used": "yes",
-#         "total_chatbot_time_seconds": st.session_state.total_interaction_time
+    
+#     # Update usage data
+#     st.session_state.usage_data.update({
+#         'chatbot_used': True,
+#         'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
+#         'get_recommendation': True,
+#         'total_time': st.session_state.total_interaction_time
 #     })
+    
+#     save_session_data()  # Single save point
+
+   #save_progress()
 if st.button("Get Recommendation"):
     update_interaction_time()
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
     
+    end_interaction_and_accumulate_time()
+
     # Update usage data
     st.session_state.usage_data.update({
         'chatbot_used': True,
@@ -522,45 +531,45 @@ if st.button("Get Recommendation"):
         'get_recommendation': True,
         'total_time': st.session_state.total_interaction_time
     })
+
+    save_session_data()
+
+
+# if user_input := st.text_input("Ask a follow-up question:"):
+#     update_interaction_time()
+#     st.session_state.conversation.append(("user", user_input))
+#     response = validate_followup(user_input, question_id, options)
+#     st.session_state.conversation.append(("assistant", response))
     
-    save_session_data()  # Single save point
+#     # Update usage data
+#     st.session_state.usage_data.update({
+#         'chatbot_used': True,
+#         'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
+#         'followup_used': True,
+#         'total_time': st.session_state.total_interaction_time
+#     })
+    
+#     save_session_data()
 
    #save_progress()
 
-
-#Follow-up input
-# user_input = st.text_input("Ask a follow-up question:")
-# if user_input:
-#    st.session_state.conversation.append(("user", user_input))
-#    response = validate_followup(user_input, question_id, options)
-#    st.session_state.conversation.append(("assistant", response))
-#    st.session_state.usage_data['followups_asked'] += 1
-#    st.session_state.first_load = False
-#    save_to_gsheet({
-#    "participant_id": participant_id,
-#    "question_id": question_id,
-#    "further_question_asked": "yes",
-#    "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
-#    "chatbot_used": "yes"
-# })
-# Follow-up input
-if user_input := st.text_input("Ask a follow-up question:"):
+user_input = st.text_input("Ask a follow-up question:")
+if user_input:
     update_interaction_time()
     st.session_state.conversation.append(("user", user_input))
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
     
-    # Update usage data
+    end_interaction_and_accumulate_time()
+
     st.session_state.usage_data.update({
         'chatbot_used': True,
-        'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
         'followup_used': True,
+        'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
         'total_time': st.session_state.total_interaction_time
     })
-    
-    save_session_data()
 
-   #save_progress()
+    save_session_data()
 
 
 # Display conversation
