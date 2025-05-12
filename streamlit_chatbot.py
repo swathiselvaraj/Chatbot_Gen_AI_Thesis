@@ -397,71 +397,39 @@ def save_to_gsheet(data_dict: Dict) -> bool:
         return False
 
 # --- Core Chatbot Functions ---
-# def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-#    try:
-#        user_embedding = get_embedding(user_question)
-#        referenced_option = extract_referenced_option(user_question, options)
+def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
+   try:
+       user_embedding = get_embedding(user_question)
+       referenced_option = extract_referenced_option(user_question, options)
       
-#        history = []
+       history = []
       
-#        if st.session_state.last_recommendation:
-#            history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
+       if st.session_state.last_recommendation:
+           history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
 
 
-#        history.append((f"Follow-up: {user_question}", ""))
+       history.append((f"Follow-up: {user_question}", ""))
 
 
-#        if referenced_option:
-#            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
+       if referenced_option:
+           history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
 
 
-#        for source in data["general_followups"] + data["questions"]:
-#            if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
-#                score = cosine_similarity(user_embedding, source["embedding"])
-#                if score >= 0.70:
-#                    return get_gpt_recommendation(user_question, options=options, history=history)
+       for source in data["general_followups"] + data["questions"]:
+           if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
+               score = cosine_similarity(user_embedding, source["embedding"])
+               if score >= 0.70:
+                   return get_gpt_recommendation(user_question, options=options, history=history)
 
 
-#        return "Please ask a question related to the current survey topic."
-#    except Exception as e:
-#        st.error(f"Follow-up validation failed: {str(e)}")
-#        return "Sorry, I encountered an error processing your question."
-#-------
+       return "Please ask a question related to the current survey topic."
+   except Exception as e:
+       st.error(f"Follow-up validation failed: {str(e)}")
 
 
 
 # Modify the validate_followup function to replace option references:
-def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-    try:
-        # Replace option references in the user question before getting embedding
-        processed_question = user_question.lower()
-        for option_ref, option_text in option_mapping.items():
-            if option_text:  # Only replace if we have text for this option
-                processed_question = processed_question.replace(option_ref, option_text.lower())
-        
-        user_embedding = get_embedding(processed_question)
-        referenced_option = extract_referenced_option(user_question, options)
-        
-        history = []
-        
-        if st.session_state.last_recommendation:
-            history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
 
-        history.append((f"Follow-up: {user_question}", ""))
-
-        if referenced_option:
-            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
-
-        for source in data["general_followups"] + data["questions"]:
-            if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
-                score = cosine_similarity(user_embedding, source["embedding"])
-                if score >= 0.70:
-                    return get_gpt_recommendation(user_question, options=options, history=history)
-
-        return "Please ask a question related to the current survey topic."
-    except Exception as e:
-        st.error(f"Follow-up validation failed: {str(e)}")
-        return "Sorry, I encountered an error processing your question."
 def get_gpt_recommendation(question: str, options: List[str] = None, history: List[Tuple[str, str]] = None) -> str:
    try:
        messages = []
