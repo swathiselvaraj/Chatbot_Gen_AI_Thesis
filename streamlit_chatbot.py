@@ -122,29 +122,39 @@ def initialize_gsheet():
         return None
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-    """Save data to Google Sheets with duplicate prevention"""
+    """Save or update data in Google Sheets"""
     try:
         worksheet = initialize_gsheet()
         if not worksheet:
             return False
             
-        # Get existing records
+        # Get all records
         records = worksheet.get_all_records()
         
-        # Check if this question has already been saved for this participant
-        for record in records:
+        # Find existing row (if any)
+        row_to_update = None
+        for i, record in enumerate(records, start=2):  # start=2 because row 1 is headers
             if (record["participant_id"] == data_dict["participant_id"] and
                 record["question_id"] == data_dict["question_id"]):
-                return True  # Consider it a success but don't save again
+                row_to_update = i
+                break
                 
-        # If not found, append new row
-        worksheet.append_row(list(data_dict.values()))
+        # Prepare the data in correct order
+        headers = worksheet.row_values(1)
+        new_row = [data_dict.get(col, "") for col in headers]
+        
+        if row_to_update:
+            # Update existing row
+            worksheet.update(f"A{row_to_update}", [new_row])
+        else:
+            # Append new row
+            worksheet.append_row(new_row)
+            
         return True
         
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
-
 # --- Core Chatbot Functions ---
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
     try:
@@ -232,9 +242,6 @@ def display_conversation():
 
 def save_progress():
     """Save or update progress in Google Sheets"""
-    if st.session_state.already_saved:
-        return True
-
     try:
         # Calculate interaction time
         total_time = 0
@@ -247,23 +254,18 @@ def save_progress():
         usage_data = {
             "participant_id": participant_id,
             "question_id": question_id,
-            "chatbot_used": "yes" if (st.session_state.get_recommendation_used or 
-                                    st.session_state.followup_used) else "no",
+            "chatbot_used": "yes",  # Always yes if we're saving
             "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
             "total_chatbot_time_seconds": total_time,
             "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
             "further_question_asked": "yes" if st.session_state.followup_used else "no"
         }
 
-        if save_to_gsheet(usage_data):
-            st.session_state.already_saved = True
-            return True
-        return False
+        return save_to_gsheet(usage_data)
 
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
         return False
-
 # --- Main App Logic ---
 # Get query parameters
 
@@ -320,7 +322,7 @@ if user_input:
     st.session_state.followup_used = True
     st.session_state.first_load = False
     st.session_state.interaction_end_time = time.time()  # End timer
-    save_progress()
+    save_progress()  # This will now UPDATE the existing row
 
     #save_progress()
 
