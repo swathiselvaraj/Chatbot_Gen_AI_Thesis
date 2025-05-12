@@ -764,7 +764,7 @@ Context:
 - Options: {chr(10).join(options)}
 {f"- Referenced option: {referenced_option}" if referenced_option else ""}
 
-Provide a detailed analysis of why this option might be a good or bad choice or answer any other question the user asks. Keep the response under 50 words.
+If the user has referenced a specific option. Provide a detailed analysis of why this option might be a good or bad choice.If they did not refer an option just give answer to the question asked or text entered. Keep the response under 50 words.
 
 Respond in this format:
 "Answer: <your answer>"
