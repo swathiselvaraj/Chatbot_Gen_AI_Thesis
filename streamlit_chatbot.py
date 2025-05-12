@@ -242,10 +242,10 @@ def save_progress():
         total_time = 0
         if (
             st.session_state.get("interaction_start_time") is not None and
-            st.session_state.get("interaction_end_time") is not None
+            st.session_state.get("interaction_end_time") is not None  # Fix this typo
         ):
             total_time = round(
-                st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2
+                st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2  # Fix this typo
             )
 
         usage_data = {
@@ -269,7 +269,6 @@ def save_progress():
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
         return False
-
 
 # --- Main App Logic ---
 # Get query parameters
@@ -298,7 +297,11 @@ if question_id != st.session_state.get('last_question_id'):
     st.session_state.already_saved = False  # Reset saved flag for new question
     # if not st.session_state.first_load:
     #     save_progress()
+# At the start of an interaction (e.g., when Get Recommendation is clicked)
+st.session_state.interaction_start_time = time.time()
 
+# At the end of an interaction (e.g., after getting a response)
+st.session_state.interaction_end_time = time.time()
 # Recommendation button
 if st.button("Get Recommendation"):
     recommendation = get_gpt_recommendation(question_text, options)
