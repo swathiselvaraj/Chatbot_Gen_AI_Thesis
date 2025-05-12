@@ -32,12 +32,24 @@ if 'already_saved' not in st.session_state:  # New flag to track saves
    st.session_state.already_saved = False
 
 
+# if 'usage_data' not in st.session_state:
+#    st.session_state.usage_data = {
+#        'start_time': time.time(),
+#        'questions_asked': 0,
+#        'followups_asked': 0
+#    }
+
 if 'usage_data' not in st.session_state:
-   st.session_state.usage_data = {
-       'start_time': time.time(),
-       'questions_asked': 0,
-       'followups_asked': 0
-   }
+    st.session_state.usage_data = {
+        'participant_id': participant_id,
+        'question_id': question_id,
+        'chatbot_used': False,
+        'questions_asked': 0,
+        'get_recommendation': False,
+        'followup_used': False,
+        'start_time': None,
+        'total_time': 0
+    }
 
 
 # --- New Session State Initialization for Time Tracking ---
@@ -151,50 +163,105 @@ def initialize_gsheet():
        st.error(f"Google Sheets initialization failed: {str(e)}")
        return None
 
+def save_session_data():
+    if not st.session_state.usage_data['start_time']:
+        return False
+
+    total_time = time.time() - st.session_state.usage_data['start_time']
+    
+    data = {
+        "participant_id": st.session_state.usage_data['participant_id'],
+        "question_id": st.session_state.usage_data['question_id'],
+        "chatbot_used": "yes" if st.session_state.usage_data['chatbot_used'] else "no",
+        "questions_asked_to_chatbot": st.session_state.usage_data['questions_asked'],
+        "total_chatbot_time_seconds": round(total_time, 2),
+        "get_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+        "further_question_asked": "yes" if st.session_state.usage_data['followup_used'] else "no"
+    }
+    
+    return save_to_gsheet(data)
+
+# def save_to_gsheet(data_dict: Dict) -> bool:
+#    try:
+#        worksheet = initialize_gsheet()
+#        if not worksheet:
+#            return False
+
+
+#        headers = worksheet.row_values(1)
+#        records = worksheet.get_all_records()
+
+
+#        target_row = None
+#        for i, record in enumerate(records):
+#            if (record["participant_id"] == data_dict["participant_id"] and
+#                record["question_id"] == data_dict["question_id"]):
+#                target_row = i + 2  # +2 because gspread is 1-indexed and skips headers
+#                break
+
+
+#        if target_row:
+#            # Row exists – update each column in data_dict
+#            for key, value in data_dict.items():
+#                if key in headers:
+#                    col_index = headers.index(key) + 1
+#                    worksheet.update_cell(target_row, col_index, value)
+#        else:
+#            # Row doesn't exist – fill in row with defaults
+#            new_row = ["" for _ in headers]
+#            for key, value in data_dict.items():
+#                if key in headers:
+#                    idx = headers.index(key)
+#                    new_row[idx] = value
+#            worksheet.append_row(new_row)
+
+
+#        return True
+
+
+#    except Exception as e:
+#        st.error(f"Failed to save to Google Sheets: {str(e)}")
+#        return False
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-   try:
-       worksheet = initialize_gsheet()
-       if not worksheet:
-           return False
+    try:
+        worksheet = initialize_gsheet()
+        if not worksheet:
+            return False
 
+        # Find existing row for this participant+question
+        records = worksheet.get_all_records()
+        row_index = None
+        
+        for i, record in enumerate(records):
+            if (record["participant_id"] == data_dict["participant_id"] and 
+                record["question_id"] == data_dict["question_id"]):
+                row_index = i + 2  # +2 for header and 1-based index
+                break
 
-       headers = worksheet.row_values(1)
-       records = worksheet.get_all_records()
+        # Prepare complete data row
+        headers = worksheet.row_values(1)
+        row_data = {k: "" for k in headers}  # Start with empty values
+        
+        # Update with our data
+        for key, value in data_dict.items():
+            if key in headers:
+                row_data[key] = value
 
+        # Convert to list in correct column order
+        ordered_data = [row_data.get(h, "") for h in headers]
 
-       target_row = None
-       for i, record in enumerate(records):
-           if (record["participant_id"] == data_dict["participant_id"] and
-               record["question_id"] == data_dict["question_id"]):
-               target_row = i + 2  # +2 because gspread is 1-indexed and skips headers
-               break
+        if row_index:
+            # Update existing row
+            worksheet.update(f"A{row_index}:{chr(64+len(headers))}{row_index}", [ordered_data])
+        else:
+            # Add new row
+            worksheet.append_row(ordered_data)
 
-
-       if target_row:
-           # Row exists – update each column in data_dict
-           for key, value in data_dict.items():
-               if key in headers:
-                   col_index = headers.index(key) + 1
-                   worksheet.update_cell(target_row, col_index, value)
-       else:
-           # Row doesn't exist – fill in row with defaults
-           new_row = ["" for _ in headers]
-           for key, value in data_dict.items():
-               if key in headers:
-                   idx = headers.index(key)
-                   new_row[idx] = value
-           worksheet.append_row(new_row)
-
-
-       return True
-
-
-   except Exception as e:
-       st.error(f"Failed to save to Google Sheets: {str(e)}")
-       return False
-
-
+        return True
+    except Exception as e:
+        st.error(f"Failed to save to Google Sheets: {str(e)}")
+        return False
 
 
 # --- Core Chatbot Functions ---
@@ -389,20 +456,37 @@ if question_id != st.session_state.get('last_question_id'):
 #    "chatbot_used": "yes"
 # })
 
+# if st.button("Get Recommendation"):
+#     update_interaction_time()  # Start/update timer
+#     recommendation = get_gpt_recommendation(question_text, options)
+#     st.session_state.conversation.append(("assistant", recommendation))
+#     st.session_state.get_recommendation_used = True
+#     st.session_state.usage_data['questions_asked'] += 1
+#     st.session_state.first_load = False
+#     save_to_gsheet({
+#         "participant_id": participant_id,
+#         "question_id": question_id,
+#         "get_recommendation": "yes",
+#         "chatbot_used": "yes",
+#         "total_chatbot_time_seconds": st.session_state.total_interaction_time
+#     })
+
+# Recommendation button
 if st.button("Get Recommendation"):
-    update_interaction_time()  # Start/update timer
+    if not st.session_state.usage_data['start_time']:
+        st.session_state.usage_data['start_time'] = time.time()
+    
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
-    st.session_state.get_recommendation_used = True
-    st.session_state.usage_data['questions_asked'] += 1
-    st.session_state.first_load = False
-    save_to_gsheet({
-        "participant_id": participant_id,
-        "question_id": question_id,
-        "get_recommendation": "yes",
-        "chatbot_used": "yes",
-        "total_chatbot_time_seconds": st.session_state.total_interaction_time
+    
+    # Update usage data
+    st.session_state.usage_data.update({
+        'chatbot_used': True,
+        'questions_asked': st.session_state.usage_data['questions_asked'] + 1,
+        'get_recommendation': True
     })
+    
+    save_session_data()
 
 
    #save_progress()
@@ -424,6 +508,23 @@ if st.button("Get Recommendation"):
 #    "chatbot_used": "yes"
 # })
 
+user_input = st.text_input("Ask a follow-up question:")
+if user_input:
+    if not st.session_state.usage_data['start_time']:
+        st.session_state.usage_data['start_time'] = time.time()
+    
+    st.session_state.conversation.append(("user", user_input))
+    response = validate_followup(user_input, question_id, options)
+    st.session_state.conversation.append(("assistant", response))
+    
+    # Update usage data
+    st.session_state.usage_data.update({
+        'chatbot_used': True,
+        'questions_asked': st.session_state.usage_data['questions_asked'] + 1,
+        'followup_used': True
+    })
+    
+    save_session_data()
 
    #save_progress()
 
