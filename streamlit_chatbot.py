@@ -581,6 +581,26 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
     if option_ref_match:
         referenced_option_idx = int(option_ref_match.group(1)) - 1  # Convert to 0-based index
         referenced_option = options[referenced_option_idx] if 0 <= referenced_option_idx < len(options) else None
+    
+    greetings = {"hi", "hello", "hey", "greetings"}
+    if user_question_lower.rstrip('!') in greetings:
+        return "Hello! How can I help you with your survey question?"
+    
+    # Check general followups with embeddings
+    user_embedding = get_embedding(user_question)
+    general_scores = []
+    
+    for source in data["general_followups"]:
+        if source.get("embedding"):
+            score = cosine_similarity(user_embedding, source["embedding"])
+            general_scores.append((score, source))
+    
+    if general_scores:
+        max_score, best_match = max(general_scores, key=lambda x: x[0])
+        if max_score >= 0.85:  # Higher threshold for general followups
+            if best_match.get("response"):
+                return best_match["response"]
+            return "How can I help you with your survey question?"
         
         # Prepare conversation history
         history = []
