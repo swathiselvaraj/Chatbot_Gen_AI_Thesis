@@ -209,23 +209,33 @@ def initialize_gsheet():
 
 
 def save_session_data():
-    if not st.session_state.usage_data['start_time']:
+    try:
+        if not st.session_state.usage_data['start_time']:
+            st.session_state.usage_data['start_time'] = time.time()  # ensure start_time is set
+
+        total_time = time.time() - st.session_state.usage_data['start_time']
+
+        data = {
+            "participant_id": st.session_state.usage_data['participant_id'],
+            "question_id": st.session_state.usage_data['question_id'],
+            "chatbot_used": "yes" if st.session_state.usage_data['chatbot_used'] else "no",
+            "questions_asked": st.session_state.usage_data['questions_asked'],
+            "total_time_seconds": round(total_time, 2),
+            "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+            "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+            "record_timestamp": pd.Timestamp.now().isoformat()
+        }
+
+        # ✅ Move this AFTER total_time is calculated
+        if save_to_gsheet(data):
+            st.session_state.already_saved = True
+            return True
+
         return False
 
-    total_time = time.time() - st.session_state.usage_data['start_time']
-    
-    data = {
-        "participant_id": st.session_state.usage_data['participant_id'],
-        "question_id": st.session_state.usage_data['question_id'],
-        "chatbot_used": "yes" if st.session_state.usage_data['chatbot_used'] else "no",
-        "questions_asked": st.session_state.usage_data['questions_asked'],
-        "total_time_seconds": round(total_time, 2),
-        "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
-        "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
-        "record_timestamp": pd.Timestamp.now().isoformat()
-    }
-    
-    return save_to_gsheet(data)
+    except Exception as e:
+        st.error(f"Session save failed: {str(e)}")
+        return False
 
 
 # def save_to_gsheet(data_dict: Dict) -> bool:
@@ -451,11 +461,6 @@ def save_progress():
 
 # --- Main App Logic ---
 # Get query parameters
-
-
-
-
-
 
 # Initialize Google Sheet on first load
 if st.session_state.first_load and not st.session_state.sheet_initialized:
