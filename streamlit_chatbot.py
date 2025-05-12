@@ -695,5 +695,3 @@ if query_params.get("debug", "false") == "true":
        if k not in ['conversation', '_secrets']
    })
 
-
-i want to pass the texts of the option as per the number given by the user in the follow up text and i want the chatbot to answer all the questions asked by the user when 
