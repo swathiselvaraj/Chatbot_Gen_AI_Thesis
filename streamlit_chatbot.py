@@ -103,15 +103,7 @@ def initialize_gsheet():
             worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=20)
         
         # Define and verify headers
-       expected_headers = [
-        "participant_id", 
-        "question_id", 
-        "chatbot_used",
-        "questions_asked_to_chatbot", 
-        "total_chatbot_time_seconds",
-        "get_recommendation", 
-        "further_question_asked"  # Removed timestamp
-        ]
+       expected_headers = ["participant_id","question_id","chatbot_used","questions_asked_to_chatbot","total_chatbot_time_seconds","get_recommendation","further_question_asked"]
         
         current_headers = worksheet.row_values(1)
         
