@@ -325,6 +325,8 @@ if st.button("Get Recommendation"):
 # Follow-up input
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
+
+# Only process follow-up if it's new and not already handled
 if user_input and user_input not in st.session_state.handled_followups:
     st.session_state.handled_followups.add(user_input)
     st.session_state.conversation.append(("user", user_input))
@@ -336,10 +338,11 @@ if user_input and user_input not in st.session_state.handled_followups:
         st.success("Follow-up saved successfully!")
     else:
         st.warning("Couldn't save follow-up - please try again")
-    
-    # Instead of rerun, use this to force refresh:
+
+    # Force a refresh after handling input
     time.sleep(0.5)
     st.rerun()
+
 
 # Display conversation
 display_conversation()
