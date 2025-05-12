@@ -296,10 +296,16 @@ def save_to_gsheet(data_dict: Dict) -> bool:
         
         # Find existing record
         row_index = None
+        # for i, record in enumerate(records):
+        #     if (str(record.get("participant_id")) == str(data_dict.get("participant_id")) and 
+        #         str(record.get("question_id")) == str(data_dict.get("question_id"))):
+        #         row_index = i + 2  # +2 for header and 1-based index
+        #         break
         for i, record in enumerate(records):
-            if (str(record.get("participant_id")) == str(data_dict.get("participant_id")) and 
-                str(record.get("question_id")) == str(data_dict.get("question_id"))):
-                row_index = i + 2  # +2 for header and 1-based index
+            pid_match = str(record.get("participant_id", "")).strip() == str(data_dict.get("participant_id", "")).strip()
+            qid_match = str(record.get("question_id", "")).strip() == str(data_dict.get("question_id", "")).strip()
+            if pid_match and qid_match:
+                row_index = i + 2  # +2 to account for header row and 1-based indexing
                 break
 
         # Prepare complete data row
