@@ -44,6 +44,17 @@ if 'already_saved' not in st.session_state:  # New flag to track saves
 #        'followups_asked': 0
 #    }
 
+# if 'usage_data' not in st.session_state:
+#     st.session_state.usage_data = {
+#         'participant_id': participant_id,
+#         'question_id': question_id,
+#         'chatbot_used': False,
+#         'questions_asked': 0,
+#         'get_recommendation': False,
+#         'followup_used': False,
+#         'start_time': None,
+#         'total_time': 0
+#     }
 if 'usage_data' not in st.session_state:
     st.session_state.usage_data = {
         'participant_id': participant_id,
@@ -53,9 +64,8 @@ if 'usage_data' not in st.session_state:
         'get_recommendation': False,
         'followup_used': False,
         'start_time': None,
-        'total_time': 0
+        'total_time': 0  # This will accumulate all interaction time
     }
-
 
 # --- New Session State Initialization for Time Tracking ---
 # if 'interaction_start_time' not in st.session_state:
@@ -148,9 +158,11 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
 
 def update_interaction_time():
     now = time.time()
+    # If no interaction is active, start a new one
     if not st.session_state.interaction_active:
         st.session_state.interaction_start_time = now
         st.session_state.interaction_active = True
+    # Always update the last interaction time
     st.session_state.last_interaction_time = now
 
 def end_interaction_and_accumulate_time():
@@ -521,9 +533,8 @@ if st.button("Get Recommendation"):
     update_interaction_time()
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
-    
     end_interaction_and_accumulate_time()
-
+    
     # Update usage data
     st.session_state.usage_data.update({
         'chatbot_used': True,
@@ -531,7 +542,6 @@ if st.button("Get Recommendation"):
         'get_recommendation': True,
         'total_time': st.session_state.total_interaction_time
     })
-
     save_session_data()
 
 
@@ -559,7 +569,6 @@ if user_input:
     st.session_state.conversation.append(("user", user_input))
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
-    
     end_interaction_and_accumulate_time()
 
     st.session_state.usage_data.update({
@@ -568,7 +577,6 @@ if user_input:
         'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
         'total_time': st.session_state.total_interaction_time
     })
-
     save_session_data()
 
 
