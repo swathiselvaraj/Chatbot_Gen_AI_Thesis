@@ -234,19 +234,22 @@ if st.button("Get Recommendation"):
 
 # Follow-up Input
 user_input = st.text_input("Ask a follow-up question:")
-if user_input:
+if user_input and (not st.session_state.conversation or st.session_state.conversation[-1][1] != user_input):
+    # Add user message
     st.session_state.conversation.append(("user", user_input))
+
+    # Call validation logic
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
-    followup_start_index = next((i for i, (role, _) in enumerate(st.session_state.conversation) if role == "assistant"), None)
-    if followup_start_index is not None:
-        st.session_state.usage_data['followups_asked'] = sum(
-            1 for role, _ in st.session_state.conversation[followup_start_index + 1:] if role == "user"
-        )
+
+    # Track follow-up question count manually
+    st.session_state.usage_data['followups_asked'] += 1
+
     if save_progress():
         st.success("Response saved!")
     time.sleep(0.3)
     st.rerun()
+
 
 # Display conversation
 display_conversation()
