@@ -29,6 +29,7 @@ if 'sheet_initialized' not in st.session_state:
 if 'already_saved' not in st.session_state:  # New flag to track saves
     st.session_state.already_saved = False
 
+
 if 'usage_data' not in st.session_state:
     st.session_state.usage_data = {
         'start_time': time.time(),
@@ -45,6 +46,9 @@ if 'get_recommendation_used' not in st.session_state:
     st.session_state.get_recommendation_used = False
 if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
+# ✅ Add this here:
+if 'handled_followups' not in st.session_state:
+    st.session_state.handled_followups = set()
 
 # --- Data Loading ---
 @st.cache_resource
@@ -321,7 +325,8 @@ if st.button("Get Recommendation"):
 # Follow-up input
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
-if user_input:
+if user_input and user_input not in st.session_state.handled_followups:
+    st.session_state.handled_followups.add(user_input)
     st.session_state.conversation.append(("user", user_input))
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
