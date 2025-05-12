@@ -357,5 +357,5 @@ save_to_gsheet({
     "participant_id": participant_id,
     "question_id": question_id,
     "timestamp": pd.Timestamp.now().isoformat(),
-    "total_chatbot_time_seconds": total_time
+    #"total_chatbot_time_seconds": total_time
 })
