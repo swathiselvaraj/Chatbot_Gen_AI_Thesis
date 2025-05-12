@@ -35,8 +35,6 @@ if 'sheet_initialized' not in st.session_state:
    st.session_state.sheet_initialized = False
 if 'already_saved' not in st.session_state:  # New flag to track saves
    st.session_state.already_saved = False
-if 'participant_id' not in st.session_state:
-    st.session_state.participant_id = None  # initialize it
 
 
 # if 'usage_data' not in st.session_state:
