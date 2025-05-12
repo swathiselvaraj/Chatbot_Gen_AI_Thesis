@@ -231,23 +231,20 @@ def display_conversation():
             st.markdown(f"**Chatbot:** {message}")
 
 def save_progress():
-    """Save or update progress in Google Sheets"""
+    """Save progress to Google Sheets only if not already saved"""
     if st.session_state.already_saved:
         return True
-
+        
     if not st.session_state.usage_data['start_time']:
         return False
-
+        
     try:
-        total_time = 0
-        if (
-            st.session_state.get("interaction_start_time") is not None and
-            st.session_state.get("interaction_end_time") is not None
-        ):
-            total_time = round(
-                st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2
-            )
-
+        total_time = (
+            round(st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2)
+            if st.session_state.interaction_start_time and st.session_state.interaction_end_time
+            else 0
+        )
+        
         usage_data = {
             "participant_id": participant_id,
             "question_id": question_id,
@@ -258,33 +255,31 @@ def save_progress():
             "further_question_asked": "yes" if st.session_state.followup_used else "no",
             "timestamp": pd.Timestamp.now().isoformat()
         }
-
+        
         if save_to_gsheet(usage_data):
             st.session_state.usage_data['start_time'] = time.time()
             st.session_state.already_saved = True
             return True
-
         return False
-
+        
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
         return False
 
 
+
 # --- Main App Logic ---
 # Get query parameters
-
-# --- Main App Logic (continued) ---
-# Get query parameters
 query_params = st.query_params
-
-# Safely extract participant_id and question_id
 question_id = query_params.get("qid", "Q1")
 question_text = query_params.get("qtext", "What is your decision?")
 options_raw = query_params.get("opts", "Option A|Option B|Option C")
+options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
-options = [opt.strip() for opt in unquote(options_raw).split(";") if opt.strip()]
 
+if st.query_params.get("save_now") == "true":
+    st.session_state.interaction_end_time = time.time()
+    save_progress()
 
 # Initialize Google Sheet on first load
 if st.session_state.first_load and not st.session_state.sheet_initialized:
@@ -296,8 +291,8 @@ if question_id != st.session_state.get('last_question_id'):
     st.session_state.conversation = []
     st.session_state.last_question_id = question_id
     st.session_state.already_saved = False  # Reset saved flag for new question
-    # if not st.session_state.first_load:
-    #     save_progress()
+    if not st.session_state.first_load:
+        save_progress()
 
 # Recommendation button
 if st.button("Get Recommendation"):
@@ -305,14 +300,7 @@ if st.button("Get Recommendation"):
     st.session_state.conversation.append(("assistant", recommendation))
     st.session_state.usage_data['questions_asked'] += 1
     st.session_state.first_load = False
-    save_to_gsheet({
-    "participant_id": participant_id,
-    "question_id": question_id,
-    "get_recommendation": "yes",
-    "chatbot_used": "yes"
-})
-
-    #save_progress()
+    save_progress()
 
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
@@ -322,22 +310,14 @@ if user_input:
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
     st.session_state.first_load = False
-    save_to_gsheet({
-    "participant_id": participant_id,
-    "question_id": question_id,
-    "further_question_asked": "yes",
-    "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
-    "chatbot_used": "yes"
-})
-
-    #save_progress()
+    save_progress()
 
 # Display conversation
 display_conversation()
 
 # Final save when leaving the page
-# if not st.session_state.first_load and not st.session_state.already_saved:
-#     save_progress()
+if not st.session_state.first_load and not st.session_state.already_saved:
+    save_progress()
 
 # Debug information
 if query_params.get("debug", "false") == "true":
@@ -349,10 +329,3 @@ if query_params.get("debug", "false") == "true":
         k: v for k, v in st.session_state.items() 
         if k not in ['conversation', '_secrets']
     })
-
-save_to_gsheet({
-    "participant_id": participant_id,
-    "question_id": question_id,
-    "timestamp": pd.Timestamp.now().isoformat(),
-    "total_chatbot_time_seconds": total_time
-})
