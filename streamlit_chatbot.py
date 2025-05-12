@@ -603,7 +603,7 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         return "Please ask a question related to the current survey topic."
     except Exception as e:
         st.error(f"Follow-up validation failed: {str(e)}")
-        return "Sorry, I encountered an error processing your question.
+        return "Sorry, I encountered an error processing your question." 
 # Modify the validate_followup function to replace option references:
 
 # def get_gpt_recommendation(question: str, options: List[str] = None, history: List[Tuple[str, str]] = None) -> str:
