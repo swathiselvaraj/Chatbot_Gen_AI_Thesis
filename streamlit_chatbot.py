@@ -27,6 +27,20 @@ participant_id = query_params.get("pid", str(uuid.uuid4()))
 # --- Session State Initialization ---
 if 'conversation' not in st.session_state:
    st.session_state.conversation = []
+
+if 'usage_data' not in st.session_state:
+    st.session_state.usage_data = {
+        'participant_id': participant_id,
+        'question_id': question_id,
+        'chatbot_used': False,
+        'questions_asked': 0,
+        'get_recommendation': False,
+        'followup_used': False,
+        'start_time': None,
+        'total_time': 0
+    }
+
+
 if 'last_recommendation' not in st.session_state:
    st.session_state.last_recommendation = None
 if 'last_question_id' not in st.session_state:
@@ -45,18 +59,6 @@ if 'already_saved' not in st.session_state:  # New flag to track saves
 #        'questions_asked': 0,
 #        'followups_asked': 0
 #    }
-
-if 'usage_data' not in st.session_state:
-    st.session_state.usage_data = {
-        'participant_id': participant_id,
-        'question_id': question_id,
-        'chatbot_used': False,
-        'questions_asked': 0,
-        'get_recommendation': False,
-        'followup_used': False,
-        'start_time': None,
-        'total_time': 0
-    }
 
 
 # --- New Session State Initialization for Time Tracking ---
@@ -480,9 +482,8 @@ if question_id != st.session_state.get('last_question_id'):
 
 # Recommendation button
 if st.button("Get Recommendation"):
-    if not st.session_state.usage_data['start_time']:
-        st.session_state.usage_data['start_time'] = time.time()
-    
+    if st.session_state.usage_data['start_time'] is None:
+        st.session_state.usage_data['start_time'] = time.time()  # NOW set the time
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
     
