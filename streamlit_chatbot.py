@@ -19,9 +19,20 @@ st.set_page_config(page_title="Survey Chatbot", layout="wide")
 query_params = st.query_params
 question_id = query_params.get("qid", "Q1")
 question_text = query_params.get("qtext", "What is your decision?")
-options_raw = query_params.get("opts", "Option A|Option B|Option C")
+###options_raw = query_params.get("opts", "Option A|Option B|Option C")
+options_raw = query_params.get("opts", "Option 1|Option 2|Option 3|Option 4")
 options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
+
+
+while len(options) < 4:
+    options.append("")
+
+# Create a mapping dictionary for option replacement
+option_mapping = {f"option {i+1}": options[i] for i in range(4)}
+option_mapping.update({f"option{i+1}": options[i] for i in range(4)})  # Also handle "option1" format
+
+
 # --- Session State Initialization ---
 if 'conversation' not in st.session_state:
    st.session_state.conversation = []
@@ -122,16 +133,36 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
        return 0.0
 
 
+# def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
+#    try:
+#        match = re.search(r"option\s*(\d+)", user_input.lower())
+#        if match:
+#            idx = int(match.group(1)) - 1
+#            if 0 <= idx < len(options):
+#                return options[idx]
+#        return None
+#    except:
+#        return None
+
+
+
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-   try:
-       match = re.search(r"option\s*(\d+)", user_input.lower())
-       if match:
-           idx = int(match.group(1)) - 1
-           if 0 <= idx < len(options):
-               return options[idx]
-       return None
-   except:
-       return None
+    try:
+        # First try to find exact matches with the mapping
+        user_input_lower = user_input.lower()
+        for option_ref, option_text in option_mapping.items():
+            if option_ref in user_input_lower and option_text:
+                return option_text
+        
+        # Fallback to regex if no direct match found
+        match = re.search(r"option\s*(\d+)", user_input_lower)
+        if match:
+            idx = int(match.group(1)) - 1
+            if 0 <= idx < len(options):
+                return options[idx]
+        return None
+    except:
+        return None
 
 # def update_interaction_time():
 #     now = time.time()
@@ -375,37 +406,72 @@ def save_to_gsheet(data_dict: Dict) -> bool:
         return False
 
 # --- Core Chatbot Functions ---
+# def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
+#    try:
+#        user_embedding = get_embedding(user_question)
+#        referenced_option = extract_referenced_option(user_question, options)
+      
+#        history = []
+      
+#        if st.session_state.last_recommendation:
+#            history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
+
+
+#        history.append((f"Follow-up: {user_question}", ""))
+
+
+#        if referenced_option:
+#            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
+
+
+#        for source in data["general_followups"] + data["questions"]:
+#            if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
+#                score = cosine_similarity(user_embedding, source["embedding"])
+#                if score >= 0.70:
+#                    return get_gpt_recommendation(user_question, options=options, history=history)
+
+
+#        return "Please ask a question related to the current survey topic."
+#    except Exception as e:
+#        st.error(f"Follow-up validation failed: {str(e)}")
+#        return "Sorry, I encountered an error processing your question."
+#-------
+
+    except:
+        return None
+
+# Modify the validate_followup function to replace option references:
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-   try:
-       user_embedding = get_embedding(user_question)
-       referenced_option = extract_referenced_option(user_question, options)
-      
-       history = []
-      
-       if st.session_state.last_recommendation:
-           history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
+    try:
+        # Replace option references in the user question before getting embedding
+        processed_question = user_question.lower()
+        for option_ref, option_text in option_mapping.items():
+            if option_text:  # Only replace if we have text for this option
+                processed_question = processed_question.replace(option_ref, option_text.lower())
+        
+        user_embedding = get_embedding(processed_question)
+        referenced_option = extract_referenced_option(user_question, options)
+        
+        history = []
+        
+        if st.session_state.last_recommendation:
+            history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
 
+        history.append((f"Follow-up: {user_question}", ""))
 
-       history.append((f"Follow-up: {user_question}", ""))
+        if referenced_option:
+            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
 
+        for source in data["general_followups"] + data["questions"]:
+            if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                if score >= 0.70:
+                    return get_gpt_recommendation(user_question, options=options, history=history)
 
-       if referenced_option:
-           history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
-
-
-       for source in data["general_followups"] + data["questions"]:
-           if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
-               score = cosine_similarity(user_embedding, source["embedding"])
-               if score >= 0.70:
-                   return get_gpt_recommendation(user_question, options=options, history=history)
-
-
-       return "Please ask a question related to the current survey topic."
-   except Exception as e:
-       st.error(f"Follow-up validation failed: {str(e)}")
-       return "Sorry, I encountered an error processing your question."
-
-
+        return "Please ask a question related to the current survey topic."
+    except Exception as e:
+        st.error(f"Follow-up validation failed: {str(e)}")
+        return "Sorry, I encountered an error processing your question."
 def get_gpt_recommendation(question: str, options: List[str] = None, history: List[Tuple[str, str]] = None) -> str:
    try:
        messages = []
