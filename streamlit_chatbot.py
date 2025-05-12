@@ -136,7 +136,7 @@ def initialize_gsheet():
        expected_headers = [
            "participant_id", "question_id", "chatbot_used",
            "questions_asked_to_chatbot", "total_chatbot_time_seconds",
-           "get_recommendation", "further_question_asked"
+           "get_recommendation", "further_question_asked", "timestamp"
        ]
       
        current_headers = worksheet.row_values(1)
@@ -341,6 +341,7 @@ def save_progress():
         save_to_gsheet({
             "participant_id": participant_id,
             "question_id": question_id,
+            "timestamp": pd.Timestamp.now().isoformat(),
             "total_chatbot_time_seconds": total_time
         })
 
@@ -423,24 +424,6 @@ if st.button("Get Recommendation"):
 #    "chatbot_used": "yes"
 # })
 
-user_input = st.text_input("Ask a follow-up question:")
-if user_input:
-    update_interaction_time()  # Start/update timer
-    st.session_state.conversation.append(("user", user_input))
-    response = validate_followup(user_input, question_id, options)
-    st.session_state.conversation.append(("assistant", response))
-    st.session_state.followup_used = True
-    st.session_state.usage_data['followups_asked'] += 1
-    st.session_state.first_load = False
-    save_to_gsheet({
-        "participant_id": participant_id,
-        "question_id": question_id,
-        "further_question_asked": "yes",
-        "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
-        "chatbot_used": "yes",
-        "total_chatbot_time_seconds": st.session_state.total_interaction_time
-    })
-
 
    #save_progress()
 
@@ -465,13 +448,4 @@ if query_params.get("debug", "false") == "true":
        if k not in ['conversation', '_secrets']
    })
 
-# At the very end of your script
-if st.session_state.interaction_active:
-    # Calculate final time
-    final_time = time.time() - st.session_state.interaction_start_time
-    save_to_gsheet({
-        "participant_id": participant_id,
-        "question_id": question_id,
-        "total_chatbot_time_seconds": final_time
-    })
 
