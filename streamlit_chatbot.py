@@ -137,46 +137,25 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 
 
-# def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-#     try:
-#         # First try to find exact matches with the mapping
-#         user_input_lower = user_input.lower()
-#         for option_ref, option_text in option_mapping.items():
-#             if option_ref in user_input_lower and option_text:
-#                 return option_text
-        
-#         # Fallback to regex if no direct match found
-#         match = re.search(r"option\s*(\d+)", user_input_lower)
-#         if match:
-#             idx = int(match.group(1)) - 1
-#             if 0 <= idx < len(options):
-#                 return options[idx]
-#         return None
-#     except:
-#         return None
-#-----------
-def extract_referenced_option(user_input: str, options: List[str]) -> Optional[Tuple[str, str]]:
-    """
-    Returns a tuple of (option_number, option_text) if found in user input
-    Example: ("4", "Launch a promotion for cheese...") for input "why not option 4"
-    """
+def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
     try:
-        # Match patterns like "option 4" or "option4" or just "4"
-        match = re.search(r"(?:option\s*)?(\d+)", user_input.lower())
+        # First try to find exact matches with the mapping
+        user_input_lower = user_input.lower()
+        for option_ref, option_text in option_mapping.items():
+            if option_ref in user_input_lower and option_text:
+                return option_text
+        
+        # Fallback to regex if no direct match found
+        match = re.search(r"option\s*(\d+)", user_input_lower)
         if match:
-            option_num = match.group(1)
-            # Find option that starts with this number
-            for option in options:
-                if option.startswith(f"{option_num}."):
-                    return (option_num, option[len(option_num)+1:].strip())  # Return number and text
-            # Alternative pattern if number isn't at start
-            for option in options:
-                if re.search(rf"\b{option_num}\.", option):
-                    return (option_num, option)
+            idx = int(match.group(1)) - 1
+            if 0 <= idx < len(options):
+                return options[idx]
         return None
-    except Exception as e:
-        st.error(f"Option extraction failed: {str(e)}")
+    except:
         return None
+
+
 
 # def update_interaction_time():
 #     now = time.time()
@@ -451,94 +430,57 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 
 #------------
 
-# def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-#     try:
-#         user_embedding = get_embedding(user_question)
-#         referenced_option = extract_referenced_option(user_question, options)
-        
-#         # First check general followups (greetings, etc.)
-#         general_scores = []
-#         for source in data["general_followups"]:
-#             if source.get("embedding"):
-#                 score = cosine_similarity(user_embedding, source["embedding"])
-#                 general_scores.append((score, source))
-        
-#         # Get the highest scoring general followup if above threshold
-#         if general_scores:
-#             max_score, best_match = max(general_scores, key=lambda x: x[0])
-#             if max_score >= 0.85:  # Higher threshold for general followups
-#                 if "followup_text" in best_match:
-#                     # For greetings, return a simple response
-#                     if best_match["followup_text"].lower() in ["hi", "hello", "hey"]:
-#                         return "Hello! How can I help you with your survey question?"
-#                     # For other general followups, return their response
-#                     return best_match.get("response", "How can I help you?")
-        
-#         # Only proceed with recommendation logic if not a general followup
-#         history = []
-#         if st.session_state.last_recommendation:
-#             history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
-
-#         history.append((f"Follow-up: {user_question}", ""))
-
-#         if referenced_option:
-#             history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
-
-#         # Check question-specific followups
-#         question_scores = []
-#         for source in data["questions"]:
-#             if source.get("embedding") and source.get("question_id") == question_id:
-#                 score = cosine_similarity(user_embedding, source["embedding"])
-#                 question_scores.append((score, source))
-        
-#         if question_scores:
-#             max_score, best_match = max(question_scores, key=lambda x: x[0])
-#             if max_score >= 0.70:
-#                 return get_gpt_recommendation(user_question, options=options, history=history)
-
-#         return "Please ask a question related to the current survey topic."
-#     except Exception as e:
-#         st.error(f"Follow-up validation failed: {str(e)}")
-
-# ***********
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
     try:
-        # First check for direct option references
-        option_ref = extract_referenced_option(user_question, options)
+        user_embedding = get_embedding(user_question)
+        referenced_option = extract_referenced_option(user_question, options)
         
-        if option_ref:
-            option_num, option_text = option_ref
-            # Format the question to include the full option text
-            formatted_question = f"{user_question} (Referring to: {option_text})"
-            user_embedding = get_embedding(formatted_question)
-        else:
-            user_embedding = get_embedding(user_question)
-
-        # Rest of your existing validation logic
+        # First check general followups (greetings, etc.)
+        general_scores = []
+        for source in data["general_followups"]:
+            if source.get("embedding"):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                general_scores.append((score, source))
+        
+        # Get the highest scoring general followup if above threshold
+        if general_scores:
+            max_score, best_match = max(general_scores, key=lambda x: x[0])
+            if max_score >= 0.85:  # Higher threshold for general followups
+                if "followup_text" in best_match:
+                    # For greetings, return a simple response
+                    if best_match["followup_text"].lower() in ["hi", "hello", "hey"]:
+                        return "Hello! How can I help you with your survey question?"
+                    # For other general followups, return their response
+                    return best_match.get("response", "How can I help you?")
+        
+        # Only proceed with recommendation logic if not a general followup
         history = []
-        
         if st.session_state.last_recommendation:
             history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
 
         history.append((f"Follow-up: {user_question}", ""))
 
-        if option_ref:
-            history.append((f"The user is asking about option {option_ref[0]}: {option_ref[1]}", ""))
+        if referenced_option:
+            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
 
-        for source in data["general_followups"] + data["questions"]:
-            if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
+        # Check question-specific followups
+        question_scores = []
+        for source in data["questions"]:
+            if source.get("embedding") and source.get("question_id") == question_id:
                 score = cosine_similarity(user_embedding, source["embedding"])
-                if score >= 0.70:
-                    return get_gpt_recommendation(
-                        user_question, 
-                        options=options,
-                        history=history,
-                        referenced_option=option_ref
-                    )
+                question_scores.append((score, source))
+        
+        if question_scores:
+            max_score, best_match = max(question_scores, key=lambda x: x[0])
+            if max_score >= 0.70:
+                return get_gpt_recommendation(user_question, options=options, history=history)
 
         return "Please ask a question related to the current survey topic."
     except Exception as e:
         st.error(f"Follow-up validation failed: {str(e)}")
+
+# ***********
+
 
 # Modify the validate_followup function to replace option references:
 
