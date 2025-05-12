@@ -103,10 +103,14 @@ def initialize_gsheet():
             worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=20)
         
         # Define and verify headers
-        expected_headers = [
-            "participant_id", "question_id", "chatbot_used",
-            "questions_asked_to_chatbot", "total_chatbot_time_seconds",
-            "get_recommendation", "further_question_asked", "timestamp"
+       expected_headers = [
+        "participant_id", 
+        "question_id", 
+        "chatbot_used",
+        "questions_asked_to_chatbot", 
+        "total_chatbot_time_seconds",
+        "get_recommendation", 
+        "further_question_asked"  # Removed timestamp
         ]
         
         current_headers = worksheet.row_values(1)
@@ -235,35 +239,29 @@ def save_progress():
     if st.session_state.already_saved:
         return True
 
-    if not st.session_state.usage_data['start_time']:
-        return False
-
     try:
+        # Calculate interaction time
         total_time = 0
-        if (
-            st.session_state.get("interaction_start_time") is not None and
-            st.session_state.get("interaction_end_time") is not None  # Fix this typo
-        ):
+        if (st.session_state.get("interaction_start_time") and 
+            st.session_state.get("interaction_end_time")):
             total_time = round(
-                st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2  # Fix this typo
+                st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2
             )
 
         usage_data = {
             "participant_id": participant_id,
             "question_id": question_id,
-            "chatbot_used": "yes" if (st.session_state.get_recommendation_used or st.session_state.followup_used) else "no",
+            "chatbot_used": "yes" if (st.session_state.get_recommendation_used or 
+                                    st.session_state.followup_used) else "no",
             "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
             "total_chatbot_time_seconds": total_time,
             "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
-            "further_question_asked": "yes" if st.session_state.followup_used else "no",
-            "timestamp": pd.Timestamp.now().isoformat()
+            "further_question_asked": "yes" if st.session_state.followup_used else "no"
         }
 
         if save_to_gsheet(usage_data):
-            st.session_state.usage_data['start_time'] = time.time()
             st.session_state.already_saved = True
             return True
-
         return False
 
     except Exception as e:
@@ -304,34 +302,29 @@ st.session_state.interaction_start_time = time.time()
 st.session_state.interaction_end_time = time.time()
 # Recommendation button
 if st.button("Get Recommendation"):
+    st.session_state.interaction_start_time = time.time()  # Start timer
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
     st.session_state.usage_data['questions_asked'] += 1
+    st.session_state.get_recommendation_used = True
     st.session_state.first_load = False
-    save_to_gsheet({
-    "participant_id": participant_id,
-    "question_id": question_id,
-    "get_recommendation": "yes",
-    "chatbot_used": "yes"
-})
+    st.session_state.interaction_end_time = time.time()  # End timer
+    save_progress()
 
     #save_progress()
 
 # Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
 if user_input:
+    st.session_state.interaction_start_time = time.time()  # Start timer
     st.session_state.conversation.append(("user", user_input))
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
+    st.session_state.followup_used = True
     st.session_state.first_load = False
-    save_to_gsheet({
-    "participant_id": participant_id,
-    "question_id": question_id,
-    "further_question_asked": "yes",
-    "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
-    "chatbot_used": "yes"
-})
+    st.session_state.interaction_end_time = time.time()  # End timer
+    save_progress()
 
     #save_progress()
 
@@ -353,9 +346,3 @@ if query_params.get("debug", "false") == "true":
         if k not in ['conversation', '_secrets']
     })
 
-save_to_gsheet({
-    "participant_id": participant_id,
-    "question_id": question_id,
-    "timestamp": pd.Timestamp.now().isoformat(),
-    #"total_chatbot_time_seconds": total_time
-})
