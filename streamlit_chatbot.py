@@ -29,12 +29,12 @@ if 'sheet_initialized' not in st.session_state:
 if 'already_saved' not in st.session_state:  # New flag to track saves
     st.session_state.already_saved = False
 
-
 if 'usage_data' not in st.session_state:
     st.session_state.usage_data = {
         'start_time': time.time(),
         'questions_asked': 0,
-        'followups_asked': 0
+        'followups_asked': 0,
+        'last_saved_followups': 0  # This will track what was last saved
     }
 
 # --- New Session State Initialization for Time Tracking ---
