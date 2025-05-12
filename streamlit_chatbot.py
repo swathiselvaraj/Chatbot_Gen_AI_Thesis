@@ -397,36 +397,85 @@ def save_to_gsheet(data_dict: Dict) -> bool:
         return False
 
 # --- Core Chatbot Functions ---
+# def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
+#    try:
+#        user_embedding = get_embedding(user_question)
+#        referenced_option = extract_referenced_option(user_question, options)
+      
+#        history = []
+      
+#        if st.session_state.last_recommendation:
+#            history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
+
+
+#        history.append((f"Follow-up: {user_question}", ""))
+
+
+#        if referenced_option:
+#            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
+
+
+#        for source in data["general_followups"] + data["questions"]:
+#            if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
+#                score = cosine_similarity(user_embedding, source["embedding"])
+#                if score >= 0.70:
+#                    return get_gpt_recommendation(user_question, options=options, history=history)
+
+
+#        return "Please ask a question related to the current survey topic."
+#    except Exception as e:
+#        st.error(f"Follow-up validation failed: {str(e)}")
+
+#------------
+
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-   try:
-       user_embedding = get_embedding(user_question)
-       referenced_option = extract_referenced_option(user_question, options)
-      
-       history = []
-      
-       if st.session_state.last_recommendation:
-           history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
+    try:
+        user_embedding = get_embedding(user_question)
+        referenced_option = extract_referenced_option(user_question, options)
+        
+        # First check general followups (greetings, etc.)
+        general_scores = []
+        for source in data["general_followups"]:
+            if source.get("embedding"):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                general_scores.append((score, source))
+        
+        # Get the highest scoring general followup if above threshold
+        if general_scores:
+            max_score, best_match = max(general_scores, key=lambda x: x[0])
+            if max_score >= 0.85:  # Higher threshold for general followups
+                if "followup_text" in best_match:
+                    # For greetings, return a simple response
+                    if best_match["followup_text"].lower() in ["hi", "hello", "hey"]:
+                        return "Hello! How can I help you with your survey question?"
+                    # For other general followups, return their response
+                    return best_match.get("response", "How can I help you?")
+        
+        # Only proceed with recommendation logic if not a general followup
+        history = []
+        if st.session_state.last_recommendation:
+            history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
 
+        history.append((f"Follow-up: {user_question}", ""))
 
-       history.append((f"Follow-up: {user_question}", ""))
+        if referenced_option:
+            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
 
+        # Check question-specific followups
+        question_scores = []
+        for source in data["questions"]:
+            if source.get("embedding") and source.get("question_id") == question_id:
+                score = cosine_similarity(user_embedding, source["embedding"])
+                question_scores.append((score, source))
+        
+        if question_scores:
+            max_score, best_match = max(question_scores, key=lambda x: x[0])
+            if max_score >= 0.70:
+                return get_gpt_recommendation(user_question, options=options, history=history)
 
-       if referenced_option:
-           history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
-
-
-       for source in data["general_followups"] + data["questions"]:
-           if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
-               score = cosine_similarity(user_embedding, source["embedding"])
-               if score >= 0.70:
-                   return get_gpt_recommendation(user_question, options=options, history=history)
-
-
-       return "Please ask a question related to the current survey topic."
-   except Exception as e:
-       st.error(f"Follow-up validation failed: {str(e)}")
-
-
+        return "Please ask a question related to the current survey topic."
+    except Exception as e:
+        st.error(f"Follow-up validation failed: {str(e)}")
 
 # Modify the validate_followup function to replace option references:
 
@@ -647,3 +696,4 @@ if query_params.get("debug", "false") == "true":
    })
 
 
+i want to pass the texts of the option as per the number given by the user in the follow up text and i want the chatbot to answer all the questions asked by the user when 
