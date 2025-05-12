@@ -136,7 +136,7 @@ def initialize_gsheet():
        expected_headers = [
            "participant_id", "question_id", "chatbot_used",
            "questions_asked_to_chatbot", "total_chatbot_time_seconds",
-           "get_recommendation", "further_question_asked", "timestamp"
+           "get_recommendation", "further_question_asked"
        ]
       
        current_headers = worksheet.row_values(1)
@@ -341,7 +341,6 @@ def save_progress():
         save_to_gsheet({
             "participant_id": participant_id,
             "question_id": question_id,
-            "timestamp": pd.Timestamp.now().isoformat(),
             "total_chatbot_time_seconds": total_time
         })
 
@@ -473,7 +472,6 @@ if st.session_state.interaction_active:
     save_to_gsheet({
         "participant_id": participant_id,
         "question_id": question_id,
-        "timestamp": pd.Timestamp.now().isoformat(),
         "total_chatbot_time_seconds": final_time
     })
 
