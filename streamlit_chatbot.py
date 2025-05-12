@@ -19,19 +19,10 @@ st.set_page_config(page_title="Survey Chatbot", layout="wide")
 query_params = st.query_params
 question_id = query_params.get("qid", "Q1")
 question_text = query_params.get("qtext", "What is your decision?")
-###options_raw = query_params.get("opts", "Option A|Option B|Option C")
-options_raw = query_params.get("opts", "Option 1|Option 2|Option 3|Option 4")
+options_raw = query_params.get("opts", "Option A|Option B|Option C")
+
 options = options_raw.split("|")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
-
-
-while len(options) < 4:
-    options.append("")
-
-# Create a mapping dictionary for option replacement
-option_mapping = {f"option {i+1}": options[i] for i in range(4)}
-option_mapping.update({f"option{i+1}": options[i] for i in range(4)})  # Also handle "option1" format
-
 
 # --- Session State Initialization ---
 if 'conversation' not in st.session_state:
@@ -437,8 +428,7 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 #        return "Sorry, I encountered an error processing your question."
 #-------
 
-    except:
-        return None
+
 
 # Modify the validate_followup function to replace option references:
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
