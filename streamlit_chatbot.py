@@ -16,6 +16,13 @@ from typing import List, Dict, Optional, Tuple
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 st.set_page_config(page_title="Survey Chatbot", layout="wide")
 
+query_params = st.query_params
+question_id = query_params.get("qid", "Q1")
+question_text = query_params.get("qtext", "What is your decision?")
+options_raw = query_params.get("opts", "Option A|Option B|Option C")
+options = options_raw.split("|")
+participant_id = query_params.get("pid", str(uuid.uuid4()))
+
 
 # --- Session State Initialization ---
 if 'conversation' not in st.session_state:
@@ -365,12 +372,12 @@ def display_conversation():
            st.markdown(f"**Chatbot:** {message}")
 
 
-query_params = st.query_params
-question_id = query_params.get("qid", "Q1")
-question_text = query_params.get("qtext", "What is your decision?")
-options_raw = query_params.get("opts", "Option A|Option B|Option C")
-options = options_raw.split("|")
-participant_id = query_params.get("pid", str(uuid.uuid4()))
+# query_params = st.query_params
+# question_id = query_params.get("qid", "Q1")
+# question_text = query_params.get("qtext", "What is your decision?")
+# options_raw = query_params.get("opts", "Option A|Option B|Option C")
+# options = options_raw.split("|")
+# participant_id = query_params.get("pid", str(uuid.uuid4()))
 
 
 def save_progress():
