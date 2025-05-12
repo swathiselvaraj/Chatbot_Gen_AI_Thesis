@@ -15,54 +15,40 @@ from typing import List, Dict, Optional, Tuple
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 st.set_page_config(page_title="Survey Chatbot", layout="wide")
 
-# --- Session State Initialization ---
-if 'conversation' not in st.session_state:
-    st.session_state.conversation = []
-if 'last_recommendation' not in st.session_state:
-    st.session_state.last_recommendation = None
-if 'last_question_id' not in st.session_state:
-    st.session_state.last_question_id = None
-if 'first_load' not in st.session_state:
-    st.session_state.first_load = True
-if 'sheet_initialized' not in st.session_state:
-    st.session_state.sheet_initialized = False
-if 'already_saved' not in st.session_state:  # New flag to track saves
-    st.session_state.already_saved = False
-
-if 'usage_data' not in st.session_state:
-    st.session_state.usage_data = {
+# Session State Initialization
+for key, default in {
+    'conversation': [],
+    'last_recommendation': None,
+    'last_question_id': None,
+    'first_load': True,
+    'sheet_initialized': False,
+    'already_saved': False,
+    'interaction_start_time': None,
+    'interaction_end_time': None,
+    'get_recommendation_used': False,
+    'followup_used': False,
+    'usage_data': {
         'start_time': time.time(),
         'questions_asked': 0,
         'followups_asked': 0,
-        'last_saved_followups': 0  # This will track what was last saved
+        'last_saved_followups': 0
     }
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
 
-# --- New Session State Initialization for Time Tracking ---
-if 'interaction_start_time' not in st.session_state:
-    st.session_state.interaction_start_time = None
-if 'interaction_end_time' not in st.session_state:
-    st.session_state.interaction_end_time = None
-if 'get_recommendation_used' not in st.session_state:
-    st.session_state.get_recommendation_used = False
-if 'followup_used' not in st.session_state:
-    st.session_state.followup_used = False
-# ✅ Add this here:
-if 'handled_followups' not in st.session_state:
-    st.session_state.handled_followups = set()
-
-# --- Data Loading ---
+# Load Embedding Data
 @st.cache_resource
 def load_embedding_data():
     try:
         with open("data/followup_embeddings_list.json", "r") as f:
             return json.load(f)
-    except Exception as e:
-        st.error(f"Failed to load embeddings: {str(e)}")
+    except:
         return {"general_followups": [], "questions": []}
 
 data = load_embedding_data()
 
-# --- Utility Functions ---
+# Utility Functions
 def get_embedding(text: str) -> List[float]:
     try:
         response = client.embeddings.create(
@@ -70,8 +56,7 @@ def get_embedding(text: str) -> List[float]:
             model="text-embedding-3-small"
         )
         return response.data[0].embedding
-    except Exception as e:
-        st.error(f"Embedding generation failed: {str(e)}")
+    except:
         return []
 
 def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
@@ -79,278 +64,192 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
         a = np.array(vec1)
         b = np.array(vec2)
         return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))) 
-    except Exception as e:
-        st.error(f"Similarity calculation failed: {str(e)}")
+    except:
         return 0.0
 
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-    try:
-        match = re.search(r"option\s*(\d+)", user_input.lower())
-        if match:
-            idx = int(match.group(1)) - 1
-            if 0 <= idx < len(options):
-                return options[idx]
-        return None
-    except:
-        return None
+    match = re.search(r"option\s*(\d+)", user_input.lower())
+    if match:
+        idx = int(match.group(1)) - 1
+        if 0 <= idx < len(options):
+            return options[idx]
+    return None
 
-# --- Google Sheets Integration ---
+# Google Sheets Integration
 def initialize_gsheet():
-    """Initialize the Google Sheet with proper headers"""
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
         sheet = gc.open("Chatbot Usage Log")
-        
         try:
             worksheet = sheet.worksheet("Logs")
         except:
             worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=20)
-        
-        # Define and verify headers
         expected_headers = [
             "participant_id", "question_id", "chatbot_used",
             "questions_asked_to_chatbot", "total_chatbot_time_seconds",
             "get_recommendation", "further_question_asked"
         ]
-        
         current_headers = worksheet.row_values(1)
-        
         if not current_headers or current_headers != expected_headers:
             worksheet.clear()
             worksheet.append_row(expected_headers)
-        
         return worksheet
-        
-    except Exception as e:
-        st.error(f"Google Sheets initialization failed: {str(e)}")
+    except:
         return None
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-    """Save or update data in Google Sheets"""
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
         sheet = gc.open("Chatbot Usage Log")
         worksheet = sheet.worksheet("Logs")
-        
-        # Get all records
         records = worksheet.get_all_records()
-        
-        # Find existing row
         row_num = None
-        for i, record in enumerate(records, start=2):  # Rows start at 2 (1=header)
+        for i, record in enumerate(records, start=2):
             if (str(record.get("participant_id", "")) == str(data_dict["participant_id"]) and 
                 str(record.get("question_id", "")) == str(data_dict["question_id"])):
                 row_num = i
                 break
-        
-        # Prepare data in correct order
         headers = worksheet.row_values(1)
-        new_values = []
-        for h in headers:
-            value = str(data_dict.get(h, ""))
-            # Ensure empty strings are written as None
-            new_values.append(value if value.strip() != "" else None)
-        
+        new_values = [str(data_dict.get(h, "")).strip() or None for h in headers]
         if row_num:
-            # Update existing row - using update_cells for better reliability
-            cells = []
-            for col_num, value in enumerate(new_values, start=1):
-                cells.append(gspread.Cell(
-                    row=row_num,
-                    col=col_num,
-                    value=value
-                ))
+            cells = [gspread.Cell(row=row_num, col=col_num, value=value) for col_num, value in enumerate(new_values, start=1)]
             worksheet.update_cells(cells)
         else:
-            # Append new row
             worksheet.append_row(new_values)
-            
         return True
-        
-    except Exception as e:
-        st.error(f"Failed to save to Google Sheets: {str(e)}")
+    except:
         return False
-# --- Core Chatbot Functions ---
+
+# Chatbot Core
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-    try:
-        user_embedding = get_embedding(user_question)
-        referenced_option = extract_referenced_option(user_question, options)
-        
-        history = []
-        
-        if st.session_state.last_recommendation:
-            history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
-
-        history.append((f"Follow-up: {user_question}", ""))
-
-        if referenced_option:
-            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
-
-        for source in data["general_followups"] + data["questions"]:
-            if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
-                score = cosine_similarity(user_embedding, source["embedding"])
-                if score >= 0.70:
-                    return get_gpt_recommendation(user_question, options=options, history=history)
-
-        return "Please ask a question related to the current survey topic."
-    except Exception as e:
-        st.error(f"Follow-up validation failed: {str(e)}")
-        return "Sorry, I encountered an error processing your question."
+    user_embedding = get_embedding(user_question)
+    referenced_option = extract_referenced_option(user_question, options)
+    history = []
+    if st.session_state.last_recommendation:
+        history.append((f"Original survey question: {question_text}", st.session_state.last_recommendation))
+    history.append((f"Follow-up: {user_question}", ""))
+    if referenced_option:
+        history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
+    for source in data["general_followups"] + data["questions"]:
+        if source.get("embedding") and (source.get("question_id") == question_id or "question_id" not in source):
+            score = cosine_similarity(user_embedding, source["embedding"])
+            if score >= 0.70:
+                return get_gpt_recommendation(user_question, options=options, history=history)
+    return "Please ask a question related to the current survey topic."
 
 def get_gpt_recommendation(question: str, options: List[str] = None, history: List[Tuple[str, str]] = None) -> str:
-    try:
-        messages = []
-        followup_mode = False
-
-        if history:
-            for q, a in history:
-                if "Follow-up:" in q:
-                    followup_mode = True
-                if q.strip():
-                    messages.append({"role": "user", "content": q})
-                if a.strip():
-                    messages.append({"role": "assistant", "content": a})
-
-        if followup_mode:
-            prompt = f"""The user has asked a follow-up question about a survey recommendation.
-You must use prior context and reasoning to answer concisely in under 50 words.
-
-Respond in this format:
-"Answer: <your answer to the follow-up question>"
-"""
-        else:
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
-            prompt = f"""Survey Question: {question}
-Available Options:
-{options_text}
-
-Please recommend the best option with reasoning. Limit your response to 50 words.
-
-Respond in this format:
-"Recommended option: <text>"
-"Reason: <short explanation>"
-"""
-
-        messages.append({"role": "user", "content": prompt})
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7
+    messages = []
+    followup_mode = False
+    if history:
+        for q, a in history:
+            if "Follow-up:" in q:
+                followup_mode = True
+            if q.strip():
+                messages.append({"role": "user", "content": q})
+            if a.strip():
+                messages.append({"role": "assistant", "content": a})
+    if followup_mode:
+        prompt = (
+            "The user has asked a follow-up question about a survey recommendation.\n"
+            "You must use prior context and reasoning to answer concisely in under 50 words.\n\n"
+            'Respond in this format:\n"Answer: <your answer to the follow-up question>"'
         )
-
-        result = response.choices[0].message.content
-        st.session_state.last_recommendation = result
-        return result
-    except Exception as e:
-        st.error(f"Recommendation generation failed: {str(e)}")
-        return "Sorry, I couldn't generate a recommendation due to an error."
+    else:
+        options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+        prompt = (
+            f"Survey Question: {question}\nAvailable Options:\n{options_text}\n\n"
+            "Please recommend the best option with reasoning. Limit your response to 50 words.\n\n"
+            'Respond in this format:\n"Recommended option: <text>"\n"Reason: <short explanation>"'
+        )
+    messages.append({"role": "user", "content": prompt})
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.7
+    )
+    result = response.choices[0].message.content
+    st.session_state.last_recommendation = result
+    return result
 
 def display_conversation():
-    if 'conversation' not in st.session_state:
-        st.session_state.conversation = []
-
-    if len(st.session_state.conversation) > 0:
+    if st.session_state.conversation:
         role, message = st.session_state.conversation[-1]
         if role != "user":
             st.markdown(f"**Chatbot:** {message}")
 
 def save_progress():
-    """Save or update progress in Google Sheets"""
-    try:
-        # Calculate new follow-ups since last save
-        new_followups = st.session_state.usage_data['followups_asked'] - st.session_state.usage_data['last_saved_followups']
-        
-        # Only proceed if there are new interactions
-        if new_followups <= 0 and not st.session_state.get_recommendation_used:
-            return True
+    new_followups = st.session_state.usage_data['followups_asked'] - st.session_state.usage_data['last_saved_followups']
+    if new_followups <= 0 and not st.session_state.get_recommendation_used:
+        return True
+    total_time = round(time.time() - st.session_state.usage_data['start_time'], 2)
+    usage_data = {
+        "participant_id": participant_id,
+        "question_id": question_id,
+        "chatbot_used": "yes",
+        "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
+        "total_chatbot_time_seconds": total_time,
+        "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
+        "further_question_asked": "yes" if st.session_state.usage_data['followups_asked'] > 0 else "no"
+    }
+    if save_to_gsheet(usage_data):
+        st.session_state.usage_data['last_saved_followups'] = st.session_state.usage_data['followups_asked']
+        st.session_state.get_recommendation_used = False
+        return True
+    return False
 
-        total_time = round(time.time() - st.session_state.usage_data['start_time'], 2)
-
-        usage_data = {
-            "participant_id": participant_id,
-            "question_id": question_id,
-            "chatbot_used": "yes",
-            "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
-            "total_chatbot_time_seconds": total_time,
-            "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
-            "further_question_asked": "yes" if st.session_state.usage_data['followups_asked'] > 0 else "no"
-        }
-
-        if save_to_gsheet(usage_data):
-            st.session_state.usage_data['last_saved_followups'] = st.session_state.usage_data['followups_asked']
-            st.session_state.get_recommendation_used = False
-            return True
-        return False
-
-    except Exception as e:
-        st.error(f"Progress save failed: {str(e)}")
-        return False
-# --- Main App Logic ---
-# Get query parameters
-
-# --- Main App Logic (continued) ---
-# Get query parameters
+# Get Query Parameters
 query_params = st.query_params
-
-# Safely extract participant_id and question_id
 question_id = query_params.get("qid", "Q1")
 question_text = query_params.get("qtext", "What is your decision?")
 options_raw = query_params.get("opts", "Option A|Option B|Option C")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 options = [opt.strip() for opt in unquote(options_raw).split(";") if opt.strip()]
 
-
-# Initialize Google Sheet on first load
+# Initialize Sheet on First Load
 if st.session_state.first_load and not st.session_state.sheet_initialized:
     initialize_gsheet()
     st.session_state.sheet_initialized = True
 
-# Track question changes
+# Reset conversation if question changed
 if question_id != st.session_state.get('last_question_id'):
     st.session_state.conversation = []
     st.session_state.last_question_id = question_id
-    st.session_state.already_saved = False  # Reset saved flag for new question
-    # if not st.session_state.first_load:
-    #     save_progress()
-# At the start of an interaction (e.g., when Get Recommendation is clicked)
-st.session_state.interaction_start_time = time.time()
+    st.session_state.already_saved = False
 
-# At the end of an interaction (e.g., after getting a response)
+# Track Interaction Time
+st.session_state.interaction_start_time = time.time()
 st.session_state.interaction_end_time = time.time()
-# Recommendation button
+
+# Recommendation Button
 if st.button("Get Recommendation"):
     st.session_state.usage_data['start_time'] = time.time()
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
     st.session_state.get_recommendation_used = True
-    st.session_state.usage_data['followups_asked'] = 0  # Reset counter
+    st.session_state.usage_data['followups_asked'] = 0
     st.session_state.usage_data['last_saved_followups'] = 0
     st.session_state.first_load = False
     save_progress()
     st.rerun()
-    #save_progress()
 
-# Follow-up input
-# Follow-up input
-# Follow-up input
-# Follow-up input
+# Follow-up Input
 user_input = st.text_input("Ask a follow-up question:")
 if user_input:
     st.session_state.conversation.append(("user", user_input))
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
-    
-    # Only increment if this is a new follow-up
-    if len(st.session_state.conversation) == 2:  # First follow-up after recommendation
+    if len(st.session_state.conversation) == 2:
         st.session_state.usage_data['followups_asked'] = 1
-    elif st.session_state.conversation[-3][0] != "user":  # Only count user messages
+    elif st.session_state.conversation[-3][0] != "user":
         st.session_state.usage_data['followups_asked'] += 1
-    
     if save_progress():
         st.success("Response saved!")
-    time.sleep(0.3)  # Small delay
+    time.sleep(0.3)
     st.rerun()
+
+# Display conversation
+display_conversation()
+
 
 
 # Display conversation
@@ -361,13 +260,13 @@ display_conversation()
 #     save_progress()
 
 # Debug information
-if query_params.get("debug", "false") == "true":
-    st.write("### Debug Information")
-    st.write("Query Parameters:", query_params)
-    st.write("Current Question ID:", question_id)
-    st.write("Participant ID:", participant_id)
-    st.write("Session State:", {
-        k: v for k, v in st.session_state.items() 
-        if k not in ['conversation', '_secrets']
-    })
+# if query_params.get("debug", "false") == "true":
+#     st.write("### Debug Information")
+#     st.write("Query Parameters:", query_params)
+#     st.write("Current Question ID:", question_id)
+#     st.write("Participant ID:", participant_id)
+#     st.write("Session State:", {
+#         k: v for k, v in st.session_state.items() 
+#         if k not in ['conversation', '_secrets']
+#     })
 
