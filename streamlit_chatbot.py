@@ -134,20 +134,29 @@ def save_to_gsheet(data_dict: Dict) -> bool:
         # Find existing row
         row_num = None
         for i, record in enumerate(records, start=2):  # Rows start at 2 (1=header)
-            if (record.get("participant_id") == data_dict["participant_id"] and 
-                record.get("question_id") == data_dict["question_id"]):
+            if (str(record.get("participant_id", "")) == str(data_dict["participant_id"]) and 
+                str(record.get("question_id", "")) == str(data_dict["question_id"])):
                 row_num = i
                 break
         
         # Prepare data in correct order
         headers = worksheet.row_values(1)
-        new_values = [str(data_dict.get(h, "")) for h in headers]
+        new_values = []
+        for h in headers:
+            value = str(data_dict.get(h, ""))
+            # Ensure empty strings are written as None
+            new_values.append(value if value.strip() != "" else None)
         
         if row_num:
-            # Update existing row - cell by cell for reliability
-            for col_num, header in enumerate(headers, start=1):
-                cell = f"{chr(64+col_num)}{row_num}"  # A2, B2, etc.
-                worksheet.update(cell, new_values[col_num-1])
+            # Update existing row - using update_cells for better reliability
+            cells = []
+            for col_num, value in enumerate(new_values, start=1):
+                cells.append(gspread.Cell(
+                    row=row_num,
+                    col=col_num,
+                    value=value
+                ))
+            worksheet.update_cells(cells)
         else:
             # Append new row
             worksheet.append_row(new_values)
@@ -310,6 +319,7 @@ if st.button("Get Recommendation"):
 
 # Follow-up input
 # Follow-up input
+# Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
 if user_input:
     st.session_state.conversation.append(("user", user_input))
@@ -317,9 +327,14 @@ if user_input:
     st.session_state.conversation.append(("assistant", response))
     st.session_state.usage_data['followups_asked'] += 1
     st.session_state.followup_used = True
-    save_progress()  # This will now properly update the existing row
-    st.experimental_rerun()  # Refresh to show changes
-    #save_progress()
+    if save_progress():
+        st.success("Follow-up saved successfully!")
+    else:
+        st.warning("Couldn't save follow-up - please try again")
+    
+    # Instead of rerun, use this to force refresh:
+    time.sleep(0.5)
+    st.rerun()
 
 # Display conversation
 display_conversation()
