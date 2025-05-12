@@ -234,19 +234,28 @@ if st.button("Get Recommendation"):
 
 # Follow-up Input
 user_input = st.text_input("Ask a follow-up question:")
-if user_input and (not st.session_state.conversation or st.session_state.conversation[-1][1] != user_input):
-    # Add user message
+# Initialize followups_asked if it wasn't set correctly
+if 'followups_asked' not in st.session_state:
+    st.session_state.followups_asked = 0
+if user_input:
+    # Add the user input to the conversation history
     st.session_state.conversation.append(("user", user_input))
 
-    # Call validation logic
+    # Validate the follow-up question
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
 
-    # Track follow-up question count manually
-    st.session_state.usage_data['followups_asked'] += 1
-
+    # Only increment followups_asked if this is a new follow-up question
+    if st.session_state.followups_asked == 0:
+        st.session_state.followups_asked = 1  # This is the first follow-up question
+    else:
+        st.session_state.followups_asked += 1  # Increment for each new follow-up
+    
+    # Save progress
     if save_progress():
         st.success("Response saved!")
+
+    # Rerun to reflect changes
     time.sleep(0.3)
     st.rerun()
 
