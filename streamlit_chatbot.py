@@ -287,52 +287,43 @@ participant_id = query_params.get("pid", str(uuid.uuid4()))
 
 
 def save_progress():
-   """Save or update progress in Google Sheets"""
-   if st.session_state.already_saved:
-       return True
+    """Save or update progress in Google Sheets"""
+    if st.session_state.already_saved:
+        return True
 
+    if not st.session_state.usage_data['start_time']:
+        return False
 
-   if not st.session_state.usage_data['start_time']:
-       return False
+    try:
+        # Ensure timing variables are defined
+        if st.session_state.interaction_start_time and st.session_state.interaction_end_time:
+            total_time = round(
+                st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2
+            )
+        else:
+            total_time = 0  # Default to 0 if timing variables are not set
 
+        usage_data = {
+            "participant_id": participant_id,
+            "question_id": question_id,
+            "chatbot_used": "yes" if (st.session_state.get_recommendation_used or st.session_state.followup_used) else "no",
+            "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
+            "total_chatbot_time_seconds": total_time,  # This should now be defined
+            "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
+            "further_question_asked": "yes" if st.session_state.followup_used else "no",
+            "timestamp": pd.Timestamp.now().isoformat()
+        }
 
-   try:
-       # Ensure timing variables are defined
-       if st.session_state.interaction_start_time and st.session_state.interaction_end_time:
-           total_time = round(
-               st.session_state.interaction_end_time - st.session_state.interaction_start_time, 2
-           )
-       else:
-           total_time = 0
+        if save_to_gsheet(usage_data):
+            st.session_state.usage_data['start_time'] = time.time()
+            st.session_state.already_saved = True
+            return True
 
+        return False
 
-       usage_data = {
-           "participant_id": participant_id,
-           "question_id": question_id,
-           "chatbot_used": "yes" if (st.session_state.get_recommendation_used or st.session_state.followup_used) else "no",
-           "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
-           "total_chatbot_time_seconds": total_time,
-           "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
-           "further_question_asked": "yes" if st.session_state.followup_used else "no",
-           "timestamp": pd.Timestamp.now().isoformat()
-       }
-
-
-       if save_to_gsheet(usage_data):
-           st.session_state.usage_data['start_time'] = time.time()
-           st.session_state.already_saved = True
-           return True
-
-
-       return False
-
-
-   except Exception as e:
-       st.error(f"Progress save failed: {str(e)}")
-       return False
-
-
-
+    except Exception as e:
+        st.error(f"Progress save failed: {str(e)}")
+        return False
 
 
 
