@@ -575,9 +575,9 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 #&&&
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
     # Check if the question contains "option 1", "option 2", etc.
-    greetings = {"hi", "hello", "hey", "greetings"}
-    if user_question_lower.rstrip('!') in greetings:
-        return "Hello! How can I help you with your survey question?"
+    if user_question.lower().strip() in {"hi", "hello", "hey"}:
+        st.session_state.last_recommendation = None  # Clear previous context
+        return "Hello! Please ask about the survey options."
     option_ref_match = re.search(r"option\s*([1-4])\b", user_question.lower())
     
     # If it contains an option reference (1-4), skip validation and go straight to GPT
