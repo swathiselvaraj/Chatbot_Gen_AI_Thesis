@@ -756,7 +756,7 @@ def get_gpt_recommendation(question: str, options: List[str] = None, history: Li
 Available Options:
 {options_text}
 
-The user has referenced a specific option. Provide a detailed analysis of why this option might be a good or bad choice, and compare it briefly with other options if relevant. Keep the response under 75 words.
+The user has referenced a specific option. Provide a detailed analysis of why this option might be a good or bad choice. Keep the response under 50 words.
 
 Respond in this format:
 "Analysis: <your detailed response>"
