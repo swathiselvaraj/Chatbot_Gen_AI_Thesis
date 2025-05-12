@@ -258,9 +258,15 @@ def display_conversation():
 def save_progress():
     """Save or update progress in Google Sheets"""
     try:
-        # Calculate interaction time
-        total_time = round(time.time() - st.session_state.usage_data['start_time'], 2)
+        # Calculate new follow-ups since last save
+        new_followups = st.session_state.usage_data['followups_asked'] - st.session_state.usage_data['last_saved_followups']
         
+        # Only proceed if there are new interactions
+        if new_followups <= 0 and not st.session_state.get_recommendation_used:
+            return True
+
+        total_time = round(time.time() - st.session_state.usage_data['start_time'], 2)
+
         usage_data = {
             "participant_id": participant_id,
             "question_id": question_id,
@@ -268,11 +274,15 @@ def save_progress():
             "questions_asked_to_chatbot": st.session_state.usage_data['followups_asked'],
             "total_chatbot_time_seconds": total_time,
             "get_recommendation": "yes" if st.session_state.get_recommendation_used else "no",
-            "further_question_asked": "yes" if st.session_state.followup_used else "no"
+            "further_question_asked": "yes" if st.session_state.usage_data['followups_asked'] > 0 else "no"
         }
-        
-        return save_to_gsheet(usage_data)
-        
+
+        if save_to_gsheet(usage_data):
+            st.session_state.usage_data['last_saved_followups'] = st.session_state.usage_data['followups_asked']
+            st.session_state.get_recommendation_used = False
+            return True
+        return False
+
     except Exception as e:
         st.error(f"Progress save failed: {str(e)}")
         return False
@@ -310,37 +320,36 @@ st.session_state.interaction_start_time = time.time()
 st.session_state.interaction_end_time = time.time()
 # Recommendation button
 if st.button("Get Recommendation"):
-    st.session_state.interaction_start_time = time.time()  # Start timer
+    st.session_state.usage_data['start_time'] = time.time()
     recommendation = get_gpt_recommendation(question_text, options)
     st.session_state.conversation.append(("assistant", recommendation))
-    st.session_state.usage_data['questions_asked'] += 1
     st.session_state.get_recommendation_used = True
+    st.session_state.usage_data['followups_asked'] = 0  # Reset counter
+    st.session_state.usage_data['last_saved_followups'] = 0
     st.session_state.first_load = False
-    st.session_state.interaction_end_time = time.time()  # End timer
     save_progress()
-
+    st.rerun()
     #save_progress()
 
 # Follow-up input
 # Follow-up input
 # Follow-up input
+# Follow-up input
 user_input = st.text_input("Ask a follow-up question:")
-
-# Only process follow-up if it's new and not already handled
-if user_input and user_input not in st.session_state.handled_followups:
-    st.session_state.handled_followups.add(user_input)
+if user_input:
     st.session_state.conversation.append(("user", user_input))
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
-    st.session_state.usage_data['followups_asked'] += 1
-    st.session_state.followup_used = True
+    
+    # Only increment if this is a new follow-up
+    if len(st.session_state.conversation) == 2:  # First follow-up after recommendation
+        st.session_state.usage_data['followups_asked'] = 1
+    elif st.session_state.conversation[-3][0] != "user":  # Only count user messages
+        st.session_state.usage_data['followups_asked'] += 1
+    
     if save_progress():
-        st.success("Follow-up saved successfully!")
-    else:
-        st.warning("Couldn't save follow-up - please try again")
-
-    # Force a refresh after handling input
-    time.sleep(0.5)
+        st.success("Response saved!")
+    time.sleep(0.3)  # Small delay
     st.rerun()
 
 
