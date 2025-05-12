@@ -442,6 +442,7 @@ Please recommend the best option with reasoning. Limit your response to 50 words
 
 Respond in this format:
 "Recommended option: <text>"
+
 "Reason: <short explanation>"
 """
 
