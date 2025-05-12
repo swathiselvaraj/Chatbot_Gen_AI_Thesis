@@ -158,11 +158,9 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
 
 def update_interaction_time():
     now = time.time()
-    # If no interaction is active, start a new one
     if not st.session_state.interaction_active:
         st.session_state.interaction_start_time = now
         st.session_state.interaction_active = True
-    # Always update the last interaction time
     st.session_state.last_interaction_time = now
 
 def end_interaction_and_accumulate_time():
@@ -235,36 +233,57 @@ def initialize_gsheet():
         return None
 
 
+# def save_session_data():
+#     try:
+#         if not st.session_state.usage_data['start_time']:
+#             st.session_state.usage_data['start_time'] = time.time()  # ensure start_time is set
+
+#         total_time = time.time() - st.session_state.usage_data['start_time']
+
+#         data = {
+#             "participant_id": st.session_state.usage_data['participant_id'],
+#             "question_id": st.session_state.usage_data['question_id'],
+#             "chatbot_used": "yes" if st.session_state.usage_data['chatbot_used'] else "no",
+#             "questions_asked": st.session_state.usage_data['questions_asked'],
+#             "total_time_seconds": round(total_time, 2),
+#             "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+#             "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+#             "record_timestamp": pd.Timestamp.now().isoformat()
+#         }
+
+#         # ✅ Move this AFTER total_time is calculated
+#         if save_to_gsheet(data):
+#             st.session_state.already_saved = True
+#             return True
+
+#         return False
+
+#     except Exception as e:
+#         st.error(f"Session save failed: {str(e)}")
+#         return False
+
 def save_session_data():
     try:
-        if not st.session_state.usage_data['start_time']:
-            st.session_state.usage_data['start_time'] = time.time()  # ensure start_time is set
-
-        total_time = time.time() - st.session_state.usage_data['start_time']
-
+        # Use total_interaction_time instead of calculating fresh
         data = {
-            "participant_id": st.session_state.usage_data['participant_id'],
-            "question_id": st.session_state.usage_data['question_id'],
-            "chatbot_used": "yes" if st.session_state.usage_data['chatbot_used'] else "no",
+            "participant_id": participant_id,
+            "question_id": question_id,
+            "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or 
+                                     st.session_state.usage_data['followup_used']) else "no",
             "questions_asked": st.session_state.usage_data['questions_asked'],
-            "total_time_seconds": round(total_time, 2),
+            "total_time_seconds": round(st.session_state.total_interaction_time, 2),
             "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
             "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
             "record_timestamp": pd.Timestamp.now().isoformat()
         }
 
-        # ✅ Move this AFTER total_time is calculated
         if save_to_gsheet(data):
             st.session_state.already_saved = True
             return True
-
         return False
-
     except Exception as e:
         st.error(f"Session save failed: {str(e)}")
         return False
-
-
 # def save_to_gsheet(data_dict: Dict) -> bool:
 #    try:
 #        worksheet = initialize_gsheet()
@@ -569,14 +588,16 @@ if user_input:
     st.session_state.conversation.append(("user", user_input))
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
+    
     end_interaction_and_accumulate_time()
 
     st.session_state.usage_data.update({
         'chatbot_used': True,
         'followup_used': True,
         'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
-        'total_time': st.session_state.total_interaction_time
+        'total_time': st.session_state.total_interaction_time  # Make sure this is included
     })
+
     save_session_data()
 
 
