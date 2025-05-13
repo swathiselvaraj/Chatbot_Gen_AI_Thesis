@@ -985,7 +985,7 @@ Respond in this format:
 #       if role != "user":
 #           st.markdown(f"**Chatbot:** {message}")
 
-# def display_conversation():
+def display_conversation():
   if 'conversation' not in st.session_state:
       st.session_state.conversation = []
 
