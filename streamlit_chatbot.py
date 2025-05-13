@@ -657,14 +657,14 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         # Clean and normalize input
         user_question = user_question.strip().lower()
         
-        # 1. Handle greetings immediately (no embeddings needed)
+        # 1. Handle greetings immediately
         greetings = {"hi", "hello", "hey", "greetings", "good morning", "good afternoon"}
         if any(greet in user_question for greet in greetings):
-            st.session_state.last_recommendation = None  # Clear any previous context
+            st.session_state.last_recommendation = None
             st.session_state.conversation = []
             return "Hello! I'm here to help with your survey question. Please ask about the options."
         
-        # 2. Check for direct option references (e.g., "option 1", "option1", "option one")
+        # 2. Check for direct option references
         option_ref = None
         for i in range(1, 5):
             patterns = [
@@ -675,6 +675,22 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
                 if i-1 < len(options) and options[i-1]:
                     option_ref = options[i-1]
                     break
+        
+        # If we have a direct option reference, proceed to GPT
+        if option_ref:
+            history = []
+            if st.session_state.last_recommendation:
+                history.append((f"Original question: {question_text}",
+                              st.session_state.last_recommendation))
+            history.append((f"Follow-up: {user_question}", ""))
+            history.append((f"User asked about: {option_ref}", ""))
+            
+            return get_gpt_recommendation(
+                user_question,
+                options=options,
+                history=history,
+                is_followup=True
+            )
         
         # 3. Get embedding for semantic comparison
         user_embedding = get_embedding(user_question)
@@ -692,10 +708,9 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         
         if general_scores:
             best_score, best_match = max(general_scores, key=lambda x: x[0])
-            if best_score >= general_threshold:
-                return best_match.get("response", "How can I help with the survey?")
+            return best_match.get("response", "How can I help with the survey?")
         
-        # 5. Check against question-specific followups with lower threshold
+        # 5. Check against question-specific followups
         question_threshold = 0.70
         question_scores = []
         for source in data.get("questions", []):
@@ -705,15 +720,13 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
                 if score >= question_threshold:
                     question_scores.append((score, source))
         
-        # 6. If we have a match or option reference, get GPT recommendation
-        if question_scores or option_ref:
+        # Only proceed to GPT if we have question-specific matches
+        if question_scores:
             history = []
             if st.session_state.last_recommendation:
                 history.append((f"Original question: {question_text}",
                               st.session_state.last_recommendation))
             history.append((f"Follow-up: {user_question}", ""))
-            if option_ref:
-                history.append((f"User asked about: {option_ref}", ""))
             
             return get_gpt_recommendation(
                 user_question,
@@ -722,12 +735,12 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
                 is_followup=True
             )
         
-        # 7. Final fallback if no matches found
+        # 6. Final fallback if no matches found
         return "Please ask a question specifically about the survey options."
     
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
-        return "Sorry, I encountered an error processing your question."
+        return "Sorry, I encountered an error processing your question.""
 # Modify the validate_followup function to replace option references:
 
 
