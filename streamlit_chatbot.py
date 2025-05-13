@@ -740,7 +740,7 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
     
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
-        return "Sorry, I encountered an error processing your question.""
+        return "Sorry, I encountered an error processing your question."
 # Modify the validate_followup function to replace option references:
 
 
