@@ -1103,6 +1103,11 @@ if question_id != st.session_state.get('last_question_id'):
 #     save_session_data()  # Single save point
 
 
+st.markdown(f"**Survey Question ({question_id}):** {question_text}")
+st.markdown("**Options:**")
+for i, opt in enumerate(options):
+   st.markdown(f"{i+1}. {opt}")
+
   #save_progress()
 if st.button("Get Recommendation"):
    update_interaction_time()
@@ -1120,10 +1125,6 @@ if st.button("Get Recommendation"):
    save_session_data()
 
 
-st.markdown(f"**Survey Question ({question_id}):** {question}")
-st.markdown("**Options:**")
-for i, opt in enumerate(options):
-   st.markdown(f"{i+1}. {opt}")
 
 
 
