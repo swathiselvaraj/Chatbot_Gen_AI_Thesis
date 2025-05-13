@@ -720,7 +720,7 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
             return "Sorry, I couldn't process your question. Please try again."
 
         # 6. Check against general followups with high threshold
-        general_threshold = 0.70
+        general_threshold = 0.50
         general_scores = []
         for source in data.get("general_followups", []):
             if source.get("embedding"):
@@ -962,7 +962,7 @@ Available Options:
 Please recommend the best option with reasoning. Limit your response to 50 words.
 
 
-Respond in this format:
+Respond in this format:ge
 "Recommended option: <text>"
 
 
