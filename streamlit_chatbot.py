@@ -760,69 +760,7 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
 #         return "Sorry, I couldn't generate a recommendation due to an error."
 
 ###&&&
-def get_gpt_recommendation(
-    question: str, 
-    options: List[str] = None, 
-    history: List[Tuple[str, str]] = None,
-    is_followup: bool = False,
-    referenced_option: Optional[str] = None
-) -> str:
-    try:
-        messages = []
-        
-        # Include conversation history if provided
-        if history:
-            for q, a in history:
-                if q.strip():
-                    messages.append({"role": "user", "content": q})
-                if a.strip():
-                    messages.append({"role": "assistant", "content": a})
 
-        # Different processing for follow-up vs initial recommendation
-        if is_followup:
-            # Follow-up question mode - focused analysis
-            prompt = f"""The user has asked a follow-up question about a survey recommendation.
-Context:
-- Original question: {question_text}
-- Options: {chr(10).join(options)}
-{f"- Referenced option: {referenced_option}" if referenced_option else ""}
-
-The user has asked a follow-up question about a survey recommendation.
-You must use prior context and reasoning to answer concisely in under 50 words.
-
-Respond in this format:
-"Answer: <your answer>"
-"""
-        else:
-            # Initial recommendation mode - full recommendation
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
-            prompt = f"""Survey Question: {question}
-Available Options:
-{options_text}
-
-Please recommend the best option with reasoning. Limit your response to 50 words.
-
-Respond in this format:
-"Recommended option: <text>"
-
-"Reason: <short explanation>"
-"""
-
-        messages.append({"role": "user", "content": prompt})
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7
-        )
-
-        result = response.choices[0].message.content
-        st.session_state.last_recommendation = result
-        return result
-    
-    except Exception as e:
-        st.error(f"Recommendation generation failed: {str(e)}")
-        return "Sorry, I couldn't generate a recommendation due to an error."
 
 
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
