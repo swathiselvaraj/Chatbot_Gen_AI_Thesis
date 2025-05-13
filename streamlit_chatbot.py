@@ -33,8 +33,6 @@ options = options_raw.split("|")
 while len(options) < 4:
    options.append("")
 
-options = sorted(options)
-
 option_mapping = {f"option {i+1}": options[i] for i in range(4)}
 option_mapping.update({f"option{i+1}": options[i] for i in range(4)})  # Also handle "option1" format
 
