@@ -740,12 +740,12 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         
         # Only proceed to GPT if we have question-specific matches
         if question_scores:
-            return get_gpt_recommendation(
-                user_question,
-                options=options,
-                history=history,
-                is_followup=True
-            )
+        return get_gpt_recommendation(
+            user_question,
+            options=options,
+            history=history,
+            is_followup=True
+        )
         
         # 8. Final fallback if no matches found
         return "Please ask a question about the survey options."
