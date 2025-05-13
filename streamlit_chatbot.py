@@ -1013,7 +1013,6 @@ def display_conversation():
         # Don't show if it's the same as last time
         if (not st.session_state.conversation[-1][1] == 
             getattr(st.session_state, 'last_displayed_response', None)):
-            st.markdown(f"**You:** {user_msg}")
             st.markdown(f"**Chatbot:** {bot_msg}")
             st.session_state.last_displayed_response = bot_msg
 
