@@ -668,17 +668,12 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         # 2. Check for direct option references
         option_ref = None
         referenced_index = None
-        for i in range(1, 5):
-            patterns = [
-                f"option {i}", f"option{i}",
-                f"option {['one','two','three','four'][i-1]}"
-            ]
-            for pattern in patterns:
-                if pattern in user_question:
-                    if i - 1 < len(options) and options[i - 1]:
-                        option_ref = options[i - 1]
-                        referenced_index = i - 1
-                        break  # Break the inner loop once a match is found
+        option_ref_match = re.search(r"option\s*([1-4])\b", user_question_lower)
+            if option_ref_match:
+                referenced_option_idx = int(option_ref_match.group(1)) - 1
+            if 0 <= referenced_option_idx < len(options):
+                referenced_option = options[referenced_option_idx]
+                option_ref = 'true',# Break the inner loop once a match is found
             if option_ref:
                 break  # Break the outer loop once a match is found
 
@@ -988,9 +983,6 @@ Respond in this format:
 def display_conversation():
   if 'conversation' not in st.session_state:
       st.session_state.conversation = []
-
-
-
 
   if len(st.session_state.conversation) > 0:
       role, message = st.session_state.conversation[-1]
