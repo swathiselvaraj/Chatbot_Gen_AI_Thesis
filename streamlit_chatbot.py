@@ -221,25 +221,52 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 ##&
 # Modify the extract_referenced_option function to use the mapping:
-def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-   try:
-       # First try to find exact matches with the mapping
-       user_input_lower = user_input.lower()
-       for option_ref, option_text in option_mapping.items():
-           if option_ref in user_input_lower and option_text:
-               return option_text
+# def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
+#    try:
+#        # First try to find exact matches with the mapping
+#        user_input_lower = user_input.lower()
+#        for option_ref, option_text in option_mapping.items():
+#            if option_ref in user_input_lower and option_text:
+#                return option_text
       
-       # Fallback to regex if no direct match found
-       match = re.search(r"option\s*(\d+)", user_input_lower)
-       if match:
-           idx = int(match.group(1)) - 1
-           if 0 <= idx < len(options):
-               return options[idx]
-       return None
-   except:
-       return None
+#        # Fallback to regex if no direct match found
+#        match = re.search(r"option\s*(\d+)", user_input_lower)
+#        if match:
+#            idx = int(match.group(1)) - 1
+#            if 0 <= idx < len(options):
+#                return options[idx]
+#        return None
+#    except:
+#        return None
 
+def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
+    """
+    Extracts referenced survey option from user input (1-4 only)
+    Handles formats: 'option X', 'optionX', 'why not option X', 'X', 'option [word]'
+    """
+    if not user_input or len(options) != 4:
+        return None
 
+    try:
+        user_input_lower = user_input.lower().strip()
+        number_map = {'one': 1, 'two': 2, 'three': 3, 'four': 4}
+        
+        # Check all possible patterns
+        for i in range(1, 5):
+            # Match: option 1, option1, option one
+            if (re.search(rf'option[\s\-_]*(0?{i}|{list(number_map.keys())[i-1]})\b', user_input_lower) or
+                re.search(rf'(^|\b)why\s+not\s+option[\s\-_]*(0?{i}|{list(number_map.keys())[i-1]})\b', user_input_lower) or
+                re.search(rf'(^|\b)0?{i}\b', user_input_lower)):
+                
+                idx = i - 1
+                if idx < len(options) and options[idx]:
+                    return options[idx]
+        
+        return None
+
+    except Exception as e:
+        print(f"Option extraction error: {str(e)}")
+        return None
 
 
 # def update_interaction_time():
