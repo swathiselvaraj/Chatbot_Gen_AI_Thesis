@@ -667,31 +667,37 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         
         # 2. Check for direct option references
         option_ref = None
-        for i in range(1, 5):
-            patterns = [
-                f"option {i}", f"option{i}",
-                f"option {['one','two','three','four'][i-1]}"
-            ]
-            if any(pattern in user_question for pattern in patterns):
-                if i-1 < len(options) and options[i-1]:
-                    option_ref = options[i-1]
-                    break
-        
-        # If we have a direct option reference, proceed to GPT
+    referenced_index = None
+    for i in range(1, 5):
+        patterns = [
+            f"option {i}", f"option{i}",
+            f"option {['one','two','three','four'][i-1]}"
+        ]
+        for pattern in patterns:
+            if pattern in user_question:
+                if i - 1 < len(options) and options[i - 1]:
+                    option_ref = options[i - 1]
+                    referenced_index = i - 1
+                    break  # Break the inner loop once a match is found
         if option_ref:
-            history = []
-            if st.session_state.last_recommendation:
-                history.append((f"Original question: {question_text}",
-                              st.session_state.last_recommendation))
-            history.append((f"Follow-up: {user_question}", ""))
-            history.append((f"User asked about: {option_ref}", ""))
-            
-            return get_gpt_recommendation(
-                user_question,
-                options=options,
-                history=history,
-                is_followup=True
-            )
+            break  # Break the outer loop once a match is found
+
+    # If we have a direct option reference, proceed to GPT with context
+    if option_ref:
+        history = []
+        if st.session_state.last_recommendation:
+            history.append((f"Original question: {question_text}",
+                          st.session_state.last_recommendation))
+        history.append((f"Follow-up: {user_question}", ""))
+        history.append((f"User asked about option {referenced_index + 1}: {option_ref}", "")) # Added context
+
+        return get_gpt_recommendation(
+            user_question,
+            options=options,
+            history=history,
+            is_followup=True,
+            focused_option=option_ref # Consider passing the specific option
+        )
         
         # 3. Get embedding for semantic comparison
         user_embedding = get_embedding(user_question)
