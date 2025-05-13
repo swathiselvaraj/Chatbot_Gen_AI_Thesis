@@ -721,12 +721,12 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         if general_scores:
             best_score, best_match = max(general_scores, key=lambda x: x[0])
             if question_scores:
-            return get_gpt_recommendation(
-                user_question,
-                options=options,
-                history=history,
-                is_followup=True
-            )
+                return get_gpt_recommendation(
+                    user_question,
+                     options=options,
+                    history=history,
+                    is_followup=True
+                )
 
         # 7. Check against question-specific followups
         question_threshold = 0.70
