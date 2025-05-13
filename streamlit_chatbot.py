@@ -664,41 +664,62 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
             st.session_state.last_recommendation = None
             st.session_state.conversation = []
             return "Hello! I'm here to help with your survey question. Please ask about the options."
-
-        # 2. Check for direct option references
+        
+        # 2. Improved option reference detection
         option_ref = None
-        referenced_index = None
-        option_ref_match = re.search(r"option\s*([1-4])\b", user_question_lower)
-            if option_ref_match:
-                referenced_option_idx = int(option_ref_match.group(1)) - 1
-            if 0 <= referenced_option_idx < len(options):
-                referenced_option = options[referenced_option_idx]
-                option_ref = 'true',# Break the inner loop once a match is found
-            if option_ref:
-                break  # Break the outer loop once a match is found
-
-        # If we have a direct option reference, proceed to GPT and return immediately
+        option_num = None
+        
+        # Number to word mapping
+        number_words = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+        ordinal_words = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth']
+        
+        # Check for patterns like "option 4", "why not option 3", "option four", etc.
+        for i in range(1, len(options)+1):
+            patterns = [
+                f"option {i}", f"option{i}",
+                f"option {number_words[i-1]}",
+                f"why not option {i}", f"why not option{i}",
+                f"what about option {i}", f"what about option{i}",
+                f"not option {i}", f"not option{i}",
+                f"{i}",  # Just the number
+                f"the {i} one", 
+                f"the {ordinal_words[i-1]} one",
+                f"the {ordinal_words[i-1]} option",
+                f"why {ordinal_words[i-1]} option",
+                f"what about {ordinal_words[i-1]} option",
+                f"not {ordinal_words[i-1]} option"
+            ]
+            
+            # Check if any pattern matches
+            if any(re.search(r'\b' + re.escape(pattern) + r'\b', user_question) for pattern in patterns):
+                if i-1 < len(options) and options[i-1]:
+                    option_ref = options[i-1]
+                    option_num = i
+                    break
+        
+        # If we have an option reference, proceed to GPT
         if option_ref:
             history = []
             if st.session_state.last_recommendation:
                 history.append((f"Original question: {question_text}",
                               st.session_state.last_recommendation))
+            
+            # Add context about the option being referenced
             history.append((f"Follow-up: {user_question}", ""))
-            history.append((f"User asked about option {referenced_index + 1}: {option_ref}", ""))
-
+            history.append((f"User asked about option {option_num}: {option_ref}", ""))
+            
             return get_gpt_recommendation(
                 user_question,
                 options=options,
                 history=history,
-                is_followup=True,
-                focused_option=option_ref  # Consider passing the specific option
+                is_followup=True
             )
-
+        
         # 3. Get embedding for semantic comparison
         user_embedding = get_embedding(user_question)
         if not user_embedding:
             return "Sorry, I couldn't process your question. Please try again."
-
+        
         # 4. Check against general followups with high threshold
         general_threshold = 0.85
         general_scores = []
@@ -707,21 +728,21 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
                 score = cosine_similarity(user_embedding, source["embedding"])
                 if score >= general_threshold:
                     general_scores.append((score, source))
-
+        
         if general_scores:
             best_score, best_match = max(general_scores, key=lambda x: x[0])
             return best_match.get("response", "How can I help with the survey?")
-
+        
         # 5. Check against question-specific followups
         question_threshold = 0.70
         question_scores = []
         for source in data.get("questions", []):
-            if (source.get("embedding") and
+            if (source.get("embedding") and 
                 source.get("question_id", "") == question_id):
                 score = cosine_similarity(user_embedding, source["embedding"])
                 if score >= question_threshold:
                     question_scores.append((score, source))
-
+        
         # Only proceed to GPT if we have question-specific matches
         if question_scores:
             history = []
@@ -729,16 +750,16 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
                 history.append((f"Original question: {question_text}",
                               st.session_state.last_recommendation))
             history.append((f"Follow-up: {user_question}", ""))
-
+            
             return get_gpt_recommendation(
                 user_question,
                 options=options,
                 history=history,
                 is_followup=True
             )
-
+        
         # 6. Final fallback if no matches found
-        return "Please ask a question specifically about the survey options."
+        return "Please ask questions related to the Survey'"
 
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
