@@ -38,6 +38,7 @@ option_mapping.update({f"option{i+1}": options[i] for i in range(4)})  # Also ha
 
 
 
+
 # Ensure we have exactly 4 options, pad with empty strings if needed
 
 
@@ -61,7 +62,11 @@ if 'sheet_initialized' not in st.session_state:
 if 'already_saved' not in st.session_state:  # New flag to track saves
   st.session_state.already_saved = False
 
-
+if "original_options" not in st.session_state:
+    st.session_state.original_options = options
+    st.session_state.option_mapping = {
+        f"option{i+1}": options[i] for i in range(len(options))
+    }
 
 
 # if 'usage_data' not in st.session_state:
@@ -694,23 +699,48 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
             st.session_state.last_recommendation = None
             return "Hello! Please ask about the survey options."
 
-        # Extract referenced option using the improved function
-        referenced_option = extract_referenced_option(user_question, options)
+        # # Extract referenced option using the improved function
+        # referenced_option = extract_referenced_option(user_question, options)
         
-        # Prepare conversation history
-        history = []
-        if st.session_state.last_recommendation:
-            history.append(("Original question", st.session_state.last_recommendation))
-        history.append(("Follow-up", user_question))
+        # # Prepare conversation history
+        # history = []
+        # if st.session_state.last_recommendation:
+        #     history.append(("Original question", st.session_state.last_recommendation))
+        # history.append(("Follow-up", user_question))
         
-        # If option found, get GPT response
-        if referenced_option:
-            option_num = options.index(referenced_option) + 1
-            history.append(("Referenced option", f"Option {option_num}: {referenced_option}"))
+        # # If option found, get GPT response
+        # if referenced_option:
+        #     option_num = options.index(referenced_option) + 1
+        #     history.append(("Referenced option", f"Option {option_num}: {referenced_option}"))
             
+        #     return get_gpt_recommendation(
+        #         user_question,
+        #         options=options,
+        #         history=history,
+        #         is_followup=True
+        #     )
+
+        option_mapping = st.session_state.get("option_mapping", {})
+        original_options = st.session_state.get("original_options", options)
+
+# Extract referenced option
+        referenced_option = extract_referenced_option(user_question, original_options)
+
+# Prepare conversation history
+        history = []
+        if st.session_state.get("last_recommendation"):
+            history.append(("Original question", st.session_state.last_recommendation))
+                history.append(("Follow-up", user_question))
+
+# If a specific option is referenced
+        if referenced_option:
+    # Reverse-lookup option number from mapping
+            option_num = original_options.index(referenced_option) + 1
+            history.append(("Referenced option", f"Option {option_num}: {referenced_option}"))
+
             return get_gpt_recommendation(
                 user_question,
-                options=options,
+                options=original_options,
                 history=history,
                 is_followup=True
             )
