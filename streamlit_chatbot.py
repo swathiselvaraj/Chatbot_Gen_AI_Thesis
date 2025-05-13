@@ -710,7 +710,7 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
             return "Sorry, I couldn't process your question. Please try again."
 
         # 6. Check against general followups with high threshold
-        general_threshold = 0.85
+        general_threshold = 0.70
         general_scores = []
         for source in data.get("general_followups", []):
             if source.get("embedding"):
@@ -720,7 +720,13 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         
         if general_scores:
             best_score, best_match = max(general_scores, key=lambda x: x[0])
-            return best_match.get("response", "How can I help with the survey?")
+            if question_scores:
+            return get_gpt_recommendation(
+                user_question,
+                options=options,
+                history=history,
+                is_followup=True
+            )
 
         # 7. Check against question-specific followups
         question_threshold = 0.70
@@ -742,7 +748,7 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
             )
         
         # 8. Final fallback if no matches found
-        return "Please ask a question specifically about the survey options."
+        return "Please ask a question about the survey options."
 
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
