@@ -574,70 +574,70 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 #         st.error(f"Follow-up validation failed: {str(e)}")
 #&&&
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-    # Clean and normalize input
-    user_question = user_question.strip()
-    user_question_lower = user_question.lower()
-    
-    # 1. Handle greetings immediately (no embeddings, no GPT)
-    greetings = {"hi", "hello", "hey", "greetings"}
-    if user_question_lower.rstrip('!?.,') in greetings:
-        st.session_state.last_recommendation = None  # Clear context
-        return "Hello! Please ask about the survey options."
-
-    # 2. Check for option references (e.g., "option 1")
-    option_ref_match = re.search(r"option\s*([1-4])\b", user_question_lower)
-    referenced_option = None
-    if option_ref_match:
-        referenced_option_idx = int(option_ref_match.group(1)) - 1
-        if 0 <= referenced_option_idx < len(options):
-            referenced_option = options[referenced_option_idx]
-
-    # 3. Prepare conversation history
-    history = []
-    if st.session_state.last_recommendation:
-        history.append((f"Original question: {question_text}", 
-                      st.session_state.last_recommendation))
-    history.append((f"Follow-up: {user_question}", ""))
-    if referenced_option:
-        history.append((f"User asked about: {referenced_option}", ""))
-
-    # 4. Handle option references immediately (bypass validation)
-    if option_ref_match:
-        return get_gpt_recommendation(
-            user_question, 
-            options=options, 
-            history=history,
-            is_followup=True
-        )
-
-    # 5. Check general followups with higher threshold
-    user_embedding = get_embedding(user_question)
-    general_scores = []
-    
-    for source in data["general_followups"]:
-        if source.get("embedding"):
-            score = cosine_similarity(user_embedding, source["embedding"])
-            if score >= 0.85:  # Strict threshold
-                general_scores.append((score, source))
-    
-    if general_scores:
-        best_match = max(general_scores, key=lambda x: x[0])[1]
-        return best_match.get("response", "How can I help with the survey?")
-
-    # 6. Check question-specific followups
-    for source in data["questions"]:
-        if (source.get("embedding") and 
-            source.get("question_id") == question_id):
-            if cosine_similarity(user_embedding, source["embedding"]) >= 0.70:
+    try:
+        user_question = user_question.strip().lower()
+        
+        # 1. Handle greetings immediately (no embeddings, no GPT)
+        greetings = {"hi", "hello", "hey", "greetings"}
+        if user_question.rstrip('!?.,') in greetings:
+            st.session_state.last_recommendation = None  # Clear context
+            return "Hello! Please ask about the survey options."
+        
+        # 2. Check for direct option references (e.g., "option 1" or "1")
+        option_ref = None
+        option_match = re.search(r"(?:option\s*)?([1-4])\b", user_question)
+        if option_match:
+            option_idx = int(option_match.group(1)) - 1
+            if 0 <= option_idx < len(options):
+                option_ref = options[option_idx]
+                # Bypass validation for option references
                 return get_gpt_recommendation(
                     user_question,
                     options=options,
-                    history=history,
+                    is_followup=True,
+                    referenced_option=option_ref
+                )
+        
+        # 3. Get embedding for the question
+        user_embedding = get_embedding(user_question)
+        if not user_embedding:
+            return "Please ask a question related to the survey options."
+        
+        # 4. Check against general followups with high threshold
+        general_scores = []
+        for source in data["general_followups"]:
+            if source.get("embedding"):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                if score >= 0.85:  # Very high threshold for general questions
+                    general_scores.append((score, source))
+        
+        if general_scores:
+            best_score, best_match = max(general_scores, key=lambda x: x[0])
+            return best_match.get("response", "How can I help with the survey?")
+        
+        # 5. Check against question-specific followups
+        question_scores = []
+        for source in data["questions"]:
+            if (source.get("embedding") and 
+                source.get("question_id") == question_id):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                question_scores.append((score, source))
+        
+        if question_scores:
+            best_score, best_match = max(question_scores, key=lambda x: x[0])
+            if best_score >= 0.75:  # Strict threshold for relevance
+                return get_gpt_recommendation(
+                    user_question,
+                    options=options,
                     is_followup=True
                 )
-
-    # 7. Final fallback
-    return "Please ask a question related to the survey options."
+        
+        # 6. Final fallback for unrelated questions
+        return "Please ask a question related to the survey options."
+        
+    except Exception as e:
+        st.error(f"Follow-up validation failed: {str(e)}")
+        return "Sorry, I encountered an error processing your question."
 # Modify the validate_followup function to replace option references:
 
 # def get_gpt_recommendation(question: str, options: List[str] = None, history: List[Tuple[str, str]] = None) -> str:
@@ -856,6 +856,59 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
     except Exception as e:
         st.error(f"Follow-up validation failed: {str(e)}")
         return "Sorry, I encountered an error processing your question."
+
+def get_gpt_recommendation(
+    question: str, 
+    options: List[str] = None, 
+    is_followup: bool = False,
+    referenced_option: Optional[str] = None
+) -> str:
+    try:
+        messages = []
+        
+        if is_followup:
+            # For follow-up questions
+            prompt = f"""The user has asked a follow-up question about this survey:
+Original Question: {question_text}
+Options: {chr(10).join(options)}
+{f"- Referenced option: {referenced_option}" if referenced_option else ""}
+
+Please provide a concise answer (under 50 words) focused on the survey context.
+
+Respond with:
+"Answer: <your response>"
+"""
+        else:
+            # For initial recommendations
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+            prompt = f"""Survey Question: {question}
+Available Options:
+{options_text}
+
+Recommend the best option with brief reasoning (under 50 words).
+
+Respond with:
+"Recommended option: <option text>"
+
+"Reason: <your reasoning>"
+"""
+
+        messages.append({"role": "user", "content": prompt})
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=0.7,
+            max_tokens=100
+        )
+
+        result = response.choices[0].message.content
+        st.session_state.last_recommendation = result
+        return result
+    
+    except Exception as e:
+        st.error(f"Recommendation generation failed: {str(e)}")
+        return "Sorry, I couldn't generate a response due to an error."
 def display_conversation():
    if 'conversation' not in st.session_state:
        st.session_state.conversation = []
@@ -978,18 +1031,18 @@ user_input = st.text_input("Ask a follow-up question:")
 if user_input:
     update_interaction_time()
     st.session_state.conversation.append(("user", user_input))
+    
+    # Get response through validation
     response = validate_followup(user_input, question_id, options)
     st.session_state.conversation.append(("assistant", response))
     
     end_interaction_and_accumulate_time()
-
     st.session_state.usage_data.update({
         'chatbot_used': True,
         'followup_used': True,
         'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
-        'total_time': st.session_state.total_interaction_time  # Make sure this is included
+        'total_time': st.session_state.total_interaction_time
     })
-
     save_session_data()
 
 
