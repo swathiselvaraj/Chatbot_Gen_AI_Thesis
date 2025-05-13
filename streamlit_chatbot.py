@@ -161,19 +161,6 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 
 
-
-
-def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
-  try:
-      a = np.array(vec1)
-      b = np.array(vec2)
-      return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
-  except Exception as e:
-      st.error(f"Similarity calculation failed: {str(e)}")
-      return 0.0
-
-
-
 # def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
 #    try:
 #        match = re.search(r"option\s*(\d+)", user_input.lower())
@@ -980,44 +967,6 @@ Respond in this format:
        st.error(f"Recommendation generation failed: {str(e)}")
        return "Sorry, I couldn't generate a recommendation due to an error."
 
-
-
-
-def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
-   clean_question = user_question.split("(")[0].strip()  # Remove any appended context
-   user_embedding = get_embedding(clean_question)
-   try:
-       # Check for option reference
-       option_ref_match = re.search(r"option\s*([1-4])\b", user_question.lower())
-       referenced_option = None
-      
-       if option_ref_match:
-           referenced_option_idx = int(option_ref_match.group(1)) - 1
-           if 0 <= referenced_option_idx < len(options):
-               referenced_option = options[referenced_option_idx]
-
-
-       # Prepare conversation history
-       history = []
-       if st.session_state.last_recommendation:
-           history.append((f"Original survey question: {question_text}",
-                          st.session_state.last_recommendation))
-      
-       history.append((f"Follow-up: {user_question}", ""))
-
-
-       # Process as follow-up question with referenced option
-       return get_gpt_recommendation(
-           question=user_question,
-           options=options,
-           history=history,
-           is_followup=True,
-           referenced_option=referenced_option
-       )
-      
-   except Exception as e:
-       st.error(f"Follow-up validation failed: {str(e)}")
-       return "Sorry, I encountered an error processing your question."
 # def display_conversation():
 #   if 'conversation' not in st.session_state:
 #       st.session_state.conversation = []
