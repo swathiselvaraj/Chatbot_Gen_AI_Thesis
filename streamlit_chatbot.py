@@ -148,6 +148,7 @@ def get_embedding(text: str) -> List[float]:
 
 
 
+
 def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
   try:
       a = np.array(vec1)
@@ -157,6 +158,19 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
       st.error(f"Similarity calculation failed: {str(e)}")
       return 0.0
 
+
+
+
+
+
+def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+  try:
+      a = np.array(vec1)
+      b = np.array(vec2)
+      return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+  except Exception as e:
+      st.error(f"Similarity calculation failed: {str(e)}")
+      return 0.0
 
 
 
@@ -970,6 +984,8 @@ Respond in this format:
 
 
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
+   clean_question = user_question.split("(")[0].strip()  # Remove any appended context
+   user_embedding = get_embedding(clean_question)
    try:
        # Check for option reference
        option_ref_match = re.search(r"option\s*([1-4])\b", user_question.lower())
