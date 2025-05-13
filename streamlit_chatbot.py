@@ -802,15 +802,14 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         option_num = None
         
         # Check for patterns like "option 4", "option4", or just "4"
-        option_match = re.search(r"(?:option\s*)?([1-4])\b", user_question_lower)
-        if option_match:
-            option_num = option_match.group(1)
-            option_idx = int(option_num) - 1
-            if 0 <= option_idx < len(options) and options[option_idx]:
-                referenced_option = options[option_idx]
+        option_ref_match = re.search(r"option\s*([1-4])\b", user_question_lower)
+        if option_ref_match:
+            referenced_option_idx = int(option_ref_match.group(1)) - 1
+            if 0 <= referenced_option_idx < len(options):
+                referenced_option = options[referenced_option_idx]
 
         # If we found an option reference, bypass validation
-        if referenced_option:
+        if option_ref_match:
             history = []
             if st.session_state.last_recommendation:
                 history.append((f"Original question: {question_text}", 
