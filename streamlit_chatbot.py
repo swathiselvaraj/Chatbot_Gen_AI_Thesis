@@ -30,10 +30,6 @@ question_text = query_params.get("qtext", "What is your decision?")
 options_raw = query_params.get("opts", "Option 1|Option 2|Option 3|Option 4")  # Default now has 4 options
 options = options_raw.split("|")
 
-st.markdown(f"**Survey Question ({question_id}):** {question}")
-st.markdown("**Options:**")
-for i, opt in enumerate(options):
-   st.markdown(f"{i+1}. {opt}")
 
 
 # Ensure we have exactly 4 options, pad with empty strings if needed
@@ -1123,6 +1119,11 @@ if st.button("Get Recommendation"):
    })
    save_session_data()
 
+
+st.markdown(f"**Survey Question ({question_id}):** {question}")
+st.markdown("**Options:**")
+for i, opt in enumerate(options):
+   st.markdown(f"{i+1}. {opt}")
 
 
 
