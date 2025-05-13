@@ -697,12 +697,12 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
 
         # 4. Handle option references immediately (bypass validation)
         if option_ref_match and referenced_option:
-            return get_gpt_recommendation(
-                user_question,
-                options=options,
-                history=history,
-                is_followup=True
-            )
+        return get_gpt_recommendation(
+            user_question,
+            options=options,
+            history=history,
+            is_followup=True
+        )
 
         # 5. Get embedding for semantic comparison
         user_embedding = get_embedding(user_question)
