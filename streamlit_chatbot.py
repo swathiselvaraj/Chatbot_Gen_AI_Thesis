@@ -979,20 +979,19 @@ Respond in this format:
 #       if role != "user":
 #           st.markdown(f"**Chatbot:** {message}")
 
-def display_conversation():
-    if 'conversation' not in st.session_state:
-        st.session_state.conversation = []
-    
-    # Only show the last exchange (question + answer)
-    if len(st.session_state.conversation) >= 2:
-        user_msg = st.session_state.conversation[-2][1]
-        bot_msg = st.session_state.conversation[-1][1]
-        
-        # Don't show if it's the same as last time
-        if (not st.session_state.conversation[-1][1] == 
-            getattr(st.session_state, 'last_displayed_response', None)):
-            st.markdown(f"**Chatbot:** {bot_msg}")
-            st.session_state.last_displayed_response = bot_msg
+# def display_conversation():
+  if 'conversation' not in st.session_state:
+      st.session_state.conversation = []
+
+
+
+
+  if len(st.session_state.conversation) > 0:
+      role, message = st.session_state.conversation[-1]
+      if role != "user":
+          st.markdown(f"**Chatbot:** {message}")
+
+
 
 
 def save_progress():
