@@ -730,7 +730,7 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         history = []
         if st.session_state.get("last_recommendation"):
             history.append(("Original question", st.session_state.last_recommendation))
-                history.append(("Follow-up", user_question))
+        history.append(("Follow-up", user_question))
 
 # If a specific option is referenced
         if referenced_option:
