@@ -575,47 +575,66 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 #&&&
 def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
     try:
-        user_question = user_question.strip().lower()
+        user_question = user_question.strip()
+        user_question_lower = user_question.lower()
         
         # 1. Handle greetings immediately (no embeddings, no GPT)
         greetings = {"hi", "hello", "hey", "greetings"}
-        if user_question.rstrip('!?.,') in greetings:
+        if user_question_lower.rstrip('!?.,') in greetings:
             st.session_state.last_recommendation = None  # Clear context
             return "Hello! Please ask about the survey options."
+
+        # 2. Check for option references using your working option_mapping logic
+        referenced_option = None
+        # First try exact matches with the mapping
+        for option_ref, option_text in option_mapping.items():
+            if option_ref in user_question_lower and option_text:
+                referenced_option = option_text
+                break
         
-        # 2. Check for direct option references (e.g., "option 1" or "1")
-        option_ref = None
-        option_match = re.search(r"(?:option\s*)?([1-4])\b", user_question)
-        if option_match:
-            option_idx = int(option_match.group(1)) - 1
-            if 0 <= option_idx < len(options):
-                option_ref = options[option_idx]
-                # Bypass validation for option references
-                return get_gpt_recommendation(
-                    user_question,
-                    options=options,
-                    is_followup=True,
-                    referenced_option=option_ref
-                )
-        
-        # 3. Get embedding for the question
+        # Fallback to regex if no direct match found
+        if not referenced_option:
+            match = re.search(r"option\s*(\d+)", user_question_lower)
+            if match:
+                idx = int(match.group(1)) - 1
+                if 0 <= idx < len(options):
+                    referenced_option = options[idx]
+
+        # If option reference found, bypass validation
+        if referenced_option:
+            history = []
+            if st.session_state.last_recommendation:
+                history.append((f"Original survey question: {question_text}", 
+                              st.session_state.last_recommendation))
+            history.append((f"Follow-up: {user_question}", ""))
+            history.append((f"The user mentioned: {referenced_option}", "Acknowledged."))
+            
+            return get_gpt_recommendation(
+                user_question,
+                options=options,
+                history=history,
+                is_followup=True,
+                referenced_option=referenced_option
+            )
+
+        # 3. For non-option questions, proceed with similarity validation
         user_embedding = get_embedding(user_question)
         if not user_embedding:
             return "Please ask a question related to the survey options."
-        
-        # 4. Check against general followups with high threshold
+
+        # Check general followups with high threshold (0.85)
         general_scores = []
         for source in data["general_followups"]:
             if source.get("embedding"):
                 score = cosine_similarity(user_embedding, source["embedding"])
-                if score >= 0.85:  # Very high threshold for general questions
+                if score >= 0.85:
                     general_scores.append((score, source))
         
         if general_scores:
             best_score, best_match = max(general_scores, key=lambda x: x[0])
             return best_match.get("response", "How can I help with the survey?")
-        
-        # 5. Check against question-specific followups
+
+        # Check question-specific followups with threshold (0.75)
         question_scores = []
         for source in data["questions"]:
             if (source.get("embedding") and 
@@ -625,14 +644,21 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         
         if question_scores:
             best_score, best_match = max(question_scores, key=lambda x: x[0])
-            if best_score >= 0.75:  # Strict threshold for relevance
+            if best_score >= 0.75:
+                history = []
+                if st.session_state.last_recommendation:
+                    history.append((f"Original survey question: {question_text}", 
+                                  st.session_state.last_recommendation))
+                history.append((f"Follow-up: {user_question}", ""))
+                
                 return get_gpt_recommendation(
                     user_question,
                     options=options,
+                    history=history,
                     is_followup=True
                 )
-        
-        # 6. Final fallback for unrelated questions
+
+        # Final fallback for unrelated questions
         return "Please ask a question related to the survey options."
         
     except Exception as e:
