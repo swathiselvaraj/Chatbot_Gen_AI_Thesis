@@ -659,51 +659,50 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
         user_question = user_question.strip()
         user_question_lower = user_question.lower()
         
-        # 1. Handle greetings immediately (no embeddings, no GPT)
+        # 1. Handle greetings immediately
         greetings = {"hi", "hello", "hey", "greetings", "good morning", "good afternoon"}
         if any(user_question_lower.rstrip('!?.,').startswith(greet) for greet in greetings):
-            st.session_state.last_recommendation = None  # Clear context
+            st.session_state.last_recommendation = None
             st.session_state.conversation = []
             return "Hello! I'm here to help with your survey question. Please ask about the options."
 
-        # 2. Check for option references (e.g., "option 1", "option1", "option one")
-        option_ref_match = None
-        referenced_option = None
+        # 2. Enhanced option reference detection
+        option_ref = None
+        option_num = None
         
-        # Check numeric patterns ("option 1", "option1")
-        option_ref_match = re.search(r"option\s*([1-4])\b", user_question_lower)
-        if not option_ref_match:
-            # Check word patterns ("option one", "option two")
-            number_words = ["one", "two", "three", "four"]
-            for i, word in enumerate(number_words, start=1):
-                if re.search(fr"option\s*{word}\b", user_question_lower):
-                    option_ref_match = type('', (), {'group': lambda _, x: str(i)})()  # Mock match object
+        # Check for all possible option references (1-4)
+        for i in range(1, len(options)+1):
+            patterns = [
+                f"option {i}", f"option{i}",
+                f"why not option {i}", f"why not option{i}",
+                f"what about option {i}", f"what about option{i}",
+                f"not option {i}", f"not option{i}",
+                f"{i}"  # Just the number
+            ]
+            
+            if any(re.search(r'\b' + re.escape(pattern) + r'\b', user_question_lower) for pattern in patterns):
+                if i-1 < len(options) and options[i-1]:
+                    option_ref = options[i-1]
+                    option_num = i
                     break
 
-        # If we found a match, get the referenced option
-        if option_ref_match:
-            referenced_option_idx = int(option_ref_match.group(1)) - 1
-            if 0 <= referenced_option_idx < len(options):
-                referenced_option = options[referenced_option_idx]
-
-        # 3. Prepare conversation history
-        history = []
-        if st.session_state.last_recommendation:
-            history.append((f"Original question: {question_text}",
-                          st.session_state.last_recommendation))
-        history.append((f"Follow-up: {user_question}", ""))
-        if referenced_option:
-            history.append((f"User asked about: {referenced_option}", ""))
-
-        # 4. Handle option references immediately (bypass validation)
-        if option_ref_match and referenced_option:
+        # 3. If we have an option reference, proceed to GPT
+        if option_ref:
+            history = []
+            if st.session_state.last_recommendation:
+                history.append((f"Original question: {question_text}",
+                              st.session_state.last_recommendation))
+            
+            # Add context about the option being referenced
+            history.append((f"Follow-up: {user_question}", ""))
+            history.append((f"User asked about option {option_num}: {option_ref}", ""))
+            
             return get_gpt_recommendation(
                 user_question,
                 options=options,
                 history=history,
                 is_followup=True
             )
-
         # 5. Get embedding for semantic comparison
         user_embedding = get_embedding(user_question)
         if not user_embedding:
