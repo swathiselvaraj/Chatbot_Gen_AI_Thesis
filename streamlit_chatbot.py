@@ -190,7 +190,7 @@ def get_contextual_prompt(question_type: str, user_input: str, referenced_option
     - Inventory turnover rates
     """
 
-    if referenced_option:
+    renced_option:
         # Handle ALL option-related questions
         return f"""{base_context}
         
@@ -198,7 +198,7 @@ def get_contextual_prompt(question_type: str, user_input: str, referenced_option
         Referenced Option: {referenced_option}
 
         Task:
-        1. For "why not" questions:
+        1. For "why not" qif refeuestions:
            - List 1-2 drawbacks of '{referenced_option}'
            - Suggest better alternatives
         2. For "explain" questions:
@@ -393,50 +393,39 @@ Options considered:
         # Extract referenced option if any
         referenced_option = extract_referenced_option(user_input, options)
         
-        # Get question embedding
+        # ===== NEW LOGIC FOR "WHY NOT OPTION X" =====
+        if referenced_option:
+            # Case 1: Asking about the RECOMMENDED option
+            if (st.session_state.original_recommendation and 
+                referenced_option in st.session_state.original_recommendation['text']):
+                return f"Actually, {referenced_option} WAS recommended because: {st.session_state.original_recommendation['reasoning']}"
+            
+            # Case 2: Asking about other options
+            option_num = options.index(referenced_option) + 1
+            prompt = f"""Explain why this option wasn't recommended:
+            
+            Survey Question: {question_text}
+            Recommended Option: {st.session_state.original_recommendation['text'] if st.session_state.original_recommendation else 'Not available'}
+            
+            Option Being Questioned: Option {option_num} ({referenced_option})
+            
+            Response Requirements:
+            1. Compare directly to recommended option
+            2. Cite 1-2 specific drawbacks
+            3. Use actual option text in explanation
+            4. Maximum 2 sentences
+            Example: "Option {option_num} ({referenced_option}) wasn't chosen because [concrete reason] compared to [recommended option] which [advantage]."
+            """
+            return get_gpt_response_with_context(prompt)
+        # ===== END NEW LOGIC =====
+
+        # Rest of your existing embedding/similarity logic
         user_embedding = get_embedding(user_input)
         if not user_embedding:
             return "Sorry, I couldn't process your question. Please try again."
 
-        # Check against general followups
-        general_threshold = 0.50
-        general_scores = []
-        for source in data.get("general_followups", []):
-            if source.get("embedding"):
-                score = cosine_similarity(user_embedding, source["embedding"])
-                if score >= general_threshold:
-                    general_scores.append((score, source))
-        
-        # Check against question-specific followups
-        question_threshold = 0.70
-        question_scores = []
-        for source in data.get("questions", []):
-            if (source.get("embedding") and 
-                source.get("question_id", "") == question_id):
-                score = cosine_similarity(user_embedding, source["embedding"])
-                if score >= question_threshold:
-                    question_scores.append((score, source))
-        
-        # Three-tier response logic
-        if question_scores and max([s[0] for s in question_scores]) > 0.7:
-            # High confidence match - use predefined answer
-            best_score, best_match = max(question_scores, key=lambda x: x[0])
-            return best_match["answer"]
-        elif general_scores or question_scores:
-            # Medium confidence - use GPT with context
-            return get_gpt_recommendation(
-                user_input,
-                options=options,
-                is_followup=True,
-                referenced_option=referenced_option
-            )
-        else:
-            # Low confidence - still try with general context
-            return get_gpt_recommendation(
-                user_input,
-                options=options,
-                is_followup=True
-            )
+        # ... (keep your existing general/question-specific followup checks)
+        # ... (keep your three-tier response logic)
 
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
