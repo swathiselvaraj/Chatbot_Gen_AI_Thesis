@@ -404,18 +404,18 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
             option_num = options.index(referenced_option) + 1
             prompt = f"""Explain why this option wasn't recommended:
             
-Survey Question: {question_text}
-Recommended Option: {st.session_state.original_recommendation['text'] if st.session_state.original_recommendation else 'Not available'}
+            Survey Question: {question_text}
+            Recommended Option: {st.session_state.original_recommendation['text'] if st.session_state.original_recommendation else 'Not available'}
 
-Option Being Questioned: Option {option_num} ({referenced_option})
+            Option Being Questioned: Option {option_num} ({referenced_option})
 
-Response Requirements:
-1. Compare directly to recommended option
-2. Cite 1-2 specific drawbacks
-3. Use actual option text in explanation
-4. Maximum 2 sentences
-Example: "Option {option_num} ({referenced_option}) wasn't chosen because [concrete reason] compared to [recommended option] which [advantage]."
-"""
+            Response Requirements:
+            1. Compare directly to recommended option
+            2. Cite 1-2 specific drawbacks
+            3. Use actual option text in explanation
+            4. Maximum 2 sentences
+            Example: "Option {option_num} ({referenced_option}) wasn't chosen because [concrete reason] compared to [recommended option] which [advantage]."
+            """
             return get_gpt_response_with_context(prompt)
 
         # Rest of your existing embedding/similarity logic
