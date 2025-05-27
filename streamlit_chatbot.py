@@ -190,7 +190,7 @@ def get_contextual_prompt(question_type: str, user_input: str, referenced_option
     - Inventory turnover rates
     """
 
-    renced_option:
+    if referenced_option:
         # Handle ALL option-related questions
         return f"""{base_context}
         
