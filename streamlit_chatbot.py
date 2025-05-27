@@ -61,6 +61,8 @@ if 'sheet_initialized' not in st.session_state:
   st.session_state.sheet_initialized = False
 if 'already_saved' not in st.session_state:  # New flag to track saves
   st.session_state.already_saved = False
+if 'original_recommendation' not in st.session_state:
+    st.session_state.original_recommendation = None
 
 if "original_options" not in st.session_state:
     st.session_state.original_options = options
@@ -353,26 +355,46 @@ def save_to_gsheet(data_dict: Dict) -> bool:
        st.error(f"Failed to save to Google Sheets: {str(e)}")
        return False
 
-def validate_followup(user_question: str, question_id: str, options: List[str]) -> str:
+def validate_followup(user_input: str, question_id: str, options: List[str]) -> str:
     try:
-        user_question = user_question.strip()
-        if not user_question:
+        user_input = user_input.strip()
+        if not user_input:
             return "Please enter a valid question."
 
         # Handle greetings
         greetings = {"hi", "hello", "hey", "greetings"}
-        if user_question.lower().rstrip('!?.,') in greetings:
+        if user_input.lower().rstrip('!?.,') in greetings:
             st.session_state.last_recommendation = None
-            return "Hello! I can help with supermarket dashboard questions. What would you like to know?"
+            return "Hello! I can help with survey questions. What would you like to know?"
+
+        # Check for recommendation explanation requests
+        explanation_phrases = [
+            "why this recommendation",
+            "explain your suggestion",
+            "justify your answer",
+            "how did you decide",
+            "reason for this recommendation"
+        ]
+        
+        if any(phrase in user_input.lower() for phrase in explanation_phrases):
+            if st.session_state.get('original_recommendation'):
+                orig = st.session_state.original_recommendation
+                return f"""📌 Recommendation Analysis:
+                
+**Chosen Option**: {orig['text']}
+**Reasoning**: {orig['reasoning']}
+
+Options considered:
+{chr(10).join([f"{i+1}. {opt}" for i, opt in enumerate(orig['options'])])}
+"""
+            else:
+                return "Please first get a recommendation before asking for an explanation."
 
         # Extract referenced option if any
-        referenced_option = extract_referenced_option(user_question, options)
-        
-        # Classify question type
-        question_type = classify_question(user_question)
+        referenced_option = extract_referenced_option(user_input, options)
         
         # Get question embedding
-        user_embedding = get_embedding(user_question)
+        user_embedding = get_embedding(user_input)
         if not user_embedding:
             return "Sorry, I couldn't process your question. Please try again."
 
@@ -402,22 +424,23 @@ def validate_followup(user_question: str, question_id: str, options: List[str]) 
             return best_match["answer"]
         elif general_scores or question_scores:
             # Medium confidence - use GPT with context
-            context_prompt = get_contextual_prompt(
-                question_type,
-                user_question,
-                referenced_option
+            return get_gpt_recommendation(
+                user_input,
+                options=options,
+                is_followup=True,
+                referenced_option=referenced_option
             )
-            return get_gpt_response_with_context(context_prompt)
         else:
             # Low confidence - still try with general context
-            return get_gpt_response_with_context(
-                get_contextual_prompt("general", user_question)
+            return get_gpt_recommendation(
+                user_input,
+                options=options,
+                is_followup=True
             )
 
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
         return "Sorry, I encountered an error processing your question."
-
 
 def get_gpt_response_with_context(prompt: str) -> str:
     """Get GPT response with enhanced context handling"""
@@ -442,8 +465,9 @@ def get_gpt_recommendation(
     referenced_option: Optional[str] = None
 ) -> str:
     try:
-        # Build conversation history
         messages = []
+        
+        # Include conversation history if provided
         if history:
             for q, a in history:
                 if q.strip():
@@ -451,40 +475,66 @@ def get_gpt_recommendation(
                 if a.strip():
                     messages.append({"role": "assistant", "content": a})
 
-        # Generate context-aware prompt
-        question_type = classify_question(question)
-        prompt = get_contextual_prompt(
-            question_type,
-            question,
-            referenced_option
-        )
+        # Different processing for follow-up vs initial recommendation
+        if is_followup:
+            prompt = f"""The user has asked a follow-up question about a survey recommendation.
+Context:
+- Original question: {question}
+- Options: {chr(10).join(options)}
+{f"- Referenced option: {referenced_option}" if referenced_option else ""}
 
-        # Add options if available
-        if options:
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
-            prompt += f"\n\nAvailable Options:\n{options_text}"
+The user has asked a follow-up question about a survey recommendation.
+You must answer the question or use prior context and reasoning to answer concisely in under 50 words.
+
+Respond in this format:
+"Answer: <your answer>"
+"""
+        else:
+            # Initial recommendation mode - full recommendation
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+            prompt = f"""Survey Question: {question}
+Available Options:
+{options_text}
+
+Please recommend the best option with reasoning. Limit your response to 50 words.
+
+Respond in this format:
+"Recommended option: <text>"
+"Reason: <short explanation>"
+"""
 
         messages.append({"role": "user", "content": prompt})
 
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
-            temperature=0.7,
-            max_tokens=200
+            temperature=0.7
         )
 
         result = response.choices[0].message.content
+        
+        # Store original recommendation with reasoning
+        if not is_followup:
+            if "Recommended option:" in result and "Reason:" in result:
+                rec_text = result.split("Recommended option:")[1].split("Reason:")[0].strip()
+                reasoning = result.split("Reason:")[1].strip()
+            else:
+                rec_text = result
+                reasoning = "Based on overall analysis of options and dashboard trends."
+            
+            st.session_state.original_recommendation = {
+                'text': rec_text,
+                'reasoning': reasoning,
+                'options': options.copy(),
+                'timestamp': time.time()
+            }
+        
         st.session_state.last_recommendation = result
-        
-        # Log the interaction for improvement
-        log_interaction(question, result, question_type)
-        
         return result
     
     except Exception as e:
         st.error(f"Recommendation generation failed: {str(e)}")
         return "Sorry, I couldn't generate a recommendation."
-
 
 def log_interaction(question: str, response: str, question_type: str):
     """Log interactions for continuous improvement"""
