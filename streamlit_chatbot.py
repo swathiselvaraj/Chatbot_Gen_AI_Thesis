@@ -173,50 +173,45 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
 
 # Add these near your other utility functions
 def get_contextual_prompt(question_type: str, user_input: str, referenced_option: str = None) -> str:
-    """Generate context-rich prompts based on question type"""
+    options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options) if opt.strip()])
+    
     base_context = f"""
     ## Supermarket Dashboard Context ##
-    Role: You're an expert assistant for a supermarket analytics dashboard
-    
-    Current Dashboard Features:
-    - Sales forecasting
-    - Inventory management
-    - Customer behavior analysis
-    - Product performance
-    
-    Key Definitions:
-    - Sales Forecast: Prediction of future sales based on historical data and trends
-    - Inventory Turnover: How quickly inventory is sold and replaced
-    - Customer Conversion: Percentage of visitors who make purchases
-    
-    Response Guidelines:
-    - Be concise (under 75 words)
-    - Use simple language
-    - Reference dashboard metrics when possible
+    Role: Analyze LimeSurvey options with dashboard insights.
+
+    Current Options:
+    {options_text}
+
+    Key Metrics:
+    - Sales trends (last 3 months)
+    - Customer preference scores
+    - Inventory turnover rates
     """
-    
-    if question_type == "definition":
+
+    if referenced_option:
+        # Handle ALL option-related questions
         return f"""{base_context}
         
         User Question: "{user_input}"
-        
-        Task: Provide a clear definition relevant to supermarket operations.
+        Referenced Option: {referenced_option}
+
+        Task:
+        1. For "why not" questions:
+           - List 1-2 drawbacks of '{referenced_option}'
+           - Suggest better alternatives
+        2. For "explain" questions:
+           - Describe pros/cons of '{referenced_option}'
+           - Reference dashboard data
+        3. For "compare" questions:
+           - Contrast with other options
+           - Use metrics (e.g., "Option 3 has 15% higher...")
+        4. Always:
+           - Be specific to THESE options
+           - Avoid generic phrases
         """
-    elif question_type == "recommendation":
-        return f"""{base_context}
-        
-        User Question: "{user_input}"
-        {f"Referenced Option: {referenced_option}" if referenced_option else ""}
-        
-        Task: Recommend the best approach with brief reasoning.
-        """
-    else:  # general question
-        return f"""{base_context}
-        
-        User Question: "{user_input}"
-        
-        Task: Answer helpfully about supermarket operations.
-        """
+    else:
+        # Non-option questions (keep your existing logic)
+        return f"{base_context}\n\nUser Question: \"{user_input}\"\n\nTask: Answer concisely."
 
 def classify_question(user_input: str) -> str:
     """Determine question type for routing"""
