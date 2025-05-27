@@ -381,12 +381,12 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
                 orig = st.session_state.original_recommendation
                 return f"""📌 Recommendation Analysis:
                 
-**Chosen Option**: {orig['text']}
-**Reasoning**: {orig['reasoning']}
+                **Chosen Option**: {orig['text']}
+                **Reasoning**: {orig['reasoning']}
 
-Options considered:
-{chr(10).join([f"{i+1}. {opt}" for i, opt in enumerate(orig['options'])])}
-"""
+                Options considered:
+                {chr(10).join([f"{i+1}. {opt}" for i, opt in enumerate(orig['options'])])}
+                """
             else:
                 return "Please first get a recommendation before asking for an explanation."
 
