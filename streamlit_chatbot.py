@@ -1174,7 +1174,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
             
             # Case 4: General option question
             elif referenced_option:
-                prompt = f"""Analyze this option:
+                prompt = f"""Explain the option and answer the question:
                 Option: {referenced_option}
                 For question: {question_text}
                 Current recommendation: {rec_option}"""
