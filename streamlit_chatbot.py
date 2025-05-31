@@ -1161,7 +1161,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
             elif (is_why or referenced_option) and referenced_option in rec_option:
                 return (f"Recommended Option: {rec_option}\n\n"
                        f"Key Advantages:\n"
-                       f"{chr(10).join([f'• {a}' for a in rec['advantages'])}\n\n"
+                       f"{chr(10).join([f'• {a}' for a in rec['advantages']])}\n\n"
                        f"Primary Reasoning: {rec['reasoning']}")
             
             # Case 3: Comparison request
