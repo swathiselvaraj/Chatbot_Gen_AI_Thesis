@@ -972,6 +972,56 @@ def extract_referenced_option(user_input: str) -> Optional[str]:
             return opt
     return None
 
+def get_gpt_recommendation(question: str, options: List[str]) -> Dict:
+    """Get recommendation with structured output"""
+    try:
+        options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
+        prompt = f"""Survey Question: {question}
+Available Options:
+{options_text}
+
+Please analyze these options and recommend the best one. Provide:
+
+1. Recommended option (number and text)
+2. Clear reasoning (2-3 sentences)
+3. Key advantages
+4. Potential drawbacks of other options
+
+Format your response as JSON:
+{{
+    "recommended_option": "Option X: [text]",
+    "reasoning": "[detailed reasoning]",
+    "advantages": ["advantage1", "advantage2"],
+    "drawbacks": {{
+        "Option 1": "[drawback]",
+        "Option 2": "[drawback]",
+        ...
+    }}
+}}"""
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            response_format={"type": "json_object"}
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        result['options'] = options.copy()  # Store original options
+        
+        # Store the full recommendation
+        st.session_state.original_recommendation = result
+        return result
+        
+    except Exception as e:
+        st.error(f"Recommendation generation failed: {str(e)}")
+        return {
+            "recommended_option": "Option 1: " + options[0],
+            "reasoning": "Default recommendation due to error",
+            "advantages": [],
+            "drawbacks": {}
+        }
+
 def get_gpt_response_with_context(prompt: str) -> str:
     try:
         response = client.chat.completions.create(
