@@ -973,43 +973,45 @@ def extract_referenced_option(user_input: str) -> Optional[str]:
     return None
 
 def get_gpt_recommendation(question: str, options: List[str]) -> Dict:
-    """Get recommendation with structured output"""
+    """Get recommendation with structured output and specific drawbacks"""
     try:
         options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
+        
         prompt = f"""Survey Question: {question}
 Available Options:
 {options_text}
 
-Please analyze these options and recommend the best one. Provide:
+Analyze these options and recommend the best one. For EACH option, provide:
+1. Specific drawbacks (2-3 concrete reasons)
+2. How it compares to other options
+3. Quantitative metrics if available
 
-1. Recommended option (number and text)
-2. Clear reasoning (2-3 sentences)
-3. Key advantages
-4. Potential drawbacks of other options
+For the recommended option, provide:
+1. Clear advantages (2-3 specific reasons)
+2. Implementation considerations
 
-Format your response as JSON:
+Format response as JSON with this structure:
 {{
     "recommended_option": "Option X: [text]",
-    "reasoning": "[detailed reasoning]",
-    "advantages": ["advantage1", "advantage2"],
+    "reasoning": "[detailed analysis]",
+    "advantages": ["specific advantage 1", "specific advantage 2"],
     "drawbacks": {{
-        "Option 1": "[drawback]",
-        "Option 2": "[drawback]",
+        "Option 1": ["specific drawback 1", "specific drawback 2"],
+        "Option 2": ["specific drawback 1", "specific drawback 2"],
         ...
-    }}
+    }},
+    "comparison": "Brief comparison against alternatives"
 }}"""
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",  # Using GPT-4 for better analysis
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
+            temperature=0.3,  # Lower temperature for more factual responses
             response_format={"type": "json_object"}
         )
         
         result = json.loads(response.choices[0].message.content)
-        result['options'] = options.copy()  # Store original options
-        
-        # Store the full recommendation
+        result['options'] = options.copy()
         st.session_state.original_recommendation = result
         return result
         
@@ -1019,7 +1021,8 @@ Format your response as JSON:
             "recommended_option": "Option 1: " + options[0],
             "reasoning": "Default recommendation due to error",
             "advantages": [],
-            "drawbacks": {}
+            "drawbacks": {},
+            "comparison": ""
         }
 
 def get_gpt_response_with_context(prompt: str) -> str:
@@ -1036,20 +1039,6 @@ def get_gpt_response_with_context(prompt: str) -> str:
         st.error(f"GPT response failed: {str(e)}")
         return "I couldn't generate a response. Please try again."
 
-def validate_followup(user_input: str, question_id: str, options: List[str]) -> str:
-    try:
-        user_input = user_input.strip()
-        if not user_input:
-            return "Please enter a valid question."
-
-        # Handle greetings
-        greetings = {"hi", "hello", "hey", "greetings"}
-        if user_input.lower().rstrip('!?.,') in greetings:
-            return "Hello! I can help analyze the survey options. What would you like to know?"
-
-        referenced_option = extract_referenced_option(user_input)
-        is_why_not = "why not" in user_input.lower()
-        is_why = "why" in user_input.lower() and not is_why_not
 
         # Handle option-specific questions
         if referenced_option or any(x in user_input.lower() for x in ["option", "1", "2", "3", "4"]):
@@ -1116,6 +1105,117 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
         return "Sorry, I encountered an error processing your question."
+
+def validate_followup(user_input: str, question_id: str, options: List[str]) -> str:
+    try:
+        user_input = user_input.strip()
+        if not user_input:
+            return "Please enter a valid question."
+
+        # Handle greetings
+        greetings = {"hi", "hello", "hey", "greetings"}
+        if user_input.lower().rstrip('!?.,') in greetings:
+            return "Hello! I can help analyze the survey options. What would you like to know?"
+
+        referenced_option = extract_referenced_option(user_input)
+        is_why_not = "why not" in user_input.lower()
+        is_why = "why" in user_input.lower() and not is_why_not
+        is_compare = "compare" in user_input.lower()
+
+        # Handle option-specific questions
+        if referenced_option or any(x in user_input.lower() for x in ["option", "1", "2", "3", "4"]):
+            if not st.session_state.original_recommendation:
+                return "Please first get a recommendation before asking follow-up questions."
+            
+            rec = st.session_state.original_recommendation
+            rec_option = rec['recommended_option']
+            
+            # Case 1: Asking about why NOT a specific option
+            if is_why_not and referenced_option:
+                if referenced_option in rec_option:
+                    return (f"Actually, {referenced_option} WAS recommended:\n\n"
+                           f"• Key advantages: {', '.join(rec['advantages'])}\n"
+                           f"• Primary reason: {rec['reasoning']}")
+                
+                # Get or generate specific drawbacks
+                drawbacks = rec['drawbacks'].get(referenced_option, [])
+                
+                if not drawbacks:
+                    prompt = f"""Explain why this option wasn't chosen:
+                    
+                    Question: {question_text}
+                    Recommended Option: {rec_option}
+                    Option Being Questioned: {referenced_option}
+                    
+                    Provide 2-3 specific reasons comparing to the recommended option."""
+                    
+                    generated_response = get_gpt_response_with_context(prompt)
+                    drawbacks = [line.strip() for line in generated_response.split('\n') if line.strip()]
+                
+                response = (f"Option {referenced_option} wasn't recommended because:\n\n"
+                           f"{chr(10).join([f'• {d}' for d in drawbacks])}\n\n"
+                           f"Recommended alternative: {rec_option}")
+                return response
+            
+            # Case 2: Asking about the recommended option
+            elif (is_why or referenced_option) and referenced_option in rec_option:
+                return (f"Recommended Option: {rec_option}\n\n"
+                       f"Key Advantages:\n"
+                       f"{chr(10).join([f'• {a}' for a in rec['advantages'])}\n\n"
+                       f"Primary Reasoning: {rec['reasoning']}")
+            
+            # Case 3: Comparison request
+            elif is_compare and referenced_option:
+                prompt = f"""Compare these two options:
+                Option A: {referenced_option}
+                Option B: {rec_option}
+                For question: {question_text}"""
+                return get_gpt_response_with_context(prompt)
+            
+            # Case 4: General option question
+            elif referenced_option:
+                prompt = f"""Analyze this option:
+                Option: {referenced_option}
+                For question: {question_text}
+                Current recommendation: {rec_option}"""
+                return get_gpt_response_with_context(prompt)
+            
+            # Case 5: General question about options
+            else:
+                return get_gpt_response_with_context(
+                    f"Question: {question_text}\n"
+                    f"Options: {', '.join(options)}\n"
+                    f"User query: {user_input}"
+                )
+
+        # Handle recommendation explanation requests
+        explanation_phrases = [
+            "why this recommendation", "explain your suggestion",
+            "justify your answer", "how did you decide"
+        ]
+        if any(phrase in user_input.lower() for phrase in explanation_phrases):
+            if st.session_state.original_recommendation:
+                rec = st.session_state.original_recommendation
+                return (f"Recommendation Analysis:\n\n"
+                       f"Chosen Option: {rec['recommended_option']}\n\n"
+                       f"Key Advantages:\n"
+                       f"{chr(10).join([f'• {a}' for a in rec['advantages'])}\n\n"
+                       f"Reasoning: {rec['reasoning']}\n\n"
+                       f"Options considered:\n"
+                       + "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]))
+            else:
+                return "Please first get a recommendation before asking for an explanation."
+
+        # Default response for other questions
+        return get_gpt_response_with_context(
+            f"Survey question: {question_text}\n"
+            f"Available options: {', '.join(options)}\n"
+            f"User question: {user_input}"
+        )
+
+    except Exception as e:
+        st.error(f"Error in followup validation: {str(e)}")
+        return "Sorry, I encountered an error processing your question. Please try again."
 
 # --- Main App Logic ---
 if st.session_state.first_load and not st.session_state.sheet_initialized:
