@@ -1036,6 +1036,87 @@ def get_gpt_response_with_context(prompt: str) -> str:
         st.error(f"GPT response failed: {str(e)}")
         return "I couldn't generate a response. Please try again."
 
+def validate_followup(user_input: str, question_id: str, options: List[str]) -> str:
+    try:
+        user_input = user_input.strip()
+        if not user_input:
+            return "Please enter a valid question."
+
+        # Handle greetings
+        greetings = {"hi", "hello", "hey", "greetings"}
+        if user_input.lower().rstrip('!?.,') in greetings:
+            return "Hello! I can help analyze the survey options. What would you like to know?"
+
+        referenced_option = extract_referenced_option(user_input)
+        is_why_not = "why not" in user_input.lower()
+        is_why = "why" in user_input.lower() and not is_why_not
+
+        # Handle option-specific questions
+        if referenced_option or any(x in user_input.lower() for x in ["option", "1", "2", "3", "4"]):
+            if not st.session_state.original_recommendation:
+                return "Please first get a recommendation before asking follow-up questions."
+            
+            rec = st.session_state.original_recommendation
+            rec_option = rec['recommended_option']
+            
+            # Case 1: Asking about why NOT a specific option
+            if is_why_not and referenced_option:
+                if referenced_option in rec_option:
+                    return f"Actually, {referenced_option} WAS recommended because: {rec['reasoning']}"
+                
+                drawback = rec['drawbacks'].get(referenced_option, 
+                    "It wasn't the optimal choice based on the current analysis.")
+                return f"Option {referenced_option} wasn't recommended because: {drawback}"
+            
+            # Case 2: Asking about the recommended option
+            elif referenced_option and referenced_option in rec_option:
+                return (f"Recommended Option: {rec_option}\n\n"
+                       f"Reasoning: {rec['reasoning']}\n\n"
+                       f"Advantages: {', '.join(rec['advantages'])}")
+            
+            # Case 3: General option question
+            elif referenced_option:
+                return (f"Analysis of {referenced_option}:\n\n"
+                       f"Compared to recommended option {rec_option}, this option "
+                       f"{rec['drawbacks'].get(referenced_option, 'has some limitations')}")
+            
+            # Case 4: General question about options
+            else:
+                return get_gpt_response_with_context(
+                    f"User asked: {user_input}\n\n"
+                    f"Current recommendation: {rec_option}\n"
+                    f"Options: {', '.join(options)}\n\n"
+                    "Provide a concise answer (1-2 sentences) relating to the recommendation."
+                )
+
+        # Handle recommendation explanation requests
+        explanation_phrases = [
+            "why this recommendation", "explain your suggestion",
+            "justify your answer", "how did you decide"
+        ]
+        if any(phrase in user_input.lower() for phrase in explanation_phrases):
+            if st.session_state.original_recommendation:
+                rec = st.session_state.original_recommendation
+                return (f"Recommendation Analysis:\n\n"
+                       f"Chosen Option: {rec['recommended_option']}\n"
+                       f"Reasoning: {rec['reasoning']}\n\n"
+                       f"Options considered:\n"
+                       + "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]))
+            else:
+                return "Please first get a recommendation before asking for an explanation."
+
+        # Default response for other questions
+        return get_gpt_response_with_context(
+            f"Survey Question: {question_text}\n"
+            f"Current Options: {', '.join(options)}\n"
+            f"User Question: {user_input}\n\n"
+            "Provide a concise answer (1-2 sentences) based on the available options."
+        )
+
+    except Exception as e:
+        st.error(f"Error in followup validation: {str(e)}")
+        return "Sorry, I encountered an error processing your question."
+
 # --- Main App Logic ---
 if st.session_state.first_load and not st.session_state.sheet_initialized:
     initialize_gsheet()
