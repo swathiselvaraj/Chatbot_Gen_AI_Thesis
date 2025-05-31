@@ -708,35 +708,28 @@ if 'usage_data' not in st.session_state:
         'total_time': 0
     }
 
-# --- Improved Option Extraction ---
-def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-    """Extracts referenced option with better handling of different formats"""
-    if not user_input or not options:
-        return None
+options_raw = unquote(query_params.get("opts", ""))
+options = [opt.strip() for opt in options_raw.split("|") if opt.strip()]
 
-    user_input_lower = user_input.lower()
-    number_map = {'one': '1', 'two': '2', 'three': '3', 'four': '4'}
-    
-    # Check for direct number references (1, 2, 3, 4)
-    for num in ['1', '2', '3', '4']:
-        # Match formats: "1", "option 1", "option1", "why not option 1"
-        if (re.search(rf'(^|\b)(option\s*)?({num})\b', user_input_lower) or
-            re.search(rf'(why\s+(not\s+)?option\s*)?({num})\b', user_input_lower)):
-            if int(num) <= len(options):
-                return options[int(num)-1]
-    
-    # Check for word numbers ("one", "two", etc.)
-    for word, num in number_map.items():
-        if re.search(rf'\b{word}\b', user_input_lower):
-            if int(num) <= len(options):
-                return options[int(num)-1]
-    
+# Create mapping dictionaries
+option_mapping = {
+    **{f"option{i+1}": opt for i, opt in enumerate(options)},
+    **{f"option {i+1}": opt for i, opt in enumerate(options)},
+    **{str(i+1): opt for i, opt in enumerate(options)},
+    **{num: opt for i, opt in enumerate(options) 
+       for num in [str(i+1), ["one", "two", "three", "four"][i]]}
+}
+
+def extract_referenced_option(user_input: str) -> Optional[str]:
+    user_input = user_input.lower()
+    # Check direct number matches first
+    for num, opt in option_mapping.items():
+        if re.search(rf'\b{num}\b', user_input):
+            return opt
     # Check for direct text matches
-    for option in options:
-        option_lower = option.lower()
-        if len(option_lower) > 5 and option_lower in user_input_lower:
-            return option
-    
+    for opt in options:
+        if opt.lower() in user_input:
+            return opt
     return None
 
 # --- Enhanced Recommendation Handling ---
