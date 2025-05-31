@@ -1199,7 +1199,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
                 return (f"Recommendation Analysis:\n\n"
                        f"Chosen Option: {rec['recommended_option']}\n\n"
                        f"Key Advantages:\n"
-                       f"{chr(10).join([f'• {a}' for a in rec['advantages'])}\n\n"
+                       f"{chr(10).join([f'• {a}' for a in rec['advantages']])}\n\n"
                        f"Reasoning: {rec['reasoning']}\n\n"
                        f"Options considered:\n"
                        + "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]))
