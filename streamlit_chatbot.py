@@ -1004,10 +1004,11 @@ Format response as JSON with this structure:
 }}"""
 
         response = client.chat.completions.create(
-            model="gpt-4",  # Using GPT-4 for better analysis
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,  # Lower temperature for more factual responses
-            response_format={"type": "json_object"}
+            model="gpt-3.5-turbo",
+            messages=[{"role": "system", "content": prompt}],
+            temperature=0.5,
+            max_tokens=150
+#         )
         )
         
         result = json.loads(response.choices[0].message.content)
