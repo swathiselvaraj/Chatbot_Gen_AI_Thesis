@@ -255,7 +255,7 @@ def save_session_data():
            "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
                                     st.session_state.usage_data['followup_used']) else "no",
            "questions_asked": st.session_state.usage_data['questions_asked'],
-           "total_time_seconds": round(st.session_state.total_interaction_time, 2),
+           "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
            "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
            "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
            "record_timestamp": pd.Timestamp.now().isoformat()
@@ -727,7 +727,7 @@ if st.button("Get Recommendation"):
        'chatbot_used': True,
        'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
        'get_recommendation': True,
-       'total_time': st.session_state.total_interaction_time
+       'total_time': st.session_state.get('total_interaction_time', 0)
    })
    save_session_data()
 
