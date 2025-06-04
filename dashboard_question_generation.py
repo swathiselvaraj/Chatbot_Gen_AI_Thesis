@@ -3,7 +3,6 @@ import json
 from openai import OpenAI
 
 # Initialize the client
-client = OpenAI(api_key="REDACTED")  # Replace with your actual API key
 
 # === Step 1: Load existing JSON file ===
 with open("data/followup_embeddings_list.json", "r") as f:
