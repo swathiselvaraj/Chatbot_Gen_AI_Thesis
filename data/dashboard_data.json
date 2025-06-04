@@ -1,0 +1,227 @@
+{
+    "dateTime": "30 May 2024, 6:15pm",
+    "laneReduction": {
+        "waitingTimeReduction": 4
+    },
+    "freeColleagues": 2,
+    "openedCashDesks": {
+        "current": 2,
+        "total": 5
+    },
+    "waitingTimeAtCashDesk": {
+        "average": [
+            {
+                "time": "8 am",
+                "minutes": 0
+            },
+            {
+                "time": "9 am",
+                "minutes": 1
+            },
+            {
+                "time": "10 am",
+                "minutes": 3
+            },
+            {
+                "time": "11 am",
+                "minutes": 5
+            },
+            {
+                "time": "12 pm",
+                "minutes": 6
+            },
+            {
+                "time": "1 pm",
+                "minutes": 7
+            },
+            {
+                "time": "2 pm",
+                "minutes": 7
+            },
+            {
+                "time": "3 pm",
+                "minutes": 8
+            },
+            {
+                "time": "4 pm",
+                "minutes": 9
+            },
+            {
+                "time": "5 pm",
+                "minutes": 10
+            },
+            {
+                "time": "6 pm",
+                "minutes": 11
+            },
+            {
+                "time": "7 pm",
+                "minutes": 13
+            },
+            {
+                "time": "8 pm",
+                "minutes": 15
+            },
+            {
+                "time": "9 pm",
+                "minutes": 15
+            },
+            {
+                "time": "10 pm",
+                "minutes": 15
+            }
+        ],
+        "target": [
+            {
+                "time": "6 pm",
+                "minutes": 8
+            },
+            {
+                "time": "7 pm",
+                "minutes": 11
+            }
+        ]
+    },
+    "productSalesAndForecast": {
+        "sales2024": [
+            {
+                "month": "Jan",
+                "value": 250000
+            },
+            {
+                "month": "Feb",
+                "value": 300000
+            },
+            {
+                "month": "Mar",
+                "value": 400000
+            },
+            {
+                "month": "Apr",
+                "value": 375000
+            }
+        ],
+        "forecast2024": [
+            {
+                "month": "May",
+                "value": 320000
+            },
+            {
+                "month": "Jun",
+                "value": 270000
+            },
+            {
+                "month": "Jul",
+                "value": 250000
+            },
+            {
+                "month": "Aug",
+                "value": 260000
+            },
+            {
+                "month": "Sep",
+                "value": 280000
+            }
+        ]
+    },
+    "customersPerDay": {
+        "actual": [
+            {
+                "time": "8 am",
+                "customers": 0
+            },
+            {
+                "time": "9 am",
+                "customers": 5
+            },
+            {
+                "time": "10 am",
+                "customers": 15
+            },
+            {
+                "time": "11 am",
+                "customers": 25
+            },
+            {
+                "time": "12 pm",
+                "customers": 35
+            },
+            {
+                "time": "1 pm",
+                "customers": 50
+            },
+            {
+                "time": "2 pm",
+                "customers": 55
+            },
+            {
+                "time": "3 pm",
+                "customers": 60
+            },
+            {
+                "time": "4 pm",
+                "customers": 70
+            },
+            {
+                "time": "5 pm",
+                "customers": 80
+            },
+            {
+                "time": "6 pm",
+                "customers": 90
+            },
+            {
+                "time": "7 pm",
+                "customers": 100
+            },
+            {
+                "time": "8 pm",
+                "customers": 120
+            },
+            {
+                "time": "9 pm",
+                "customers": 120
+            },
+            {
+                "time": "10 pm",
+                "customers": 120
+            }
+        ],
+        "average": [
+            {
+                "time": "6 pm",
+                "customers": 90
+            },
+            {
+                "time": "7 pm",
+                "customers": 120
+            }
+        ]
+    },
+    "productVariationList": [
+        {
+            "item": "Banana",
+            "apr2024Sales": "6,000 \u20ac",
+            "may2024Sales": "6,200 \u20ac",
+            "salesTarget": "6,000 \u20ac"
+        },
+        {
+            "item": "Milk",
+            "apr2024Sales": "9,300 \u20ac",
+            "may2024Sales": "9,200 \u20ac",
+            "salesTarget": "10,000 \u20ac"
+        },
+        {
+            "item": "Chocolate",
+            "apr2024Sales": "4,600 \u20ac",
+            "may2024Sales": "4,500 \u20ac",
+            "salesTarget": "4,800 \u20ac"
+        },
+        {
+            "item": "Cheese",
+            "apr2024Sales": "9,500 \u20ac",
+            "may2024Sales": "9,700 \u20ac",
+            "salesTarget": "9,500 \u20ac"
+        }
+    ]
+}

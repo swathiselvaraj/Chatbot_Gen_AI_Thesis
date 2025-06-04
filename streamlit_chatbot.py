@@ -321,7 +321,90 @@ def save_to_gsheet(data_dict: Dict) -> bool:
        st.error(f"Failed to save to Google Sheets: {str(e)}")
        return False
 
-def validate_followup(user_input: str, question_id: str, options: List[str]) -> str:
+# def validate_followup(user_input: str, question_id: str, options: List[str]) -> str:
+#     try:
+#         user_input = user_input.strip()
+#         if not user_input:
+#             return "Please enter a valid question."
+
+#         # Handle greetings
+#         greetings = {"hi", "hello", "hey", "greetings"}
+#         if user_input.lower().rstrip('!?.,') in greetings:
+#             st.session_state.last_recommendation = None
+#             return "Hello! I can help with survey questions. What would you like to know?"
+
+#         # Extract referenced option if any
+#         referenced_option = extract_referenced_option(user_input, options)
+        
+#         # Handle all option-related questions
+#         if referenced_option or any(x in user_input.lower() for x in ["option", "1", "2", "3", "4"]):
+#             # Get the option number
+#             option_num = options.index(referenced_option) + 1 if referenced_option else None
+            
+#             # Determine question type
+#             is_why_not = "why not" in user_input.lower()
+#             is_why = "why" in user_input.lower() and not is_why_not
+#             is_explain = "explain" in user_input.lower()
+            
+#             # Case 1: Asking about why NOT a specific option
+#             if is_why_not and referenced_option:
+#                 if (st.session_state.original_recommendation and 
+#                     referenced_option in st.session_state.original_recommendation['text']):
+#                     return f"Actually, {referenced_option} WAS recommended because: {st.session_state.original_recommendation['reasoning']}"
+                
+#                 if not st.session_state.original_recommendation:
+#                     return "Please first get a recommendation before asking why an option wasn't chosen."
+                
+#                 prompt = f"""Explain why this option wasn't recommended:
+                
+#                 Survey Question: {question_text}
+#                 Recommended Option: {st.session_state.original_recommendation['text']}
+#                 Option Being Questioned: Option {option_num} ({referenced_option})
+
+#                 Provide 1-2 specific reasons comparing to the recommended option.
+#                 Be concise (1-2 sentences max).
+#                 """
+#                 return get_gpt_response_with_context(prompt)
+            
+#             # Case 2: Asking WHY an option (or general option question)
+#             elif (is_why or is_explain or referenced_option) and referenced_option:
+#                 prompt = f"""Analyze this survey option:
+                
+#                 Survey Question: {question_text}
+#                 Option: {referenced_option} (Option {option_num})
+#                 User Question: {user_input}
+
+#                 Provide a concise analysis (1-2 sentences) focusing on:
+#                 - Key advantages/disadvantages
+#                 - How it compares to other options
+#                 - Specific metrics if available
+#                 """
+#                 return get_gpt_response_with_context(prompt)
+            
+#             # Case 3: General option question without specific reference
+#             else:
+#                 return get_gpt_recommendation(
+#                     f"{user_input} (about these options: {', '.join(options)})",
+#                     options=options,
+#                     is_followup=True
+#                 )
+
+#         # Rest of your existing logic for non-option questions...
+#         # (keep the embedding/similarity checks here)
+        
+#         # If we get here, use general GPT response
+#         return get_gpt_recommendation(
+#             user_input,
+#             options=options,
+#             is_followup=True
+#         )
+
+#     except Exception as e:
+#         st.error(f"Error in followup validation: {str(e)}")
+#         return "Sorry, I encountered an error processing your question."
+
+
+def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str) -> str:
     try:
         user_input = user_input.strip()
         if not user_input:
@@ -336,7 +419,45 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
         # Extract referenced option if any
         referenced_option = extract_referenced_option(user_input, options)
         
-        # Handle all option-related questions
+        # Get question embedding for similarity checks
+        user_embedding = get_embedding(user_input)
+        if not user_embedding:
+            return "Sorry, I couldn't process your question. Please try again."
+
+        # Check against general followups
+        general_threshold = 0.30
+        general_scores = []
+        for source in data.get("dashboard_followups", []):
+            if source.get("embedding"):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                if score >= general_threshold:
+                    general_scores.append((score, source))
+
+        general_threshold = 0.50
+        general_scores = []
+        for source in data.get("general_followups", []):
+            if source.get("embedding"):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                if score >= general_threshold:
+                    general_scores.append((score, source))
+        
+        # Check against question-specific followups
+        question_threshold = 0.70
+        question_scores = []
+        for source in data.get("questions", []):
+            if (source.get("embedding") and
+                source.get("question_id", "") == question_id):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                if score >= question_threshold:
+                    question_scores.append((score, source))
+
+        # Three-tier response logic with option handling
+        if question_scores and max([s[0] for s in question_scores]) > 0.7:
+            # High confidence match - use predefined answer
+            best_score, best_match = max(question_scores, key=lambda x: x[0])
+            return best_match["answer"]
+        
+        # Handle option-related questions if no high-confidence match found
         if referenced_option or any(x in user_input.lower() for x in ["option", "1", "2", "3", "4"]):
             # Get the option number
             option_num = options.index(referenced_option) + 1 if referenced_option else None
@@ -389,10 +510,18 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
                     is_followup=True
                 )
 
-        # Rest of your existing logic for non-option questions...
-        # (keep the embedding/similarity checks here)
+        # If we have medium confidence matches (either general or question-specific)
+        if general_scores or question_scores:
+            # Classify question type for contextual prompt
+            question_type = classify_question(user_input)
+            context_prompt = get_contextual_prompt(
+                question_type,
+                user_input,
+                referenced_option
+            )
+            return get_gpt_response_with_context(context_prompt)
         
-        # If we get here, use general GPT response
+        # Default fallback - use general GPT response
         return get_gpt_recommendation(
             user_input,
             options=options,
@@ -402,6 +531,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str]) -> 
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
         return "Sorry, I encountered an error processing your question."
+
 
 def get_gpt_response_with_context(prompt: str) -> str:
     """Get GPT response with enhanced context handling"""
