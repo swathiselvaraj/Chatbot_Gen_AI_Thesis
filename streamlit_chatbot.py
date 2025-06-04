@@ -12,6 +12,7 @@ import re
 import uuid
 from typing import List, Dict, Optional, Tuple
 
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 query_params = st.query_params
 question_id = query_params.get("qid", "Q1")
 question_text = query_params.get("qtext", "What is your decision?")
