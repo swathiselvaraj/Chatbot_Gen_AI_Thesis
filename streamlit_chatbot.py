@@ -12,11 +12,6 @@ import re
 import uuid
 from typing import List, Dict, Optional, Tuple
 
-# Initialize OpenAI client
-client = OpenAI(api_key=st.secrets["openai"]["api_key"])
-st.set_page_config(page_title="Survey Chatbot", layout="wide")
-
-
 query_params = st.query_params
 question_id = query_params.get("qid", "Q1")
 question_text = query_params.get("qtext", "What is your decision?")
