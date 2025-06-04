@@ -399,7 +399,7 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 #         return "Sorry, I encountered an error processing your question."
 
 
-def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str) -> str:
+def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
     try:
         user_input = user_input.strip()
         if not user_input:
@@ -517,12 +517,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
             return get_gpt_response_with_context(context_prompt)
         
         # Default fallback - use general GPT response
-        return get_gpt_recommendation(
-            user_input,
-            options=options,
-            is_followup=True
-        )
-
+        return "Please ask a question related to the Survey"
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
         return "Sorry, I encountered an error processing your question."
