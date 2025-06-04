@@ -3,7 +3,6 @@ import json
 from openai import OpenAI
 
 # Initialize the client
-client = OpenAI(api_key="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")  # Replace with your actual API key
 
 # === Step 1: Load existing JSON file ===
 with open("data/followup_embeddings_list.json", "r") as f:
