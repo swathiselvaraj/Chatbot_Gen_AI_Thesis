@@ -641,7 +641,7 @@ def get_gpt_recommendation(
             # Response Format:
             # Answer: <your response>
             # """
-            f"""The user has asked a follow-up question about a survey recommendation.
+            prompt = f"""The user has asked a follow-up question about a survey recommendation.
             Context:
             -Original question: {question}
             - Options: {chr(10).join(options)}
@@ -654,7 +654,7 @@ def get_gpt_recommendation(
 
             Respond in this format:
             "Answer: <your answer>"
-        """
+            """
 
 
         else: # Initial recommendation logic
