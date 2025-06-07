@@ -456,21 +456,24 @@ def get_gpt_recommendation(
                 
                 original_rec = st.session_state.get("original_recommendation", {})
                 
-                prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences).
+            
+                prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
 
                 Context:
-                - Original Question: {question}
-                - Recommended Option: {original_rec.get('text', 'None')}
-                - Reason for Recommendation: {original_rec.get('reasoning', 'Not provided')}
+                - Survey Question: {question_text}
+            
+                -Recommended Option: {st.session_state.original_recommendation['text']}
+                - Option Being Questioned: Option {options.index(referenced_option)+1} ({referenced_option})
                 - Option Being Questioned: Option {option_num} ({referenced_option})
-                - User's Follow-up: {follow_up_question or 'Why not this option?'}
+                - User Input: {user_input}
 
-                Please explain:
-                1. Why Option {option_num} wasn't recommended
-                2. How it compares to the recommended option
-                3. Any specific advantages/disadvantages
+                Instructions:
+                If the user is asking *why this option wasn't recommended*, explain 1-2 specific reasons why it was not chosen, compared to the recommended option.
 
-                Keep response under 50 words.
+                If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
+                - Key advantages or disadvantages
+                - Comparison with other options
+                - Any relevant metrics if applicable    
                 """
             except ValueError:
                 return f"Error: The option '{referenced_option}' is not in the available options."
@@ -528,7 +531,7 @@ def get_gpt_recommendation(
     except Exception as e:
         st.error(f"Recommendation generation failed: {str(e)}")
         return "Sorry, I couldn't generate a recommendation."
-        
+
 def display_conversation():
   if 'conversation' not in st.session_state:
       st.session_state.conversation = []
