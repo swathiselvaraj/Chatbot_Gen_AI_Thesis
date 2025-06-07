@@ -563,27 +563,27 @@ def get_gpt_recommendation(
                 option_index = options.index(referenced_option)
                 option_num = option_index + 1
         
-            original_rec = st.session_state.original_recommendation
+                original_rec = st.session_state.original_recommendation
         
-            prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
+                prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
 
-            Context:
-            - Survey Question: {question}
+                Context:
+                - Survey Question: {question}
     
-            - Recommended Option: {original_rec['text']}
-            - Option Being Questioned: Option {option_num} ({referenced_option})
+                - Recommended Option: {original_rec['text']}
+                - Option Being Questioned: Option {option_num} ({referenced_option})
         
-            - User Input: {follow_up_question}
+                - User Input: {follow_up_question}
 
-            Instructions:
-            If the user is asking *why this option wasn't recommended*, explain why it was not chosen, compared to the recommended option.
+                Instructions:
+                If the user is asking *why this option wasn't recommended*, explain why it was not chosen, compared to the recommended option.
 
-            If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
-            -Key advantages or disadvantages
-            - Comparison with other options
-            - Any relevant metrics if applicable  
-            - limit to 50 words  
-            """
+                If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
+                -Key advantages or disadvantages
+                - Comparison with other options
+                - Any relevant metrics if applicable  
+                - limit to 50 words  
+                """
             except ValueError:
                 return f"Error: The option '{referenced_option}' is not in the available options."
 
