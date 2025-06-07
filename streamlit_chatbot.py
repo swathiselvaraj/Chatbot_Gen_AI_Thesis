@@ -524,33 +524,66 @@ def get_gpt_recommendation(
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
         # Handle follow-up question about a specific option
+        # if is_followup and referenced_option:
+        #     try:
+        #         option_index = options.index(referenced_option)
+        #         option_num = option_index + 1
+                
+        #         original_rec = st.session_state.get("original_recommendation", {})
+                
+            
+        #         prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
+
+        #         Context:
+        #         - Survey Question: {question_text}
+            
+        #         -Recommended Option: {st.session_state.original_recommendation['text']}
+        #         - Option Being Questioned: Option {options.index(referenced_option)+1} ({referenced_option})
+                
+        #         - User Input: {user_input}
+
+        #         Instructions:
+        #         If the user is asking *why this option wasn't recommended*, explain why it was not chosen, compared to the recommended option.
+
+        #         If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
+        #         - Key advantages or disadvantages
+        #         - Comparison with other options
+        #         - Any relevant metrics if applicable  
+        #         -limit to 50 words  
+        #         """
+        #     except ValueError:
+        #         return f"Error: The option '{referenced_option}' is not in the available options."
+
         if is_followup and referenced_option:
+    # Check if we have an original recommendation
+            if 'original_recommendation' not in st.session_state or not st.session_state.original_recommendation:
+                return "Please first ask for a recommendation before asking follow-up questions about specific options."
+    
             try:
                 option_index = options.index(referenced_option)
                 option_num = option_index + 1
-                
-                original_rec = st.session_state.get("original_recommendation", {})
-                
-            
-                prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
+        
+            original_rec = st.session_state.original_recommendation
+        
+            prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
 
-                Context:
-                - Survey Question: {question_text}
-            
-                -Recommended Option: {st.session_state.original_recommendation['text']}
-                - Option Being Questioned: Option {options.index(referenced_option)+1} ({referenced_option})
-                
-                - User Input: {user_input}
+            Context:
+            - Survey Question: {question}
+    
+            - Recommended Option: {original_rec['text']}
+            - Option Being Questioned: Option {option_num} ({referenced_option})
+        
+            - User Input: {follow_up_question}
 
-                Instructions:
-                If the user is asking *why this option wasn't recommended*, explain why it was not chosen, compared to the recommended option.
+            Instructions:
+            If the user is asking *why this option wasn't recommended*, explain why it was not chosen, compared to the recommended option.
 
-                If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
-                - Key advantages or disadvantages
-                - Comparison with other options
-                - Any relevant metrics if applicable  
-                -limit to 50 words  
-                """
+            If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
+            -Key advantages or disadvantages
+            - Comparison with other options
+            - Any relevant metrics if applicable  
+            - limit to 50 words  
+            """
             except ValueError:
                 return f"Error: The option '{referenced_option}' is not in the available options."
 
