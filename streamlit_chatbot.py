@@ -290,11 +290,20 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         #    return get_gpt_recommendation(question =  question_text,referenced_option = option_num )
 
         if option_num is not None:
+            # return get_gpt_recommendation(
+            #     question=question_text,
+            #     options=options,  # Pass the full options list
+            #     referenced_option=option_num
+            # )
             return get_gpt_recommendation(
                 question=question_text,
-                options=options,  # Pass the full options list
-                referenced_option=option_num
-            )
+                #options=options,
+                referenced_option=referenced_option,
+                is_followup=True, 
+                follow_up_question=user_input
+
+                )
+
 
         
 
@@ -330,15 +339,13 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 if score >= question_threshold:
                     question_scores.append((score, source))
 
-
-
         # If we have medium confidence matches (either general or question-specific)
         if general_scores or question_scores:
             # Classify question type for contextual prompt
-            return get_gpt_recommendation(question =  question_text)
+            return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input)
 
         elif dashboard_scores:
-            return get_gpt_recommendation(question =  question_text, dashboard = 'yes')
+            return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
         
         else:
             return "Please ask a question related to the Survey"
@@ -351,11 +358,12 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
 
 def get_gpt_recommendation(
     question: str,
-    options: List[str] = None,
+    #options: List[str] = None,
     is_followup: bool = False,
     follow_up_question: Optional[str] = None,
     referenced_option: Optional[str] = None,
     dashboard: bool = False
+
 ) -> str:
     try:
         # Initialize chat history
@@ -413,67 +421,60 @@ def get_gpt_recommendation(
         #     Answer: <your response>
         #     """
 
+    #     
         if is_followup:
             original_rec = st.session_state.get("original_recommendation")
-    
-    # Build the context based on what we know
             context_parts = []
-    
-    # 1. Include original recommendation if available
+
             if original_rec:
                 context_parts.append(
-                f"Earlier Recommendation:\n"
-                f"Recommended option: {original_rec['text']}\n"
-                f"Reason: {original_rec['reasoning']}"
+                    f"Earlier Recommendation:\n"
+                    f"Recommended option: {original_rec['text']}\n"
+                    f"Reason: {original_rec['reasoning']}"
                 )
-    
-    # 2. Include current options if available and relevant
-            # if options and (referenced_option or any(opt.lower() in follow_up_question.lower() for opt in options if opt)):
-            #     options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options) if opt])
-            #     context_parts.append(
-            #     f"Current Options:\n{options_text}"
-            # )
-    
-    # 3. Handle specific option references
-            if referenced_option is not None and options and 1 <= referenced_option <= len(options):
-                option_text = options[referenced_option-1]
-                context_parts.append(
-                f"Specifically asking about Option {referenced_option}: {option_text}"
-                )
-    
-    # Combine all context parts
-                context = "\n\n".join(context_parts) if context_parts else "No previous context available."
-    
-                prompt = f"""Context:
-                {context}
 
-                Follow-up Question: {follow_up_question or question}
+            # 3. Handle specific option references - USE current_options
+            if referenced_option is not None and current_options: # <--- CHANGED HERE
+                try:
+                    option_index = current_options.index(referenced_option) # <--- CHANGED HERE
+                    option_text = current_options[option_index] # <--- CHANGED HERE
+                    context_parts.append(
+                        f"Specifically asking about Option {option_index + 1}: {option_text}"
+                    )
+                except ValueError:
+                    pass
 
-                Instructions:
-                - If question references a specific option, focus on that option and answer the users question
-                - If comparing to previous recommendation, explain any differences
-                - If general question, answer concisely 
-                - Keep response under 50 words
+            context = "\n\n".join(context_parts) if context_parts else "No previous context available."
 
-                Response Format:
-                Answer: <your response>
-                """
+            prompt = f"""Context:
+            {context}
 
-            
+            Follow-up Question: {follow_up_question or question}
 
-            else:
-                options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
-                prompt = f"""Survey Question: {question}
+            Instructions:
+            - If question references a specific option, focus on that option and answer the users question
+            - If comparing to previous recommendation, explain any differences
+            - If general question, answer concisely
+            - Keep response under 50 words
 
-                Available Options:
-                {options_text}
+            Response Format:
+            Answer: <your response>
+            """
 
-                Please recommend the best option with reasoning (limit to 50 words).
+        else: # Initial recommendation logic
+            # Use current_options for display in prompt
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(current_options)]) if current_options else "" # <--- CHANGED HERE
+            prompt = f"""Survey Question: {question}
 
-                Format:
-                Recommended option: <option>
-                Reason: <short explanation>
-                """
+            Available Options:
+            {options_text}
+
+            Please recommend the best option with reasoning (limit to 50 words).
+
+            Format:
+            Recommended option: <option>
+            Reason: <short explanation>
+            """
 
         messages.append({"role": "user", "content": prompt})
 
@@ -483,6 +484,7 @@ def get_gpt_recommendation(
         messages=messages,
         temperature=0.7
         )
+        result = response.choices[0].message.content
 
         # Store original recommendation if not a follow-up
         if not is_followup:
@@ -496,7 +498,7 @@ def get_gpt_recommendation(
             st.session_state.original_recommendation = {
                 'text': rec_text,
                 'reasoning': reasoning,
-                'options': options.copy() if options else [],
+                'options': current_options.copy() if current_options else [], # <--- CHANGED HERE
                 'timestamp': time.time()
             }
 
@@ -589,7 +591,7 @@ if question_id != st.session_state.get('last_question_id'):
 
 if st.button("Get Recommendation"):
    update_interaction_time()
-   recommendation = get_gpt_recommendation(question_text, options)
+   recommendation = get_gpt_recommendation(question_text)
    st.session_state.conversation.append(("assistant", recommendation))
    end_interaction_and_accumulate_time()
   
