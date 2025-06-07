@@ -475,14 +475,14 @@ def get_gpt_recommendation(
                 Reason: <short explanation>
                 """
 
-                messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "user", "content": prompt})
 
         # Call GPT
-                response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                temperature=0.7
-                )
+        response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.7
+        )
 
         # Store original recommendation if not a follow-up
         if not is_followup:
