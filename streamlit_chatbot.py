@@ -615,7 +615,7 @@ def get_gpt_recommendation(
                 )
 
             # 3. Handle specific option references - USE current_options
-            if referenced_option is not None and options: # <--- CHANGED HERE
+            if referenced_option is not None # <--- CHANGED HERE
                 try:
                     option_index = options.index(referenced_option) # <--- CHANGED HERE
                     option_text = options[option_index] # <--- CHANGED HERE
