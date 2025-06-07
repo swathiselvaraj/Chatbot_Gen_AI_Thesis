@@ -224,49 +224,50 @@ def save_session_data():
 
 
 def save_to_gsheet(data_dict: Dict) -> bool:
-   try:
-       worksheet = initialize_gsheet()
-       if not worksheet:
-           return False
+    try:
+        worksheet = initialize_gsheet()
+        if not worksheet:
+        return False
 
 
        # Get all records with expected headers to avoid duplicates
-       records = worksheet.get_all_records(expected_headers=[
-           "participant_id", "question_id", "chatbot_used",
-           "questions_asked", "total_time_seconds",
-           "got_recommendation", "asked_followup", "record_timestamp"
-       ])
+        records = worksheet.get_all_records(expected_headers=[
+            "participant_id", "question_id", "chatbot_used",
+            "questions_asked", "total_time_seconds",
+            "got_recommendation", "asked_followup", "record_timestamp"
+        ])
       
        # Find existing record
-       row_index = None
-       for i, record in enumerate(records):
-           pid_match = str(record.get("participant_id", "")).strip() == str(data_dict.get("participant_id", "")).strip()
-           qid_match = str(record.get("question_id", "")).strip() == str(data_dict.get("question_id", "")).strip()
-           if pid_match and qid_match:
-               row_index = i + 2  # +2 to account for header row and 1-based indexing
-               break
+        row_index = None
+        for i, record in enumerate(records):
+            pid_match = str(record.get("participant_id", "")).strip() == str(data_dict.get("participant_id", "")).strip()
+            qid_match = str(record.get("question_id", "")).strip() == str(data_dict.get("question_id", "")).strip()
+            if pid_match and qid_match:
+                row_index = i + 2  # +2 to account for header row and 1-based indexing
+                break
 
 
        # Prepare complete data row
-       headers = worksheet.row_values(1)
-       row_data = {k: data_dict.get(k, "") for k in headers}
+        headers = worksheet.row_values(1)
+        row_data = {k: data_dict.get(k, "") for k in headers}
       
-       if row_index:
+        if row_index:
            # Update existing row
-           worksheet.update(
-               f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
-               [[row_data.get(h, "") for h in headers]]
-           )
-       else:
+            worksheet.update(
+                f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
+                [[row_data.get(h, "") for h in headers]]
+            )
+        else:
            # Add new row
-           worksheet.append_row([row_data.get(h, "") for h in headers])
+            worksheet.append_row([row_data.get(h, "") for h in headers])
       
-       return True
+        return True
 
 
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
+        
     return "Sorry, I encountered an error processing your question."
 
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
