@@ -356,7 +356,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
             return get_gpt_recommendation(
                 question=question_text,
                 options=options,
-                referenced_option=referenced_option,
+                referenced_option=option_num,
                 is_followup=True, 
                 follow_up_question=user_input
 
