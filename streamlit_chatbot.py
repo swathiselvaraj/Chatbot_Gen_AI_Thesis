@@ -527,24 +527,24 @@ def get_gpt_recommendation(
             # Respond in this format:
             # "Answer: <your answer>"
             # """
-            prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
+                prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
 
-            Context:
-            - Survey Question: {question_text}
+                Context:
+                - Survey Question: {question_text}
             
-            -Recommended Option: {st.session_state.original_recommendation['text']}
-            - Option Being Questioned: Option {options.index(referenced_option)+1} ({referenced_option})
-            - Option Being Questioned: Option {option_num} ({referenced_option})
-            - User Input: {user_input}
+                -Recommended Option: {st.session_state.original_recommendation['text']}
+                - Option Being Questioned: Option {options.index(referenced_option)+1} ({referenced_option})
+                - Option Being Questioned: Option {option_num} ({referenced_option})
+                - User Input: {user_input}
 
-            Instructions:
-            If the user is asking *why this option wasn't recommended*, explain 1-2 specific reasons why it was not chosen, compared to the recommended option.
+                Instructions:
+                If the user is asking *why this option wasn't recommended*, explain 1-2 specific reasons why it was not chosen, compared to the recommended option.
 
-            If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
-            - Key advantages or disadvantages
-            - Comparison with other options
-            - Any relevant metrics if applicable    
-            """
+                If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
+                - Key advantages or disadvantages
+                - Comparison with other options
+                - Any relevant metrics if applicable    
+                """
 
         else: # Initial recommendation logic
             # Use current_options for display in prompt
