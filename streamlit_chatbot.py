@@ -451,8 +451,9 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 score = cosine_similarity(user_embedding, source["embedding"])
                 if score >= dashboard_threshold:
                     dashboard_scores.append((score, source))
+                
 
-        general_threshold = 0.60
+        general_threshold = 0.50
         general_scores = []
         for source in data.get("general_followups", []):
             if source.get("embedding"):
@@ -472,11 +473,20 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
 
         # If we have medium confidence matches (either general or question-specific)
         if dashboard_scores:
-            return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
+            dashboard_scores.sort(reverse=True, key=lambda x: x[0])
+            best_match = dashboard_scores[0][1]
+            return get_gpt_recommendation(
+                question=question_text,
+                options=options,
+                is_followup=True,
+                follow_up_question=user_input,
+                dashboard=True
+            )
+            #return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
 
         elif general_scores or question_scores:
             # Classify question type for contextual prompt
-            return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input)
+            return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, non_dashboard=True)
 
         
         
@@ -493,7 +503,8 @@ def get_gpt_recommendation(
     is_followup: bool = False,
     follow_up_question: Optional[str] = None,
     referenced_option: Optional[str] = None,
-    dashboard: bool = False
+    dashboard: bool = False,
+    non_dashboard: bool = False
 ) -> str:
     try:
         # Initialize chat history
@@ -554,7 +565,7 @@ def get_gpt_recommendation(
         #     """
 
     #     
-        if is_followup:
+        if is_followup and non_dashboard:
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
 
