@@ -123,6 +123,21 @@ def load_embedding_data():
     except Exception as e:
         st.error(f"Failed to load embeddings: {str(e)}")
         return default_structure
+# def load_embedding_data():
+#     try:
+#         with open("data/followup_embeddings_list.json", "r") as f:
+#             data = json.load(f)
+#             # Ensure all required sections exist
+#             if "dashboard_followups" not in data:
+#                 data["dashboard_followups"] = []
+#             return data
+#     except Exception as e:
+#         st.error(f"Failed to load embeddings: {str(e)}")
+#         return {
+#             "general_followups": [],
+#             "questions": [],
+#             "dashboard_followups": []  # Make sure this exists
+#         }
 
 data = load_embedding_data()
 
@@ -132,7 +147,6 @@ def get_embedding(text: str) -> List[float]:
       response = client.embeddings.create(
           input=text,
           model="text-embedding-3-small"
-          #model= "text-embedding-ada-002"
       )
       return response.data[0].embedding
   except Exception as e:
