@@ -13,6 +13,8 @@ import uuid
 import textwrap
 from typing import List, Dict, Optional, Tuple
 
+from fuzzywuzzy import fuzz  # For fuzzy string matching
+
 
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 query_params = st.query_params
@@ -25,15 +27,20 @@ question_text = query_params.get("qtext", "What is your decision?")
 options_raw = query_params.get("opts", "Option 1|Option 2|Option 3|Option 4")  # Default now has 4 options
 options = options_raw.split("|")
 ##&
-options = sorted(options_raw.split("|"))
-while len(options) < 4:
-    options.append("")
 
+while len(options) < 4:
+    options.append("") # Ensure at least 4 options, padding with empty strings if needed
 
 option_mapping = {f"option {i+1}": options[i] for i in range(4)}
-option_mapping.update({f"option{i+1}": options[i] for i in range(4)})  # Also handle "option1" format
-# Ensure we have exactly 4 options, pad with empty strings if needed
+option_mapping.update({f"option{i+1}": options[i] for i in range(4)})
+
 participant_id = query_params.get("pid", str(uuid.uuid4()))
+
+
+# option_mapping = {f"option {i+1}": options[i] for i in range(4)}
+# option_mapping.update({f"option{i+1}": options[i] for i in range(4)})  # Also handle "option1" format
+# # Ensure we have exactly 4 options, pad with empty strings if needed
+# participant_id = query_params.get("pid", str(uuid.uuid4()))
 # --- Session State Initialization ---
 if 'conversation' not in st.session_state:
   st.session_state.conversation = []
@@ -116,33 +123,84 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
       return 0.0
 
 
+# def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
+#     """
+#     Extracts referenced survey option from user input with improved matching
+#     Handles formats: 
+#     - 'option X', 'optionX', 'option [text]'
+#     - 'X' (just the number)
+#     - 'why not option X', 'why option X'
+#     - Direct mentions of option text
+#     """
+#     if not user_input or not options:
+#         return None
+
+#     user_input_lower = user_input.lower()
+    
+#     # Check for direct number references (1, 2, 3, 4)
+#     for i in range(len(options)):
+#         # Match: "1", "option 1", "option1", "why not option 1"
+#         if (re.search(rf'(^|\b)(option\s*)?({i+1})\b', user_input_lower) or
+#             re.search(rf'(why\s+(not\s+)?option\s*)?({i+1})\b', user_input_lower)):
+#             return options[i]
+
+#     # Check for direct text matches (if user quotes part of the option)
+#     for option in options:
+#         # Simple text matching (case insensitive)
+#         option_lower = option.lower()
+#         if len(option_lower) > 5 and option_lower in user_input_lower:
+#             return option
+
+#     return None
+
+
+
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
     """
-    Extracts referenced survey option from user input with improved matching
-    Handles formats: 
-    - 'option X', 'optionX', 'option [text]'
-    - 'X' (just the number)
-    - 'why not option X', 'why option X'
-    - Direct mentions of option text
+    Extracts referenced survey option from user input with:
+    - Missing space handling ("option2" → "option 2")
+    - Fuzzy matching ("optioon2" → "option 2")
+    - Partial text matching ("why not open 1 more")
+    - Number-only references ("just do 3")
+    - Option validation
     """
     if not user_input or not options:
         return None
 
     user_input_lower = user_input.lower()
-    
-    # Check for direct number references (1, 2, 3, 4)
-    for i in range(len(options)):
-        # Match: "1", "option 1", "option1", "why not option 1"
-        if (re.search(rf'(^|\b)(option\s*)?({i+1})\b', user_input_lower) or
-            re.search(rf'(why\s+(not\s+)?option\s*)?({i+1})\b', user_input_lower)):
+    normalized_options = [opt.lower() for opt in options]
+
+    # 1. Handle "optionX" (missing space)
+    option_num = None
+    no_space_match = re.search(r'(?:option|opt|op)?(\d+)', user_input_lower)
+    if no_space_match:
+        option_num = int(no_space_match.group(1))
+
+    # 2. Standard "option X" format
+    spaced_match = re.search(r'(?:option|opt|op)\s*(\d+)', user_input_lower)
+    if spaced_match:
+        option_num = int(spaced_match.group(1))
+
+    # 3. Just number reference ("why not 2")
+    number_only = re.search(r'(?:^|\b)(\d+)(?:\b|$)', user_input_lower)
+    if number_only and not option_num:
+        option_num = int(number_only.group(1))
+
+    # Validate option number
+    if option_num is not None:
+        if 1 <= option_num <= len(options):
+            return options[option_num - 1]
+        return None  # Invalid option number
+
+    # 4. Fuzzy match with option text
+    for i, opt in enumerate(normalized_options):
+        # Check for direct text inclusion ("open 1 more" in option text)
+        if opt in user_input_lower:
             return options[i]
 
-    # Check for direct text matches (if user quotes part of the option)
-    for option in options:
-        # Simple text matching (case insensitive)
-        option_lower = option.lower()
-        if len(option_lower) > 5 and option_lower in user_input_lower:
-            return option
+        # Fuzzy match for typos (requires fuzzywuzzy package)
+        if fuzz.partial_ratio(opt, user_input_lower) > 85:  # Adjust threshold as needed
+            return options[i]
 
     return None
 
@@ -297,7 +355,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
             # )
             return get_gpt_recommendation(
                 question=question_text,
-                #options=options,
+                options=options,
                 referenced_option=referenced_option,
                 is_followup=True, 
                 follow_up_question=user_input
@@ -358,7 +416,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
 
 def get_gpt_recommendation(
     question: str,
-    #options: List[str] = None,
+    options: List[str] = None,
     is_followup: bool = False,
     follow_up_question: Optional[str] = None,
     referenced_option: Optional[str] = None,
@@ -434,10 +492,10 @@ def get_gpt_recommendation(
                 )
 
             # 3. Handle specific option references - USE current_options
-            if referenced_option is not None and current_options: # <--- CHANGED HERE
+            if referenced_option is not None and options: # <--- CHANGED HERE
                 try:
-                    option_index = current_options.index(referenced_option) # <--- CHANGED HERE
-                    option_text = current_options[option_index] # <--- CHANGED HERE
+                    option_index = options.index(referenced_option) # <--- CHANGED HERE
+                    option_text = options[option_index] # <--- CHANGED HERE
                     context_parts.append(
                         f"Specifically asking about Option {option_index + 1}: {option_text}"
                     )
@@ -463,7 +521,7 @@ def get_gpt_recommendation(
 
         else: # Initial recommendation logic
             # Use current_options for display in prompt
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(current_options)]) if current_options else "" # <--- CHANGED HERE
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
             prompt = f"""Survey Question: {question}
 
             Available Options:
@@ -498,7 +556,7 @@ def get_gpt_recommendation(
             st.session_state.original_recommendation = {
                 'text': rec_text,
                 'reasoning': reasoning,
-                'options': current_options.copy() if current_options else [], # <--- CHANGED HERE
+                'options': options.copy() if options else [], # <--- CHANGED HERE
                 'timestamp': time.time()
             }
 
@@ -591,7 +649,7 @@ if question_id != st.session_state.get('last_question_id'):
 
 if st.button("Get Recommendation"):
    update_interaction_time()
-   recommendation = get_gpt_recommendation(question_text)
+   recommendation = get_gpt_recommendation(question_text, options=options)
    st.session_state.conversation.append(("assistant", recommendation))
    end_interaction_and_accumulate_time()
   
