@@ -469,6 +469,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 referenced_option=option_num,
                 is_followup=True, 
                 follow_up_question=user_input
+                non_dashboard = True
 
                 )
 
