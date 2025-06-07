@@ -570,7 +570,7 @@ def get_gpt_recommendation(
                     2. Reference specific metrics when available
                     3. If data contradicts standard recommendations, explain why
                     """)
-                    messages.insert(0, {"role": "system", "content": prompt})
+                messages.insert(0, {"role": "system", "content": prompt})
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
