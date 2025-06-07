@@ -33,8 +33,8 @@ while len(options) < 4:
 
 option_mapping = {f"option {i+1}": options[i] for i in range(4)}
 option_mapping.update({f"option{i+1}": options[i] for i in range(4)})
-for key, value in option_mapping.items():
-    st.write(f"{key}: {value}")
+# for key, value in option_mapping.items():
+#     st.write(f"{key}: {value}")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 
 
@@ -452,7 +452,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 if score >= dashboard_threshold:
                     dashboard_scores.append((score, source))
 
-        general_threshold = 0.50
+        general_threshold = 0.60
         general_scores = []
         for source in data.get("general_followups", []):
             if source.get("embedding"):
@@ -471,12 +471,14 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                     question_scores.append((score, source))
 
         # If we have medium confidence matches (either general or question-specific)
-        if general_scores or question_scores:
+        if dashboard_scores:
+            return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
+
+        elif general_scores or question_scores:
             # Classify question type for contextual prompt
             return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input)
 
-        elif dashboard_scores:
-            return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
+        
         
         else:
             return "Please ask a question related to the Survey"
