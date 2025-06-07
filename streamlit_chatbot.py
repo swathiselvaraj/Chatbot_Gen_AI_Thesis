@@ -286,8 +286,15 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         referenced_option = extract_referenced_option(user_input, options)
         option_num = options.index(referenced_option) + 1 if referenced_option else None
 
+        # if option_num is not None:
+        #    return get_gpt_recommendation(question =  question_text,referenced_option = option_num )
+
         if option_num is not None:
-           return get_gpt_recommendation(question =  question_text,referenced_option = option_num )
+            return get_gpt_recommendation(
+                question=question_text,
+                options=options,  # Pass the full options list
+                referenced_option=option_num
+            )
 
         
 
@@ -381,53 +388,101 @@ def get_gpt_recommendation(
         # =========================
         # Construct the user prompt
         # =========================
+        # if is_followup:
+        #     original_rec = st.session_state.get("original_recommendation")
+
+        #     if original_rec:
+        #         recommendation_summary = f"""
+        #         Earlier Recommendation:
+        #         Recommended option: {original_rec['text']}
+        #         Reason: {original_rec['reasoning']}
+        #         """
+        #     else:
+        #         recommendation_summary = "No previous recommendation found."
+
+        #     prompt = f"""{recommendation_summary}
+
+        #     Follow-up Question: {follow_up_question or question}
+            
+        #     Instructions:
+        #     - If the follow-up refers to the options or prior recommendation, compare and clarify.
+        #     - If not, just answer directly using the original context.
+        #     - Keep the response under 50 words.
+
+        #     Format:
+        #     Answer: <your response>
+        #     """
+
         if is_followup:
             original_rec = st.session_state.get("original_recommendation")
-
+    
+    # Build the context based on what we know
+            context_parts = []
+    
+    # 1. Include original recommendation if available
             if original_rec:
-                recommendation_summary = f"""
-                Earlier Recommendation:
-                Recommended option: {original_rec['text']}
-                Reason: {original_rec['reasoning']}
+                context_parts.append(
+                f"Earlier Recommendation:\n"
+                f"Recommended option: {original_rec['text']}\n"
+                f"Reason: {original_rec['reasoning']}"
+                )
+    
+    # 2. Include current options if available and relevant
+            if options and (referenced_option or any(opt.lower() in follow_up_question.lower() for opt in options if opt)):
+                options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options) if opt])
+                context_parts.append(
+                f"Current Options:\n{options_text}"
+            )
+    
+    # 3. Handle specific option references
+            if referenced_option is not None and options and 1 <= referenced_option <= len(options):
+                option_text = options[referenced_option-1]
+                context_parts.append(
+                f"Specifically asking about Option {referenced_option}: {option_text}"
+                )
+    
+    # Combine all context parts
+                context = "\n\n".join(context_parts) if context_parts else "No previous context available."
+    
+                prompt = f"""Context:
+                {context}
+
+                Follow-up Question: {follow_up_question or question}
+
+                Instructions:
+                - If question references a specific option, focus on that option
+                - If comparing to previous recommendation, explain any differences
+                - If general question, answer concisely
+                - Keep response under 50 words unless complex comparison needed
+
+                Response Format:
+                Answer: <your response>
                 """
-            else:
-                recommendation_summary = "No previous recommendation found."
 
-            prompt = f"""{recommendation_summary}
-
-            Follow-up Question: {follow_up_question or question}
             
-            Instructions:
-            - If the follow-up refers to the options or prior recommendation, compare and clarify.
-            - If not, just answer directly using the original context.
-            - Keep the response under 50 words.
 
-            Format:
-            Answer: <your response>
-            """
+            else:
+                options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+                prompt = f"""Survey Question: {question}
 
-        else:
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
-            prompt = f"""Survey Question: {question}
+                Available Options:
+                {options_text}
 
-            Available Options:
-            {options_text}
+                Please recommend the best option with reasoning (limit to 50 words).
 
-            Please recommend the best option with reasoning (limit to 50 words).
+                Format:
+                Recommended option: <option>
+                Reason: <short explanation>
+                """
 
-            Format:
-            Recommended option: <option>
-            Reason: <short explanation>
-            """
-
-        messages.append({"role": "user", "content": prompt})
+                messages.append({"role": "user", "content": prompt})
 
         # Call GPT
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7
-        )
+                response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=0.7
+                )
 
         result = response.choices[0].message.content
 
