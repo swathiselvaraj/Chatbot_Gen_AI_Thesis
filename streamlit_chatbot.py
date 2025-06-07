@@ -331,6 +331,8 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
     try:
         user_input = user_input.strip()
+        if not options:
+            options = st.session_state.get('original_options', [])
         if not user_input:
             return "Please enter a valid question."
 
@@ -429,6 +431,8 @@ def get_gpt_recommendation(
             st.session_state.chat_history = []
 
         messages = st.session_state.chat_history.copy()
+        if options is None:
+            options = st.session_state.get('original_options', [])  # Fallback to session state
 
         # Include dashboard context if needed
         if dashboard:
@@ -481,6 +485,7 @@ def get_gpt_recommendation(
 
     #     
         if is_followup:
+            
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
 
@@ -675,7 +680,7 @@ if user_input:
     if user_input.lower().strip() in ['help', '?']:
         response = "I can help with:\n- Explaining dashboard terms\n- Analyzing trends\n- Making recommendations\nAsk me anything about the supermarket data!"
     else:
-        response = validate_followup(user_input, question_id, options)
+        response = validate_followup(user_input, question_id, options = options)
     
     st.session_state.conversation.append(("assistant", response))
     end_interaction_and_accumulate_time()
