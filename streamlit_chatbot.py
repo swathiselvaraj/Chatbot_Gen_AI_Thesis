@@ -155,6 +155,11 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 
 
+
+from typing import List, Optional
+import re
+from fuzzywuzzy import fuzz
+
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
     """
     Extracts referenced survey option from user input with:
@@ -163,28 +168,40 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
     - Partial text matching ("why not open 1 more")
     - Number-only references ("just do 3")
     - Option validation
+
+    Args:
+        user_input: The user's text input
+        options: List of available options (1-indexed)
+
+    Returns:
+        The matched option text or None if no valid match found
     """
     if not user_input or not options:
         return None
 
-    user_input_lower = user_input.lower()
-    normalized_options = [opt.lower() for opt in options]
+    # Normalize input and options
+    user_input_lower = user_input.lower().strip()
+    normalized_options = [opt.lower().strip() for opt in options]
 
-    # 1. Handle "optionX" (missing space)
+    # Remove common punctuation that might interfere with matching
+    user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
+    
     option_num = None
-    no_space_match = re.search(r'(?:option|opt|op)?(\d+)', user_input_lower)
-    if no_space_match:
-        option_num = int(no_space_match.group(1))
 
-    # 2. Standard "option X" format
-    spaced_match = re.search(r'(?:option|opt|op)\s*(\d+)', user_input_lower)
-    if spaced_match:
-        option_num = int(spaced_match.group(1))
-
-    # 3. Just number reference ("why not 2")
-    number_only = re.search(r'(?:^|\b)(\d+)(?:\b|$)', user_input_lower)
-    if number_only and not option_num:
-        option_num = int(number_only.group(1))
+    # 1. Handle "optionX" (missing space) and standard "option X" format
+    option_patterns = [
+        r'(?:option|opt|op)\s*(\d+)',  # "option 1", "option1", "opt 2", etc.
+        r'(?:^|\b)(\d+)(?:\b|$)'       # standalone number "1" or "option 1"
+    ]
+    
+    for pattern in option_patterns:
+        match = re.search(pattern, user_input_clean)
+        if match:
+            try:
+                option_num = int(match.group(1))
+                break  # Use the first match found
+            except (ValueError, IndexError):
+                continue
 
     # Validate option number
     if option_num is not None:
@@ -192,14 +209,22 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
             return options[option_num - 1]
         return None  # Invalid option number
 
-    # 4. Fuzzy match with option text
+    # 2. Text-based matching (direct and fuzzy)
     for i, opt in enumerate(normalized_options):
-        # Check for direct text inclusion ("open 1 more" in option text)
-        if opt in user_input_lower:
+        # Check for direct text inclusion
+        if opt in user_input_clean:
             return options[i]
 
-        # Fuzzy match for typos (requires fuzzywuzzy package)
-        if fuzz.partial_ratio(opt, user_input_lower) > 85:  # Adjust threshold as needed
+        # Check if option is contained in input
+        if opt in user_input_clean:
+            return options[i]
+
+        # Check if input is contained in option
+        if user_input_clean in opt:
+            return options[i]
+
+        # Fuzzy match for typos
+        if fuzz.partial_ratio(opt, user_input_clean) > 85:
             return options[i]
 
     return None
