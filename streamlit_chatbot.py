@@ -491,32 +491,55 @@ def get_gpt_recommendation(
                     f"Reason: {original_rec['reasoning']}"
                 )
 
-            # 3. Handle specific option references - USE current_options
-            if referenced_option is not None and options: # <--- CHANGED HERE
-                try:
-                    option_index = options.index(referenced_option) # <--- CHANGED HERE
-                    option_text = options[option_index] # <--- CHANGED HERE
-                    context_parts.append(
-                        f"Specifically asking about Option {option_index + 1}: {option_text}"
-                    )
-                except ValueError:
-                    pass
+            if referenced_option is not None and options:
+            # try:
+            #     option_index = options.index(referenced_option)
+            #     # Add explicit option numbering here
+            #     context_parts.append(
+            #         f"User is asking about:\n"
+            #         f"Option {option_index + 1}: {referenced_option}"
+            #     )
+            # except ValueError:
+            #     pass
 
-            context = "\n\n".join(context_parts) if context_parts else "No previous context available."
+            # context = "\n\n".join(context_parts) if context_parts else "No previous context available."
 
-            prompt = f"""Context:
-            {context}
+            #  prompt = f"""Context:
+            # # {context}
 
-            Follow-up Question: {follow_up_question or question}
+            # # Follow-up Question: {follow_up_question or question}
+
+            # # Instructions:
+            # # - If question references a specific option, focus on that option and answer the users question
+            # # - If comparing to previous recommendation, explain any differences
+            # # - If general question, answer concisely
+            # # - Keep response under 50 words
+
+            # # Response Format:
+            # # Answer: <your response>
+            # # """
+            # The user has asked a follow-up question about a survey recommendation.
+            # You must answer the question or use prior context and reasoning to answer concisely in under 50 words.
+
+
+            # Respond in this format:
+            # "Answer: <your answer>"
+            # """
+            prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
+
+            Context:
+            - Survey Question: {question_text}
+            - Recommended Option: {st.session_state.original_recommendation['text']}
+            - Option Being Questioned: Option {option_num} ({referenced_option})
+            -User Input: {user_input}
 
             Instructions:
-            - If question references a specific option, focus on that option and answer the users question
-            - If comparing to previous recommendation, explain any differences
-            - If general question, answer concisely
-            - Keep response under 50 words
+            If the user is asking *why this option wasn't recommended*, explain 1-2 specific reasons why it was not chosen, compared to the recommended option.
 
-            Response Format:
-            Answer: <your response>
+            If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
+            - Key advantages or disadvantages
+            - Comparison with other options
+            - Any relevant metrics if applicable    
             """
 
         else: # Initial recommendation logic
