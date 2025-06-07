@@ -449,7 +449,7 @@ def get_gpt_recommendation(
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
         # Handle follow-up question about a specific option
-        if is_followup and referenced_option and options:
+        if is_followup and referenced_option:
             try:
                 option_index = options.index(referenced_option)
                 option_num = option_index + 1
