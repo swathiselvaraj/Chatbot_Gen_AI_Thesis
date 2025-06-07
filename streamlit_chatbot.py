@@ -625,22 +625,37 @@ def get_gpt_recommendation(
                 except ValueError:
                     pass
 
-            context = "\n\n".join(context_parts) if context_parts else "No previous context available."
+            # context = "\n\n".join(context_parts) if context_parts else "No previous context available."
 
-            prompt = f"""Context:
-            {context}
+            # prompt = f"""Context:
+            # {context}
 
-            Follow-up Question: {follow_up_question or question}
+            # Follow-up Question: {follow_up_question or question}
 
-            Instructions:
-            - If question references a specific option, focus on that option and answer the users question
-            - If comparing to previous recommendation, explain any differences
-            - If general question, answer concisely
-            - Keep response under 50 words
+            # Instructions:
+            # - If question references a specific option, focus on that option and answer the users question
+            # - If comparing to previous recommendation, explain any differences
+            # - If general question, answer concisely
+            # - Keep response under 50 words
 
-            Response Format:
-            Answer: <your response>
-            """
+            # Response Format:
+            # Answer: <your response>
+            # """
+            f"""The user has asked a follow-up question about a survey recommendation.
+            Context:
+            -Original question: {question}
+            - Options: {chr(10).join(options)}
+            {f"- Referenced option: {referenced_option}" if referenced_option else ""}
+
+
+            The user has asked a follow-up question about a survey recommendation.
+            You must answer the question or use prior context and reasoning to answer concisely in under 50 words.
+
+
+            Respond in this format:
+            "Answer: <your answer>"
+        """
+
 
         else: # Initial recommendation logic
             # Use current_options for display in prompt
