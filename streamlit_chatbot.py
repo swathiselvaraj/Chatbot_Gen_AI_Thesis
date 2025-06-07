@@ -25,8 +25,10 @@ question_text = query_params.get("qtext", "What is your decision?")
 options_raw = query_params.get("opts", "Option 1|Option 2|Option 3|Option 4")  # Default now has 4 options
 options = options_raw.split("|")
 ##&
+options = sorted(options_raw.split("|"))
 while len(options) < 4:
-   options.append("")
+    options.append("")
+
 
 option_mapping = {f"option {i+1}": options[i] for i in range(4)}
 option_mapping.update({f"option{i+1}": options[i] for i in range(4)})  # Also handle "option1" format
@@ -287,6 +289,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
            return get_gpt_recommendation(question =  question_text,referenced_option = option_num )
 
         
+
         # Get question embedding for similarity checks
         user_embedding = get_embedding(user_input)
         # if not user_embedding:
