@@ -412,8 +412,6 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         return "Sorry, I encountered an error processing your question."
 
 
-
-
 def get_gpt_recommendation(
     question: str,
     options: List[str] = None,
@@ -450,47 +448,36 @@ def get_gpt_recommendation(
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
-        # Construct the user prompt
-        if is_followup:
-            original_rec = st.session_state.get("original_recommendation")
-            context_parts = []
-
-            if original_rec:
-                context_parts.append(
-                    f"Earlier Recommendation:\n"
-                    f"Recommended option: {original_rec['text']}\n"
-                    f"Reason: {original_rec['reasoning']}"
-                )
-
-            if referenced_option is not None and options:
-                try:
-                    option_index = options.index(referenced_option)
-                    option_num = option_index + 1
-                    context_parts.append(
-                        f"Option Being Questioned: Option {option_num} ({referenced_option})"
-                    )
-                except ValueError:
-                    pass
-
-                prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences) with clear, specific insights.
+        # Handle follow-up question about a specific option
+        if is_followup and referenced_option and options:
+            try:
+                option_index = options.index(referenced_option)
+                option_num = option_index + 1
+                
+                original_rec = st.session_state.get("original_recommendation", {})
+                
+                prompt = f"""You are assisting with analyzing survey response options. Respond concisely (1-2 sentences).
 
                 Context:
-                - Survey Question: {question}
-                - Recommended Option: {original_rec['text'] if original_rec else 'None'}
+                - Original Question: {question}
+                - Recommended Option: {original_rec.get('text', 'None')}
+                - Reason for Recommendation: {original_rec.get('reasoning', 'Not provided')}
                 - Option Being Questioned: Option {option_num} ({referenced_option})
-                - User Input: {follow_up_question or question}
+                - User's Follow-up: {follow_up_question or 'Why not this option?'}
 
-                Instructions:
-                If the user is asking *why this option wasn't recommended*, explain 1-2 specific reasons why it was not chosen, compared to the recommended option.
+                Please explain:
+                1. Why Option {option_num} wasn't recommended
+                2. How it compares to the recommended option
+                3. Any specific advantages/disadvantages
 
-                If the user is *asking for a general analysis* of the option, provide a brief evaluation focusing on:
-                - Key advantages or disadvantages
-                - Comparison with other options
-                - Any relevant metrics if applicable    
+                Keep response under 50 words.
                 """
-        else:  # Initial recommendation logic
-            # Use current_options for display in prompt
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+            except ValueError:
+                return f"Error: The option '{referenced_option}' is not in the available options."
+
+        # Handle initial recommendation
+        elif options:
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
             prompt = f"""Survey Question: {question}
 
             Available Options:
@@ -499,14 +486,16 @@ def get_gpt_recommendation(
             Please recommend the best option with reasoning (limit to 50 words).
 
             Format:
-            Recommended option: <option>
+            Recommended option: <option number or text>
             Reason: <short explanation>
             """
+        else:
+            return "Error: No options provided for recommendation."
 
         # Add user message to chat history
         messages.append({"role": "user", "content": prompt})
 
-        # Call GPT
+        # Call GPT API
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
@@ -515,7 +504,7 @@ def get_gpt_recommendation(
         result = response.choices[0].message.content
 
         # Store original recommendation if not a follow-up
-        if not is_followup:
+        if not is_followup and options:
             if "Recommended option:" in result and "Reason:" in result:
                 rec_text = result.split("Recommended option:")[1].split("Reason:")[0].strip()
                 reasoning = result.split("Reason:")[1].strip()
@@ -526,15 +515,13 @@ def get_gpt_recommendation(
             st.session_state.original_recommendation = {
                 'text': rec_text,
                 'reasoning': reasoning,
-                'options': options.copy() if options else [],
+                'options': options.copy(),
                 'timestamp': time.time()
             }
 
-        st.session_state.last_recommendation = result
-
-        # Add response to chat history and trim
+        # Update chat history
         messages.append({"role": "assistant", "content": result})
-        st.session_state.chat_history = messages[-30:]  # Keep last 30 exchanges
+        st.session_state.chat_history = messages[-30:]
 
         return result
 
