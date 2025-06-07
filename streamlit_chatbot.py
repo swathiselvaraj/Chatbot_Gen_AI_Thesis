@@ -534,6 +534,7 @@ def get_gpt_recommendation(
             
                 -Recommended Option: {st.session_state.original_recommendation['text']}
                 - Option Being Questioned: Option {options.index(referenced_option)+1} ({referenced_option})
+                - Option Being Questioned: Option {option_num} ({referenced_option})
                 - User Input: {user_input}
 
                 Instructions:
@@ -545,22 +546,31 @@ def get_gpt_recommendation(
                 - Any relevant metrics if applicable    
                 """
 
-        else: # Initial recommendation logic
+            else: # Initial recommendation logic
             # Use current_options for display in prompt
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
-            prompt = f"""Survey Question: {question}
+                options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
+                prompt = f"""Survey Question: {question}
 
-            Available Options:
-            {options_text}
+                Available Options:
+                {options_text}
 
-            Please recommend the best option with reasoning (limit to 50 words).
+                Please recommend the best option with reasoning (limit to 50 words).
 
-            Format:
-            Recommended option: <option>
-            Reason: <short explanation>
-            """
+                Format:
+                Recommended option: <option>
+                Reason: <short explanation>
+                """
 
-        
+        messages.append({"role": "user", "content": prompt})
+
+        # Call GPT
+        response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.7
+        )
+        result = response.choices[0].message.content
+
         # Store original recommendation if not a follow-up
         if not is_followup:
             if "Recommended option:" in result and "Reason:" in result:
@@ -582,17 +592,6 @@ def get_gpt_recommendation(
         # Add response to chat history and trim
         messages.append({"role": "assistant", "content": result})
         st.session_state.chat_history = messages[-30:]  # Keep last 30 exchanges
-
-        messages.append({"role": "user", "content": prompt})
-
-        # Call GPT
-        response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        temperature=0.7
-        )
-        result = response.choices[0].message.content
-
 
         return result
 
