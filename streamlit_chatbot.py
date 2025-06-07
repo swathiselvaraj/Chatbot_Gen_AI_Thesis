@@ -480,7 +480,7 @@ def get_gpt_recommendation(
                 return f"Error: The option '{referenced_option}' is not in the available options."
 
         # Handle initial recommendation
-        elif options:
+        else:
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)])
             prompt = f"""Survey Question: {question}
 
@@ -493,8 +493,7 @@ def get_gpt_recommendation(
             Recommended option: <option number or text>
             Reason: <short explanation>
             """
-        else:
-            return "Error: No options provided for recommendation."
+        
 
         # Add user message to chat history
         messages.append({"role": "user", "content": prompt})
