@@ -33,7 +33,8 @@ while len(options) < 4:
 
 option_mapping = {f"option {i+1}": options[i] for i in range(4)}
 option_mapping.update({f"option{i+1}": options[i] for i in range(4)})
-
+for key, value in option_mapping.items():
+    print(f"{key}: {value}")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 
 
@@ -154,11 +155,6 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 #     return None
 
 
-
-
-from typing import List, Optional
-import re
-from fuzzywuzzy import fuzz
 # def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
 #     """
 #     Extracts referenced survey option from user input with:
