@@ -490,6 +490,7 @@ def get_gpt_recommendation(
                     f"Recommended option: {original_rec['text']}\n"
                     f"Reason: {original_rec['reasoning']}"
                 )
+       
 
             # 3. Handle specific option references - USE current_options
             if referenced_option is not None and options: # <--- CHANGED HERE
@@ -502,6 +503,7 @@ def get_gpt_recommendation(
                 except ValueError:
                     pass
 
+
             context = "\n\n".join(context_parts) if context_parts else "No previous context available."
 
             prompt = f"""Context:
@@ -513,7 +515,7 @@ def get_gpt_recommendation(
             - If question references a specific option, focus on that option and answer the users question
             - If comparing to previous recommendation, explain any differences
             - If general question, answer concisely
-            - Keep response under 50 words
+            - Keep the answer below 50 words
 
             Response Format:
             Answer: <your response>
