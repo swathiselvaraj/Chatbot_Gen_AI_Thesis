@@ -535,7 +535,7 @@ def get_gpt_recommendation(
                 -Recommended Option: {st.session_state.original_recommendation['text']}
                 - Option Being Questioned: Option {options.index(referenced_option)+1} ({referenced_option})
                 - Option Being Questioned: Option {option_num} ({referenced_option})
-                - User Input: {user_input}
+                - User Input: {follow_up_question}
 
                 Instructions:
                 If the user is asking *why this option wasn't recommended*, explain 1-2 specific reasons why it was not chosen, compared to the recommended option.
