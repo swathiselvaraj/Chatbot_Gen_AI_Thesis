@@ -34,7 +34,7 @@ while len(options) < 4:
 option_mapping = {f"option {i+1}": options[i] for i in range(4)}
 option_mapping.update({f"option{i+1}": options[i] for i in range(4)})
 for key, value in option_mapping.items():
-    print(f"{key}: {value}")
+    st.write(f"{key}: {value}")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 
 
