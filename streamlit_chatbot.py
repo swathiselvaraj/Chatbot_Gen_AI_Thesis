@@ -428,11 +428,11 @@ def get_gpt_recommendation(
                 )
     
     # 2. Include current options if available and relevant
-            if options and (referenced_option or any(opt.lower() in follow_up_question.lower() for opt in options if opt)):
-                options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options) if opt])
-                context_parts.append(
-                f"Current Options:\n{options_text}"
-            )
+            # if options and (referenced_option or any(opt.lower() in follow_up_question.lower() for opt in options if opt)):
+            #     options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options) if opt])
+            #     context_parts.append(
+            #     f"Current Options:\n{options_text}"
+            # )
     
     # 3. Handle specific option references
             if referenced_option is not None and options and 1 <= referenced_option <= len(options):
@@ -450,10 +450,10 @@ def get_gpt_recommendation(
                 Follow-up Question: {follow_up_question or question}
 
                 Instructions:
-                - If question references a specific option, focus on that option
+                - If question references a specific option, focus on that option and answer the users question
                 - If comparing to previous recommendation, explain any differences
-                - If general question, answer concisely
-                - Keep response under 50 words unless complex comparison needed
+                - If general question, answer concisely 
+                - Keep response under 50 words
 
                 Response Format:
                 Answer: <your response>
@@ -483,8 +483,6 @@ def get_gpt_recommendation(
                 messages=messages,
                 temperature=0.7
                 )
-
-        result = response.choices[0].message.content
 
         # Store original recommendation if not a follow-up
         if not is_followup:
