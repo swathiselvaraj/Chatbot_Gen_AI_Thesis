@@ -1,3 +1,6 @@
+###### generate new 100 embeddings related to dashboard but using the new model 
+
+
 
 import streamlit as st
 from openai import OpenAI
@@ -482,7 +485,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         #     return "Sorry, I couldn't process your question. Please try again."
 
         # Check against general followups
-        dashboard_threshold = 0.50
+        dashboard_threshold = 0.20
         dashboard_scores = []
         for source in data.get("dashboard_followups", []):
             if source.get("embedding"):
