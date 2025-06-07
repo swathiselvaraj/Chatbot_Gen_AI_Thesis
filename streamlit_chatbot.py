@@ -561,7 +561,7 @@ def get_gpt_recommendation(
                     json_data = json.load(file)
                     json_context = json.dumps(json_data, indent=2)
 
-                    system_prompt = textwrap.dedent(f"""\
+                    prompt = textwrap.dedent(f"""\
                     Current dashboard data (in JSON format):
                     {json_context}
 
@@ -570,7 +570,7 @@ def get_gpt_recommendation(
                     2. Reference specific metrics when available
                     3. If data contradicts standard recommendations, explain why
                     """)
-                    messages.insert(0, {"role": "system", "content": system_prompt})
+                    messages.insert(0, {"role": "system", "content": prompt})
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
