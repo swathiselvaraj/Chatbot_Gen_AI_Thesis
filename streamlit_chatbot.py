@@ -546,20 +546,20 @@ def get_gpt_recommendation(
                 - Any relevant metrics if applicable    
                 """
 
-        else: # Initial recommendation logic
+            else: # Initial recommendation logic
             # Use current_options for display in prompt
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
-            prompt = f"""Survey Question: {question}
+                options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
+                prompt = f"""Survey Question: {question}
 
-            Available Options:
-            {options_text}
+                Available Options:
+                {options_text}
 
-            Please recommend the best option with reasoning (limit to 50 words).
+                Please recommend the best option with reasoning (limit to 50 words).
 
-            Format:
-            Recommended option: <option>
-            Reason: <short explanation>
-            """
+                Format:
+                Recommended option: <option>
+                Reason: <short explanation>
+                """
 
         messages.append({"role": "user", "content": prompt})
 
