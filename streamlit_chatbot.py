@@ -264,10 +264,10 @@ def save_to_gsheet(data_dict: Dict) -> bool:
        return True
 
 
-   except Exception as e:
+    except Exception as e:
        st.error(f"Failed to save to Google Sheets: {str(e)}")
        return False
-      return "Sorry, I encountered an error processing your question."
+    return "Sorry, I encountered an error processing your question."
 
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
     try:
