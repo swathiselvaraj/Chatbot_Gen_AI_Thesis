@@ -242,9 +242,7 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 #             return options[i]
 
 #     return None
-from typing import List, Optional
-import re
-from fuzzywuzzy import fuzz
+
 
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
     """
