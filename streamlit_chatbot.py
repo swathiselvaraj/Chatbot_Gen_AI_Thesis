@@ -92,13 +92,37 @@ if 'followup_used' not in st.session_state:
 
 # --- Data Loading ---
 @st.cache_resource
+# def load_embedding_data():
+#   try:
+#       with open("data/followup_embeddings_list.json", "r") as f:
+#           return json.load(f)
+#   except Exception as e:
+#       st.error(f"Failed to load embeddings: {str(e)}")
+#       return {"general_followups": [], "questions": []}
+
 def load_embedding_data():
-  try:
-      with open("data/followup_embeddings_list.json", "r") as f:
-          return json.load(f)
-  except Exception as e:
-      st.error(f"Failed to load embeddings: {str(e)}")
-      return {"general_followups": [], "questions": []}
+    default_structure = {
+        "general_followups": [],
+        "questions": [],
+        "dashboard_followups": []  # Add this to ensure the key always exists
+    }
+    try:
+        with open("data/followup_embeddings_list.json", "r") as f:
+            loaded_data = json.load(f)
+            # Ensure all expected keys exist in the loaded data
+            for key in default_structure:
+                if key not in loaded_data:
+                    loaded_data[key] = []
+            return loaded_data
+    except FileNotFoundError:
+        st.error("Embeddings file not found. Using empty dataset.")
+        return default_structure
+    except json.JSONDecodeError:
+        st.error("Invalid JSON format in embeddings file. Using empty dataset.")
+        return default_structure
+    except Exception as e:
+        st.error(f"Failed to load embeddings: {str(e)}")
+        return default_structure
 
 data = load_embedding_data()
 
