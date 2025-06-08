@@ -103,6 +103,7 @@ if 'followup_used' not in st.session_state:
 #       st.error(f"Failed to load embeddings: {str(e)}")
 #       return {"general_followups": [], "questions": []}
 
+
 def load_embedding_data():
     default_structure = {
         "general_followups": [],
@@ -517,11 +518,12 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         if dashboard_scores:
             return get_gpt_recommendation(
                 question=question_text,
-                options=options,
+                #options=options,
                 is_followup=True,
                 follow_up_question=user_input,
                 dashboard=True
             )
+            
             #return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
 
         elif general_scores or question_scores:
@@ -562,7 +564,7 @@ def get_gpt_recommendation(
                 with open(json_data_path, 'r') as file:
                     json_data = json.load(file)
                     json_context = json.dumps(json_data, indent=2)
-
+                    st.write("dashboard data loaded")
                     prompt = f"""\
                     Current dashboard data (in JSON format):
                     {json_context}
