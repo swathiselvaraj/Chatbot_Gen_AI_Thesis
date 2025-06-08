@@ -661,7 +661,7 @@ def get_gpt_recommendation(
             """
 
 
-        elif is_followup == 'False' : # Initial recommendation logic
+        elif not is_followup: # Initial recommendation logic
             # Use current_options for display in prompt
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
             prompt = f"""Survey Question: {question}
@@ -676,8 +676,8 @@ def get_gpt_recommendation(
 
             Reason: <short explanation>
             """
-        else :
-            "Please as a question about the survey"
+        else:
+            return "Please ask a question about the survey."
         
 
         # Add user message to chat history
