@@ -568,17 +568,20 @@ def get_gpt_recommendation(
                     prompt = f"""\
                     Current dashboard data (in JSON format):
                     {json_context}
-
-
                     Instructions for answering:
-                    1. I1. If the user asks about the current status, values, or figures in the survey/dashboard (e.g., "How many cash desks are open?"), respond **only using** the exact data from the JSON. Do **not** interpret, summarize, or recommend anything.
-                    2. If the user asks to compare the dashboard data with the previous recommendations, then reference both the JSON data and your general knowledge.
-                    3. Always reference specific metrics when possible.
-                    4. If the data contradicts recommendations, clearly explain why.
-                    5. Keep answers concise — maximum 50 words.
-                    Format:
-                    "Dashboard Answer: <your answer>"
-                     """
+1. If the user asks a **factual question about the dashboard data** (e.g., number of open cash desks, waiting time, sales), answer **strictly** using only the values in the JSON.
+   - Example: "How many cash desks are open?" → Only use openedCashDesks.current
+2. If the user asks for a **comparison with benchmarks, sales targets, or recommendations**, you may refer to:
+   - waitingTimeAtCashDesk.target
+   - productVariationList.salesTarget
+   - your own general knowledge
+3. Do not interpret, summarize, or suggest improvements unless specifically asked for a comparison, recommendation, or insight.
+4. Always cite exact metric names and values when answering.
+5. Keep your answers brief — maximum 50 words.
+
+Format:
+"Dashboard Answer: <your answer>"
+"""
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
