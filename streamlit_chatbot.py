@@ -631,10 +631,7 @@ def get_gpt_recommendation(
                     )
                 except ValueError:
                     pass
-
-        ###################
-
-            
+ 
             prompt = f"""The user has asked a follow-up question about a survey recommendation.
             Context:
             -Original question: {question}
