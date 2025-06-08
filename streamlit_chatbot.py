@@ -569,19 +569,31 @@ def get_gpt_recommendation(
                     Current dashboard data (in JSON format):
                     {json_context}
 
-                    Important: When making recommendations:
-                    1. Your knowledge is limited only to the data from this dashboard
-                    2. If the question is about the data in the dashboard data answer pick the data from {json_context} and show it
-                    3. Reference specific metrics when available
-                    4. If data contradicts standard recommendations, explain why
-                    5.. Answer within 50 words
 
+                    Instructions for answering:
+                    1. If the user asks a direct question about the survey or dashboard data, respond **only** using the values from the JSON.
+                    2. If the user asks to compare the dashboard data with the previous recommendations, then reference both the JSON data and your general knowledge.
+                    3. Always reference specific metrics when possible.
+                    4. If the data contradicts recommendations, clearly explain why.
+                    5. Keep answers concise — maximum 50 words.
                     Format:
                     "Dashboard Answer: <your answer>"
-                    """
+                     """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
+
+
+        #             Important: When making recommendations:
+        #             1. Your knowledge is limited only to the data from this dashboard
+        #             2. If the question is about the data in the dashboard data answer pick the data from {json_context} and show it
+        #             3. Reference specific metrics when available
+        #             4. If data contradicts standard recommendations, explain why
+        #             5.. Answer within 50 words
+
+        #             Format:
+        #             "Dashboard Answer: <your answer>"
+        #             """
         # =========================
         # Construct the user prompt
         # =========================
