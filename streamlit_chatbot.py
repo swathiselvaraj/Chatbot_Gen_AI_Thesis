@@ -640,7 +640,7 @@ def get_gpt_recommendation(
 
 
             The user has asked a follow-up question about a survey recommendation.
-            You must answer the question or use prior context and reasoning to answer concisely in under 50 words.
+            You must answer the question specifically or use prior context and reasoning to answer concisely in under 50 words.
 
 
             Respond in this format:
