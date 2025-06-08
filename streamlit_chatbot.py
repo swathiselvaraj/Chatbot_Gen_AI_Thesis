@@ -571,9 +571,10 @@ def get_gpt_recommendation(
 
                     Important: When making recommendations:
                     1. Your knowledge is limited only to the data from this dashboard
-                    2. Reference specific metrics when available
-                    3. If data contradicts standard recommendations, explain why
-                    4. Answer within 50 words
+                    2. If the question is about the data in the dashboard data answer directly donot always compare with the recommendation
+                    3.Reference specific metrics when available
+                    4.If data contradicts standard recommendations, explain why
+                    5.. Answer within 50 words
 
                     Format:
                     "Dashboard Answer: <your answer>"
