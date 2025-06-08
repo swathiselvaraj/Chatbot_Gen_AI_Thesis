@@ -796,7 +796,7 @@ if question_id != st.session_state.get('last_question_id'):
 
 if st.button("Get Recommendation"):
    update_interaction_time()
-   recommendation = get_gpt_recommendation(question_text, options=options)
+   recommendation = get_gpt_recommendation(question_text, options=options, is_followup=False)
    st.session_state.conversation.append(("assistant", recommendation))
    end_interaction_and_accumulate_time()
   
