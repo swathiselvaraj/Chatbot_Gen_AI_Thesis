@@ -571,7 +571,7 @@ def get_gpt_recommendation(
 
 
                     Instructions for answering:
-                    1. If the user asks a direct question about the survey or dashboard data, respond **only** using the values from the JSON.
+                    1. I1. If the user asks about the current status, values, or figures in the survey/dashboard (e.g., "How many cash desks are open?"), respond **only using** the exact data from the JSON. Do **not** interpret, summarize, or recommend anything.
                     2. If the user asks to compare the dashboard data with the previous recommendations, then reference both the JSON data and your general knowledge.
                     3. Always reference specific metrics when possible.
                     4. If the data contradicts recommendations, clearly explain why.
