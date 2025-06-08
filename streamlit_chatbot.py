@@ -673,10 +673,12 @@ def get_gpt_recommendation(
 
             Format:
             Recommended option: <option number or text>
+
             Reason: <short explanation>
             """
+        else :
+            "Please as a question about the survey"
         
-
 
         # Add user message to chat history
         messages.append({"role": "user", "content": prompt})
@@ -689,8 +691,7 @@ def get_gpt_recommendation(
         )
         result = response.choices[0].message.content
 
-        else :
-            "Please as a question about the survey"
+        
             
 
         # Store original recommendation if not a follow-up
