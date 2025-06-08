@@ -514,16 +514,16 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                     question_scores.append((score, source))
 
         # If we have medium confidence matches (either general or question-specific)
-        if dashboard_scores:
-            dashboard_scores.sort(reverse=True, key=lambda x: x[0])
-            best_match = dashboard_scores[0][1]
-            return get_gpt_recommendation(
-                question=question_text,
-                options=options,
-                is_followup=True,
-                follow_up_question=user_input,
-                dashboard=True
-            )
+        # if dashboard_scores:
+        #     dashboard_scores.sort(reverse=True, key=lambda x: x[0])
+        #     best_match = dashboard_scores[0][1]
+        #     return get_gpt_recommendation(
+        #         question=question_text,
+        #         options=options,
+        #         is_followup=True,
+        #         follow_up_question=user_input,
+        #         dashboard=True
+        #     )
             #return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
 
         elif general_scores or question_scores:
