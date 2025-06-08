@@ -514,16 +514,14 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                     question_scores.append((score, source))
 
         # If we have medium confidence matches (either general or question-specific)
-        # if dashboard_scores:
-        #     dashboard_scores.sort(reverse=True, key=lambda x: x[0])
-        #     best_match = dashboard_scores[0][1]
-        #     return get_gpt_recommendation(
-        #         question=question_text,
-        #         options=options,
-        #         is_followup=True,
-        #         follow_up_question=user_input,
-        #         dashboard=True
-        #     )
+        if dashboard_scores:
+            return get_gpt_recommendation(
+                question=question_text,
+                options=options,
+                is_followup=True,
+                follow_up_question=user_input,
+                dashboard=True
+            )
             #return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
 
         elif general_scores or question_scores:
@@ -565,7 +563,7 @@ def get_gpt_recommendation(
                     json_data = json.load(file)
                     json_context = json.dumps(json_data, indent=2)
 
-                    prompt = textwrap.dedent(f"""\
+                    prompt = f"""\
                     Current dashboard data (in JSON format):
                     {json_context}
 
@@ -573,8 +571,11 @@ def get_gpt_recommendation(
                     1. Your knowledge is limited only to the data from this dashboard
                     2. Reference specific metrics when available
                     3. If data contradicts standard recommendations, explain why
-                    """)
-                messages.insert(0, {"role": "system", "content": prompt})
+                    4. Answer within 50 words
+
+                    Format:
+                    Answer ption: 
+                    """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
