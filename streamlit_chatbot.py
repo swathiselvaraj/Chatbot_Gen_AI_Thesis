@@ -149,8 +149,8 @@ def get_embedding(text: str) -> List[float]:
   try:
       response = client.embeddings.create(
           input=text,
-        #   model="text-embedding-3-small"
-          model="text-embedding-ada-002"
+          model="text-embedding-3-small"
+        
       )
       return response.data[0].embedding
   except Exception as e:
@@ -607,7 +607,7 @@ def get_gpt_recommendation(
         #     """
 
     #     
-        if is_followup and non_dashboard:
+        elif is_followup and non_dashboard:
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
 
@@ -661,7 +661,7 @@ def get_gpt_recommendation(
             """
 
 
-        else: # Initial recommendation logic
+        elif is_followup == 'False' : # Initial recommendation logic
             # Use current_options for display in prompt
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
             prompt = f"""Survey Question: {question}
@@ -677,6 +677,7 @@ def get_gpt_recommendation(
             """
         
 
+
         # Add user message to chat history
         messages.append({"role": "user", "content": prompt})
 
@@ -687,6 +688,10 @@ def get_gpt_recommendation(
             temperature=0.7
         )
         result = response.choices[0].message.content
+
+        else :
+            "Please as a question about the survey"
+            
 
         # Store original recommendation if not a follow-up
         if not is_followup and options:
