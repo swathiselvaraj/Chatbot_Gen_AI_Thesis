@@ -576,7 +576,7 @@ def get_gpt_recommendation(
                     4. Answer within 50 words
 
                     Format:
-                    Answer : Based on the dashboard data....s
+                    "Dashboard Answer: <your answer>"
                     """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
