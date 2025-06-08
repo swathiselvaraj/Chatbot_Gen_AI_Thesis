@@ -576,7 +576,7 @@ def get_gpt_recommendation(
                     4. Answer within 50 words
 
                     Format:
-                    Answer ption: 
+                    Answer : Based on the dashboard data....s
                     """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
@@ -610,45 +610,45 @@ def get_gpt_recommendation(
         #     """
 
     #     ############################
-        # elif is_followup and non_dashboard:
-        #     original_rec = st.session_state.get("original_recommendation")
-        #     context_parts = []
+        elif is_followup and non_dashboard:
+            original_rec = st.session_state.get("original_recommendation")
+            context_parts = []
 
-        #     if original_rec:
-        #         context_parts.append(
-        #             f"Earlier Recommendation:\n"
-        #             f"Recommended option: {original_rec['text']}\n"
-        #             f"Reason: {original_rec['reasoning']}"
-        #         )
+            if original_rec:
+                context_parts.append(
+                    f"Earlier Recommendation:\n"
+                    f"Recommended option: {original_rec['text']}\n"
+                    f"Reason: {original_rec['reasoning']}"
+                )
 
-        #     # 3. Handle specific option references - USE current_options
-        #     if referenced_option is not None: # <--- CHANGED HERE
-        #         try:
-        #             option_index = options.index(referenced_option) # <--- CHANGED HERE
-        #             option_text = options[option_index] # <--- CHANGED HERE
-        #             context_parts.append(
-        #                 f"Specifically asking about Option {option_index + 1}: {option_text}"
-        #             )
-        #         except ValueError:
-        #             pass
+            # 3. Handle specific option references - USE current_options
+            if referenced_option is not None: # <--- CHANGED HERE
+                try:
+                    option_index = options.index(referenced_option) # <--- CHANGED HERE
+                    option_text = options[option_index] # <--- CHANGED HERE
+                    context_parts.append(
+                        f"Specifically asking about Option {option_index + 1}: {option_text}"
+                    )
+                except ValueError:
+                    pass
 
         ###################
 
             
-            # prompt = f"""The user has asked a follow-up question about a survey recommendation.
-            # Context:
-            # -Original question: {question}
-            # - Options: {chr(10).join(options)}
-            # {f"- Referenced option: {referenced_option}" if referenced_option else ""}
+            prompt = f"""The user has asked a follow-up question about a survey recommendation.
+            Context:
+            -Original question: {question}
+            - Options: {chr(10).join(options)}
+            {f"- Referenced option: {referenced_option}" if referenced_option else ""}
 
 
-            # The user has asked a follow-up question about a survey recommendation.
-            # You must answer the question or use prior context and reasoning to answer concisely in under 50 words.
+            The user has asked a follow-up question about a survey recommendation.
+            You must answer the question or use prior context and reasoning to answer concisely in under 50 words.
 
 
-            # Respond in this format:
-            # "Answer: <your answer>"
-            # """
+            Respond in this format:
+            "Answer: <your answer>"
+            """
 ##################
 
         elif not is_followup: # Initial recommendation logic
