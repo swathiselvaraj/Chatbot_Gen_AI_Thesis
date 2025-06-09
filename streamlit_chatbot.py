@@ -538,6 +538,19 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         st.error(f"Error in followup validation: {str(e)}")
         return "Sorry, I encountered an error processing your question."
 
+def flatten_json(y):
+    out = {}
+    def flatten(x, name=''):
+        if type(x) is dict:
+            for a in x:
+                flatten(x[a], name + a + '_')
+        elif type(x) is list:
+            for i,a in enumerate(x):
+                flatten(a, name + str(i) + '_')
+        else:
+            out[name[:-1]] = x
+    flatten(y)
+    return out
 
 def get_gpt_recommendation(
     question: str,
@@ -558,31 +571,56 @@ def get_gpt_recommendation(
             options = st.session_state.get('original_options', [])  # Fallback to session state
 
         # Include dashboard context if needed
-        if dashboard:
-            json_data_path = "data/dashboard_data.json"
+#         if dashboard:
+#             json_data_path = "data/dashboard_data.json"
+#             try:
+#                 with open(json_data_path, 'r') as file:
+#                     json_data = json.load(file)
+#                     json_context = json.dumps(json_data, indent=2)
+#                     st.write("dashboard data loaded")
+                   
+#                     prompt = f"""You are a strict data analyst assistant. Use ONLY the following JSON data to answer questions. 
+
+# <json_data>
+# {json_context}
+# </json_data>
+
+# RULES:
+# 1. FIRST check if the exact requested data exists in the JSON
+# 2. If found, respond with: "Dashboard Answer: [EXACT VALUE FROM JSON]"
+# 3. If not found, respond with: "Dashboard Answer: Not found in data"
+# 4. NEVER infer, calculate, or invent answers
+# 5. If question is unclear, ask for clarification
+# 6. Max 50 words.
+
+# """
+#             except Exception as e:
+                # print(f"Warning: Could not load JSON data - {str(e)}")
+            if dashboard:
+                json_data_path = "data/dashboard_data.json"
             try:
                 with open(json_data_path, 'r') as file:
                     json_data = json.load(file)
-                    json_context = json.dumps(json_data, indent=2)
-                    st.write("dashboard data loaded")
-                   
-                    prompt = f"""You are a strict data analyst assistant. Use ONLY the following JSON data to answer questions. 
+            
+            # Create search-friendly data structures
+                flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON
+                search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
+            
+                prompt = f"""Answer the question using ONLY the following data. Never invent answers.
 
-<json_data>
-{json_context}
-</json_data>
+Available Data (format is "key: value"):
+{search_terms}
 
-RULES:
-1. FIRST check if the exact requested data exists in the JSON
-2. If found, respond with: "Dashboard Answer: [EXACT VALUE FROM JSON]"
-3. If not found, respond with: "Dashboard Answer: Not found in data"
-4. NEVER infer, calculate, or invent answers
-5. If question is unclear, ask for clarification
-6. Max 50 words.
+Question: {user_question}
 
-"""
+Response Format:
+1. If answer exists: "Dashboard Answer: [value] (Source: [key])"
+2. If not found: "Dashboard Answer: Not found in data"
+3. Never add extra information or assumptions"""
+
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
+
 
 
 
