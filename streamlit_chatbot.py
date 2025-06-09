@@ -574,7 +574,7 @@ def get_gpt_recommendation(
 
 RULES:
 1. FIRST check if the exact requested data exists in the JSON
-2. If found, respond with: "Dashboard Answer: [EXACT VALUE FROM JSON] (Source: [field_name])"
+2. If found, respond with: "Dashboard Answer: [EXACT VALUE FROM JSON]"
 3. If not found, respond with: "Dashboard Answer: Not found in data"
 4. NEVER infer, calculate, or invent answers
 5. If question is unclear, ask for clarification
