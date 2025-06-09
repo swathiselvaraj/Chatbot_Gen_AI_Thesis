@@ -565,22 +565,18 @@ def get_gpt_recommendation(
                     json_data = json.load(file)
                     json_context = json.dumps(json_data, indent=2)
                     st.write("dashboard data loaded")
-                    prompt = f"""\
-                    Current dashboard data (in JSON format):
-                    {json_context}
-                    Instructions for answering:
-1. If the user asks a **factual question about the dashboard data** (e.g., number of open cash desks, waiting time, sales), answer **strictly** using only the values in the JSON.
-   - Example: "How many cash desks are open?" → Only use openedCashDesks.current
-2. If the user asks for a **comparison with benchmarks, sales targets, or recommendations**, you may refer to:
-   - waitingTimeAtCashDesk.target
-   - productVariationList.salesTarget
-   - your own general knowledge
-3. Do not interpret, summarize, or suggest improvements unless specifically asked for a comparison, recommendation, or insight.
-4. Always cite exact metric names and values when answering.
-5. Keep your answers brief — maximum 50 words.
+                    prompt = f"""\You are a data analyst assistant. Use ONLY the following JSON data to answer factual questions. Do not invent or assume any information.
 
-Format:
-"Dashboard Answer: <your answer>"
+<json_data>
+{json_context}
+</json_data>
+
+Instructions:
+1. Only answer questions using data explicitly in the JSON.
+2. Cite the JSON field names and values.
+3. If data is missing, say "Not found in data."
+4. Format: Dashboard Answer: <your answer>
+5. Max 50 words.
 """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
