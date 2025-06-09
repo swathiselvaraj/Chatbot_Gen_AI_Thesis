@@ -573,10 +573,11 @@ def get_gpt_recommendation(
 
 Instructions:
 1. Only answer questions using data explicitly in the JSON.
-2. Cite the JSON field names and values.
-3. If data is missing, say "Not found in data."
-4. Format: Dashboard Answer: <your answer>
-5. Max 50 words.
+2. Search the JSON file i gave you and give the exact answer donot give random answers
+3. Cite the JSON field names and values.
+4. If data is missing, say "Not found in data."
+5. Format: Dashboard Answer: <your answer>
+6. Max 50 words.
 """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
