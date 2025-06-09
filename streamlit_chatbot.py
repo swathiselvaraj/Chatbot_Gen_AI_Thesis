@@ -614,10 +614,9 @@ Available Data (format is "key: value"):
 {search_terms}
 
 Response Format:
-1. If answer exists: "Dashboard Answer: [value] (Source: [key])"
-2. If not found: "Dashboard Answer: Not found in data"
-3. Never add extra information or assumptions"""
-
+1. If the question is directly asking for values inside the data : "Dashboard Answer: [value]"
+2. If not answer to the question the user asks about the dashboard referencing to the data inside the json file
+"""
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
