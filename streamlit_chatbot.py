@@ -696,7 +696,7 @@ Response Format:
 
 
             Respond in this format:
-            "Answer: general questions <your answer>"
+            "Answer general questions:  <your answer>"
             """
 ##################
 
