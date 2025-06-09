@@ -3,7 +3,7 @@ import json
 from openai import OpenAI
 
 # Initialize the client
-
+c
 # === Step 1: Load existing JSON file ===
 with open("data/followup_embeddings_list.json", "r") as f:
     data = json.load(f)
