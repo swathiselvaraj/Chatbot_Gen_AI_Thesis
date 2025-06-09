@@ -503,7 +503,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 score = cosine_similarity(user_embedding, source["embedding"])
                 if score >= general_threshold:
                     general_scores.append((score, source))
-                    st.write("dashboard data loaded")
+                    st.write("general data loaded")
         
         # Check against question-specific followups
         question_threshold = 0.70
@@ -514,6 +514,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 score = cosine_similarity(user_embedding, source["embedding"])
                 if score >= question_threshold:
                     question_scores.append((score, source))
+                    st.write("general question data loaded")
 
         # If we have medium confidence matches (either general or question-specific)
         if dashboard_scores:
