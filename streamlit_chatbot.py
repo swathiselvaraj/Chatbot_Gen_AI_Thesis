@@ -702,7 +702,7 @@ Response Format:
 
 
             Respond in this format:
-            "general Answer"
+            Always start your response with the exact words: "general Answer"
             "Answer general questions:  <your answer>"
             """
 ##################
