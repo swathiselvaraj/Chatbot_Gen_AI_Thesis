@@ -611,8 +611,6 @@ def get_gpt_recommendation(
 Available Data (format is "key: value"):
 {search_terms}
 
-Question: {user_question}
-
 Response Format:
 1. If answer exists: "Dashboard Answer: [value] (Source: [key])"
 2. If not found: "Dashboard Answer: Not found in data"
