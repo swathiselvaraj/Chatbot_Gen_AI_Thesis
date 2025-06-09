@@ -565,6 +565,7 @@ def get_gpt_recommendation(
                     json_data = json.load(file)
                     json_context = json.dumps(json_data, indent=2)
                     st.write("dashboard data loaded")
+                   
                     prompt = f"""You are a strict data analyst assistant. Use ONLY the following JSON data to answer questions. 
 
 <json_data>
@@ -577,8 +578,8 @@ RULES:
 3. If not found, respond with: "Dashboard Answer: Not found in data"
 4. NEVER infer, calculate, or invent answers
 5. If question is unclear, ask for clarification
+6. Max 50 words.
 
-Question: {user_question}
 """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
