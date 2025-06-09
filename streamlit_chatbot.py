@@ -683,7 +683,7 @@ Response Format:
                     )
                 except ValueError:
                     pass
- 
+            st.write()
             prompt = f"""The user has asked a follow-up question about a survey recommendation.
             Context:
             -Original question: {question}
@@ -696,6 +696,7 @@ Response Format:
 
 
             Respond in this format:
+            "general Answer"
             "Answer general questions:  <your answer>"
             """
 ##################
