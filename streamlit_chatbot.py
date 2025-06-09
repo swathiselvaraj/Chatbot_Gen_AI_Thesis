@@ -565,19 +565,20 @@ def get_gpt_recommendation(
                     json_data = json.load(file)
                     json_context = json.dumps(json_data, indent=2)
                     st.write("dashboard data loaded")
-                    prompt = f"""\You are a data analyst assistant. Use ONLY the following JSON data to answer factual questions. Do not invent or assume any information.
+                    prompt = f"""You are a strict data analyst assistant. Use ONLY the following JSON data to answer questions. 
 
 <json_data>
 {json_context}
 </json_data>
 
-Instructions:
-1. Only answer questions using data explicitly in the JSON.
-2. Search the JSON file i gave you and give the exact answer donot give random answers
-3. Cite the JSON field names and values.
-4. If data is missing, say "Not found in data."
-5. Format: Dashboard Answer: <your answer>
-6. Max 50 words.
+RULES:
+1. FIRST check if the exact requested data exists in the JSON
+2. If found, respond with: "Dashboard Answer: [EXACT VALUE FROM JSON] (Source: [field_name])"
+3. If not found, respond with: "Dashboard Answer: Not found in data"
+4. NEVER infer, calculate, or invent answers
+5. If question is unclear, ask for clarification
+
+Question: {user_question}
 """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
