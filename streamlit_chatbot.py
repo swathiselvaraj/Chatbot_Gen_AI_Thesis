@@ -732,8 +732,7 @@ Response Format:
                     Context:
                 
                     The user has asked a follow-up question about a survey recommendation.
-                    Only answer if the question is related to supermarket scenario and the things needed for its managementif not tell "Please ask a questionrelated to the 
-                    survey"
+                    Only answer if the question is related to supermarket scenario and the things needed for its managementif not tell "Please ask a that makes sense"
                 
 
                     Respond in this format:
