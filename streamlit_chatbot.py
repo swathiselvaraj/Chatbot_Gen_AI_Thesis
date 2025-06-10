@@ -735,17 +735,25 @@ Response Format:
             
 
         elif other_questions:
-             prompt = f"""The user has asked a follow-up question about a survey recommendation.
-                    Context:
-                
-                    The user has asked a follow-up question about a survey recommendation.
-                    Only answer if the question is related to supermarket scenario and the things needed for its managementif not tell "Please ask a that makes sense"
-                
+             prompt = f"""
+You are a helpful assistant responding to questions related to managing a supermarket.
 
-                    Respond in this format:
-                    Always start your response with the exact words: "supermarket "
-                    "Answer suoermarket questions:  <your answer>"
-                    """
+Context:
+The user has asked a follow-up question based on a previous discussion about supermarket management and survey recommendations.
+
+Instructions:
+1. Only answer questions that are relevant to supermarket operations, management, or planning.
+2. If the user's question is completely unrelated (e.g., about outer space or cooking recipes), respond with:
+   "Please ask a question related to supermarkets or their management."
+3. If the question is vague but could relate (like "What is a supermarket?"), provide a helpful response.
+
+Respond in this format:
+Always start your response with the exact words:  
+**"supermarket Answer:"** followed by your answer.
+
+User Question:
+{user_input}
+"""
             #return "Please ask a question about the survey."
         
 
