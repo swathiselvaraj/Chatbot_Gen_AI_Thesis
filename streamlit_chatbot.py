@@ -694,20 +694,20 @@ Response Format:
                     pass
                 st.write("general data loaded")
                 prompt = f"""The user has asked a follow-up question about a survey recommendation.
-            Context:
-            -Original question: {question}
-            - Options: {chr(10).join(options)}
-            {f"- Referenced option: {referenced_option}" if referenced_option else ""}
+                    Context:
+                    -Original question: {question}
+                    - Options: {chr(10).join(options)}
+                    {f"- Referenced option: {referenced_option}" if referenced_option else ""}
 
 
-            The user has asked a follow-up question about a survey recommendation.
-            You must answer the question specifically or use prior context and reasoning to answer concisely in under 50 words.
+                    The user has asked a follow-up question about a survey recommendation.
+                    You must answer the question specifically or use prior context and reasoning to answer concisely in under 50 words.
 
 
-            Respond in this format:
-            Always start your response with the exact words: "general Answer"
-            "Answer general questions:  <your answer>"
-            """
+                    Respond in this format:
+                    Always start your response with the exact words: "general Answer"
+                    "Answer general questions:  <your answer>"
+                    """
 ##################
 
         elif not is_followup: # Initial recommendation logic
