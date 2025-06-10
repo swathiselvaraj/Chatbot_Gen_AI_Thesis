@@ -683,15 +683,15 @@ Response Format:
                 )
 
             # 3. Handle specific option references - USE current_options
-            if referenced_option is not None: # <--- CHANGED HERE
-                try:
-                    option_index = options.index(referenced_option) # <--- CHANGED HERE
-                    option_text = options[option_index] # <--- CHANGED HERE
-                    context_parts.append(
-                        f"Specifically asking about Option {option_index + 1}: {option_text}"
-                    )
-                except ValueError:
-                    pass
+            # if referenced_option is not None: # <--- CHANGED HERE
+            #     try:
+            #         option_index = options.index(referenced_option) # <--- CHANGED HERE
+            #         option_text = options[option_index] # <--- CHANGED HERE
+            #         context_parts.append(
+            #             f"Specifically asking about Option {option_index + 1}: {option_text}"
+            #         )
+            #     except ValueError:
+            #         pass
                 st.write("general data loaded")
                 prompt = f"""The user has asked a follow-up question about a survey recommendation.
                     Context:
