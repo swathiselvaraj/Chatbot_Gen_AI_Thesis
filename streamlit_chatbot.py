@@ -534,9 +534,12 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
 
         elif general_scores or question_scores:
             # Classify question type for contextual prompt
-            return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, non_dashboard=True)
+            return get_gpt_recommendation(
+                question=question_text, 
+                is_followup=True, 
+                follow_up_question=user_input, 
+                non_dashboard=True)
 
-        
         
         else:
             return "Please ask a question related to the Survey"
@@ -690,7 +693,7 @@ Response Format:
                 except ValueError:
                     pass
             st.write("general data loaded")
-            prompt = f"""The user has asked a follow-up question about a survey recommendation.
+                prompt = f"""The user has asked a follow-up question about a survey recommendation.
             Context:
             -Original question: {question}
             - Options: {chr(10).join(options)}
@@ -722,6 +725,7 @@ Response Format:
 
             Reason: <short explanation>
             """
+            
         else:
             return "Please ask a question about the survey."
         
