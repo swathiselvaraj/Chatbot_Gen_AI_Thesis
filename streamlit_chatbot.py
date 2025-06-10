@@ -616,7 +616,7 @@ def get_gpt_recommendation(
                 search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
                 user_input
             
-                prompt = f"""Question =  {user_input}
+                prompt = f"""
                 Answer the Question using ONLY the following data. Never invent answers.
 
 Available Data (format is "key: value"):
