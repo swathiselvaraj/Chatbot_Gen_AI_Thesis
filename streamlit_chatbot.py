@@ -702,8 +702,7 @@ Response Format:
 
                     The user has asked a follow-up question about a survey recommendation.
                     You must answer the question specifically or use prior context and reasoning to answer concisely in under 50 words.
-                    Also only answer if the question is about supermarket scenario if not reply "Please ask a question about the survey"
-
+                
 
                     Respond in this format:
                     Always start your response with the exact words: "general Answer"
@@ -727,8 +726,21 @@ Response Format:
             Reason: <short explanation>
             """
             
+
         else:
-            return "Please ask a question about the survey."
+             prompt = f"""The user has asked a follow-up question about a survey recommendation.
+                    Context:
+                
+                    The user has asked a follow-up question about a survey recommendation.
+                    Only answer if the question is related to supermarket scenario and the things needed for its managementif not tell "Please ask a questionrelated to the 
+                    survey"
+                
+
+                    Respond in this format:
+                    Always start your response with the exact words: "supermarket "
+                    "Answer suoermarket questions:  <your answer>"
+                    """
+            #return "Please ask a question about the survey."
         
 
         # Add user message to chat history
