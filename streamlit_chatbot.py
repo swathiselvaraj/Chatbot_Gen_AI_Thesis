@@ -904,7 +904,6 @@ if user_input:
 
     save_session_data()
 
-# Display conversation
 display_conversation()
 
 # Debug information
