@@ -702,6 +702,7 @@ Response Format:
 
                     The user has asked a follow-up question about a survey recommendation.
                     You must answer the question specifically or use prior context and reasoning to answer concisely in under 50 words.
+                    Also only answer if the question is about supermarket scenario if not reply "Please ask a question about the survey"
 
 
                     Respond in this format:
