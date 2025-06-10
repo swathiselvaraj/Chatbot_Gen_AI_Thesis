@@ -614,9 +614,9 @@ def get_gpt_recommendation(
             # Create search-friendly data structures
                 flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON
                 search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
-                user_input
+                
             
-                prompt = f"""
+                prompt = f"""Question =  {user_input}
                 Answer the Question using ONLY the following data. Never invent answers.
 
 Available Data (format is "key: value"):
