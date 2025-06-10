@@ -542,7 +542,13 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
 
         
         else:
-            return "Please ask a question related to the Survey"
+            return get_gpt_recommendation(
+                question=question_text, 
+                is_followup=True, 
+                follow_up_question=user_input, 
+                non_dashboard=False,
+                other_questions=True)
+
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
         return "Sorry, I encountered an error processing your question."
@@ -568,7 +574,8 @@ def get_gpt_recommendation(
     follow_up_question: Optional[str] = None,
     referenced_option: Optional[str] = None,
     dashboard: bool = False,
-    non_dashboard: bool = False
+    non_dashboard: bool = False,
+    other_questions: bool = False
 ) -> str:
     try:
         # Initialize chat history
@@ -727,7 +734,7 @@ Response Format:
             """
             
 
-        else:
+        elif other_questions:
              prompt = f"""The user has asked a follow-up question about a survey recommendation.
                     Context:
                 
