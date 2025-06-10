@@ -746,6 +746,7 @@ Instructions:
 2. If the user's question is completely unrelated (e.g., about outer space or cooking recipes), respond with:
    "Please ask a question related to supermarkets or their management."
 3. If the question is vague but could relate (like "What is a supermarket?"), provide a helpful response.
+4. Answer concisely in under 50 words.
 
 Respond in this format:
 Always start your response with the exact words:  
