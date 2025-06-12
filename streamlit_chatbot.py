@@ -805,7 +805,7 @@ User Question:
                 'user_question' : follow_up_question,
                 'question_amswered': 'yes'
             })
-        else 
+        else: 
             
             st.session_state.usage_data.update({
                 'user_question' : follow_up_question,
