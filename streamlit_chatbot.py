@@ -60,6 +60,10 @@ if 'already_saved' not in st.session_state:  # New flag to track saves
   st.session_state.already_saved = False
 if 'original_recommendation' not in st.session_state:
     st.session_state.original_recommendation = None
+if 'followup_questions' not in st.session_state:
+    st.session_state.followup_questions = []
+if 'question_answers' not in st.session_state:
+    st.session_state.question_answers = []
 
 if "original_options" not in st.session_state:
     st.session_state.original_options = options
@@ -356,7 +360,7 @@ def initialize_gsheet():
             "participant_id", "question_id", "chatbot_used",
             "total_questions_asked", "total_time_seconds",
             "got_recommendation", "asked_followup", "record_timestamp",
-            "user_question", "question_amswered"
+            "user_question", "question_answered"
 
        ]
       
@@ -800,19 +804,25 @@ User Question:
         messages.append({"role": "assistant", "content": result})
         st.session_state.chat_history = messages[-30:]
 
-        if result == "Please ask a question related to supermarkets or their management.":
-            st.session_state.usage_data.update({
-                'user_question' : follow_up_question,
-                'question_amswered': 'yes'
-            })
-        else: 
-            
-            st.session_state.usage_data.update({
-                'user_question' : follow_up_question,
-                'question_amswered': 'no'
-            })
+        if is_followup:
+            question_text = follow_up_question
+            st.session_state.followup_questions.append(question_text)
 
+    # Determine if the response was valid
+            answered = "Yes" if result.strip() != "Please ask a question related to supermarkets or their management." else "No"
+            index = len(st.session_state.followup_questions)
+            st.session_state.question_answers.append(f"{index}. {answered}")
 
+# Format all questions with numbering
+            formatted_questions = [
+                f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)
+            ]
+
+# Store in usage_data
+        st.session_state.usage_data.update({
+            'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
+            'question_answered': "\n".join(st.session_state.question_answers),
+        })
         save_session_data()
 
 
@@ -892,9 +902,11 @@ if st.session_state.first_load and not st.session_state.sheet_initialized:
 
 # Track question changes
 if question_id != st.session_state.get('last_question_id'):
-  st.session_state.conversation = []
-  st.session_state.last_question_id = question_id
-  st.session_state.already_saved = False  # Reset saved flag for new question
+    st.session_state.followup_questions = []
+    st.session_state.question_answers = []
+    st.session_state.conversation = []
+    st.session_state.last_question_id = question_id
+    st.session_state.already_saved = False  # Reset saved flag for new question
 
 
 if st.button("Get Recommendation"):
