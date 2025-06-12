@@ -16,9 +16,7 @@ import uuid
 import textwrap
 from typing import List, Dict, Optional, Tuple
 
-from fuzzywuzzy import fuzz  # For fuzzy string matching
-
-
+from fuzzywuzzy import fuzz  # For fuzzy string matchin
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 query_params = st.query_params
 question_id = query_params.get("qid", "Q1")
