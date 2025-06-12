@@ -418,7 +418,7 @@ def save_to_gsheet(data_dict: Dict) -> bool:
             "participant_id", "question_id", "chatbot_used",
             "total_questions_asked", "total_time_seconds",
             "got_recommendation", "asked_followup", "record_timestamp", "user_question",
-           "question_amswered"
+           "question_answered"
         ])
       
        # Find existing record
