@@ -73,7 +73,7 @@ if 'usage_data' not in st.session_state:
        'participant_id': participant_id,
        'question_id': question_id,
        'chatbot_used': False,
-       'questions_asked': 0,
+       'total_questions_asked': 0,
        'get_recommendation': False,
        'followup_used': False,
        'start_time': None,
@@ -350,9 +350,14 @@ def initialize_gsheet():
       
        # Define and verify headers - ensure all are unique
        expected_headers = [
-           "participant_id", "question_id", "chatbot_used",
-           "questions_asked", "total_time_seconds",
-           "got_recommendation", "asked_followup", "record_timestamp"
+        #    "participant_id", "question_id", "chatbot_used",
+        #    "total_questions_asked", "total_time_seconds",
+        #    "got_recommendation", "asked_followup", "record_timestamp"
+            "participant_id", "question_id", "chatbot_used",
+            "total_questions_asked", "total_time_seconds",
+            "got_recommendation", "asked_followup", "record_timestamp",
+            "user_question", "question_amswered"
+
        ]
       
        current_headers = worksheet.row_values(1)
@@ -378,13 +383,15 @@ def save_session_data():
            "question_id": question_id,
            "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
                                     st.session_state.usage_data['followup_used']) else "no",
-           "questions_asked": st.session_state.usage_data['questions_asked'],
+           "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
            "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
            "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
            "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
-           "record_timestamp": pd.Timestamp.now().isoformat()
+           "record_timestamp": pd.Timestamp.now().isoformat(),
+           "user_question": st.session_state.usage_data.get("user_question", ""),
+           "question_answered": st.session_state.usage_data.get("question_answered", "")
+           
        }
-
 
        if save_to_gsheet(data):
            st.session_state.already_saved = True
@@ -405,8 +412,9 @@ def save_to_gsheet(data_dict: Dict) -> bool:
        # Get all records with expected headers to avoid duplicates
         records = worksheet.get_all_records(expected_headers=[
             "participant_id", "question_id", "chatbot_used",
-            "questions_asked", "total_time_seconds",
-            "got_recommendation", "asked_followup", "record_timestamp"
+            "total_questions_asked", "total_time_seconds",
+            "got_recommendation", "asked_followup", "record_timestamp", "user_question",
+           "question_amswered"
         ])
       
        # Find existing record
@@ -792,6 +800,22 @@ User Question:
         messages.append({"role": "assistant", "content": result})
         st.session_state.chat_history = messages[-30:]
 
+        if result == "Please ask a question related to supermarkets or their management."
+            st.session_state.usage_data.update({
+                'user_question' : follow_up_question,
+                'question_amswered': 'yes'
+            })
+        else 
+            
+            st.session_state.usage_data.update({
+                'user_question' : follow_up_question,
+                'question_amswered': 'no'
+            })
+
+
+   save_session_data()
+
+
         return result
 
     except Exception as e:
@@ -831,11 +855,12 @@ def save_progress():
            "participant_id": participant_id,
            "question_id": question_id,
            "chatbot_used": "yes" if (st.session_state.get("get_recommendation_used") or st.session_state.get("followup_used")) else "no",
-           "questions_asked_to_chatbot": st.session_state.usage_data.get('followups_asked', 0),
+           "total_total_questions_asked_to_chatbot": st.session_state.usage_data.get('followups_asked', 0),
            "total_chatbot_time_seconds": total_time,
            "get_recommendation": "yes" if st.session_state.get("get_recommendation_used") else "no",
            "further_question_asked": "yes" if st.session_state.get("followup_used") else "no",
            "timestamp": pd.Timestamp.now().isoformat()
+           
        }
 
 
@@ -881,7 +906,7 @@ if st.button("Get Recommendation"):
    # Update usage data
    st.session_state.usage_data.update({
        'chatbot_used': True,
-       'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
+       'total_questions_asked': st.session_state.usage_data.get('total_questions_asked', 0) + 1,
        'get_recommendation': True,
        'total_time': st.session_state.get('total_interaction_time', 0)
    })
@@ -907,7 +932,7 @@ if user_input:
     st.session_state.usage_data.update({
         'chatbot_used': True,
         'followup_used': True,
-        'questions_asked': st.session_state.usage_data.get('questions_asked', 0) + 1,
+        'total_questions_asked': st.session_state.usage_data.get('total_questions_asked', 0) + 1,
         'total_time': st.session_state.total_interaction_time
     })
 
