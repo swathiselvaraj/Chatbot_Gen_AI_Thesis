@@ -800,7 +800,7 @@ User Question:
         messages.append({"role": "assistant", "content": result})
         st.session_state.chat_history = messages[-30:]
 
-        if result == "Please ask a question related to supermarkets or their management."
+        if result == "Please ask a question related to supermarkets or their management.":
             st.session_state.usage_data.update({
                 'user_question' : follow_up_question,
                 'question_amswered': 'yes'
