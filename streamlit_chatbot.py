@@ -807,9 +807,13 @@ User Question:
             st.session_state.followup_questions.append(question_text)
 
     # Determine if the response was valid
-            answered = "Yes" if result.strip() != "Please ask a question related to supermarkets or their management." else "No"
+            if "Please ask a question related to supermarkets or their management." in result:
+                answered = "No"
+            else:
+                answered = "Yes"
             index = len(st.session_state.followup_questions)
             st.session_state.question_answers.append(f"{index}. {answered}")
+            
 
 # Format all questions with numbering
             formatted_questions = [
