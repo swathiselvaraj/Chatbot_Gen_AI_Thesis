@@ -603,62 +603,62 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
               
 
 
-       general_threshold = 0.50
-       general_scores = []
-       for source in data.get("general_followups", []):
-           if source.get("embedding"):
-               score = cosine_similarity(user_embedding, source["embedding"])
-               if score >= general_threshold:
-                   general_scores.append((score, source))
+        general_threshold = 0.50
+        general_scores = []
+        for source in data.get("general_followups", []):
+            if source.get("embedding"):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                if score >= general_threshold:
+                    general_scores.append((score, source))
                   
       
        # Check against question-specific followups
-       question_threshold = 0.70
-       question_scores = []
-       for source in data.get("questions", []):
-           if (source.get("embedding") and
-               source.get("question_id", "") == question_id):
-               score = cosine_similarity(user_embedding, source["embedding"])
-               if score >= question_threshold:
-                   question_scores.append((score, source))
+        question_threshold = 0.70
+        question_scores = []
+        for source in data.get("questions", []):
+            if (source.get("embedding") and
+                source.get("question_id", "") == question_id):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                if score >= question_threshold:
+                    question_scores.append((score, source))
                  
 
 
        # If we have medium confidence matches (either general or question-specific)
-       if dashboard_scores:
-           return get_gpt_recommendation(
-               question=question_text,
-               #options=options,
-               is_followup=True,
-               follow_up_question=user_input,
-               dashboard=True
-           )
+        if dashboard_scores:
+            return get_gpt_recommendation(
+                question=question_text,
+                #options=options,
+                is_followup=True,
+                follow_up_question=user_input,
+                dashboard=True
+            )
           
            #return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
 
 
-       elif general_scores or question_scores:
+        elif general_scores or question_scores:
            # Classify question type for contextual prompt
-           return get_gpt_recommendation(
-               question=question_text,
-               is_followup=True,
-               follow_up_question=user_input,
-               non_dashboard=True)
+            return get_gpt_recommendation(
+                question=question_text,
+                is_followup=True,
+                follow_up_question=user_input,
+                non_dashboard=True)
 
 
       
-       else:
-           return get_gpt_recommendation(
-               question=question_text,
-               is_followup=True,
-               follow_up_question=user_input,
-               non_dashboard=False,
-               other_questions=True)
+        else:
+            return get_gpt_recommendation(
+                question=question_text,
+                is_followup=True,
+                follow_up_question=user_input,
+                non_dashboard=False,
+                other_questions=True)
 
 
-   except Exception as e:
-       st.error(f"Error in followup validation: {str(e)}")
-       return "Sorry, I encountered an error processing your question."
+    except Exception as e:
+        st.error(f"Error in followup validation: {str(e)}")
+        return "Sorry, I encountered an error processing your question."
 
 
 def flatten_json(y):
