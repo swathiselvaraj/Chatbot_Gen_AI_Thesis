@@ -3,7 +3,7 @@ import json
 from openai import OpenAI
 
 # Initialize the client
-c
+client = OpenAI( api_key = "key")
 # === Step 1: Load existing JSON file ===
 with open("data/followup_embeddings_list.json", "r") as f:
     data = json.load(f)
@@ -14,13 +14,25 @@ with open("data/dashboard_data.json", "r") as f:
 
 # === Step 3: Generate questions from GPT ===
 prompt = f"""
-You are a helpful assistant.
+You are an AI assistant analyzing a business dashboard described in the JSON data below.
 
-Based on the following store dashboard data in JSON format, generate 50 realistic and varied questions a human might ask. 
-Keep them concise and relevant to store management, customer traffic, waiting time, staffing, and sales trends.
+Your task is to generate a list of realistic, diverse questions a user might ask about this dashboard when interacting with a chatbot. These should include questions about:
 
-Dashboard JSON:
+1. Trends over time (e.g., increasing/decreasing values)
+2. Comparisons between actual and target values
+3. Operational suggestions (e.g., open more cash desks?)
+4. Time-specific questions (e.g., peak hours, changes by hour)
+5. Sales analysis and forecasts
+6. Customer traffic patterns
+7. Product performance and anomalies
+
+Make sure the questions reflect curiosity, decision-making needs, or requests for clarification. Keep them clear and natural, as if a user were typing them to a chatbot.
+
+Here is the dashboard data:
 {json.dumps(dashboard_json)}
+
+Please return 30 to 40 unique, relevant, and well-phrased questions.
+
 """
 
 response = client.chat.completions.create(
