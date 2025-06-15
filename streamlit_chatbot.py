@@ -767,7 +767,7 @@ Available Data (format is "key: value"):
 {search_terms}
 
 
-User Question: {user_input}
+User Question: {follow_up_question}
 """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
@@ -914,7 +914,7 @@ Always start your response with the exact words:
 
 
 User Question:
-{user_input}
+{follow_up_question}
 """
            #return "Please ask a question about the survey."
       
