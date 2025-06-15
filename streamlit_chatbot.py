@@ -651,8 +651,8 @@ Instructions:
 2. If the answer is numerical or factual, state it clearly as: "Dashboard Answer: [value]".
 3. If the question requires reasoning (like trends, comparisons, or suggestions), explain your answer using the values and context from the data.
 4. Always reference specific values or data points to justify your answer.
-5. Format your answer in a clear, bullet-point or paragraph style depending on complexity.
-6.Keep the answer within 50 words
+5. Format your answer in a clear paragraph style .
+6. Strictly Keep the answer within 50 words
 
 Available Data (format is "key: value"):
 {search_terms}
