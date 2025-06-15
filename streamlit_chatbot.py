@@ -548,8 +548,7 @@ Instructions:
 7. Never mention or quote the raw data keys from the json file in your response.
 8. Always translate the data into natural language that a store manager would understand.
 
-Respond in this format:
-"Answer:  <your answer>"
+
 
 Available Data (format is "key: value"):
 {search_terms}
@@ -633,9 +632,6 @@ Instructions:
 3. If the question is vague but could relate (like "What is a supermarket?"), provide a helpful response.
 4. Answer concisely in under 50 words.
 
-
-Respond in this format:
-"Answer:  <your answer>"
 
 
 User Question:
