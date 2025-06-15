@@ -926,7 +926,8 @@ User Question:
 
        # Call GPT API
         response = client.chat.completions.create(
-          
+                  
+            model="gpt-3.5-turbo",  # Required parameter
             messages=messages,
             temperature=0.5,  # More deterministic than 0.7
             max_tokens=150,   # Limit response length
