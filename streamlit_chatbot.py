@@ -410,9 +410,9 @@ def get_gpt_recommendation(
                # print(f"Warning: Could not load JSON data - {str(e)}")
         if dashboard:
            json_data_path = "data/dashboard_data.json"
-           try:
-               with open(json_data_path, 'r') as file:
-                   json_data = json.load(file)
+            try:
+                with open(json_data_path, 'r') as file:
+                    json_data = json.load(file)
           
            # Create search-friendly data structures
                flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON
@@ -451,8 +451,8 @@ Available Data (format is "key: value"):
 
 User Question: {user_input}
 """
-           except Exception as e:
-               print(f"Warning: Could not load JSON data - {str(e)}")
+            except Exception as e:
+                print(f"Warning: Could not load JSON data - {str(e)}")
 
         elif is_followup and non_dashboard:
             original_rec = st.session_state.get("original_recommendation")
