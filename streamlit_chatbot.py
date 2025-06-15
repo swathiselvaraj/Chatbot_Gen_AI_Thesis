@@ -409,7 +409,7 @@ def get_gpt_recommendation(
 
                # print(f"Warning: Could not load JSON data - {str(e)}")
         if dashboard:
-           json_data_path = "data/dashboard_data.json"
+            json_data_path = "data/dashboard_data.json"
             try:
                 with open(json_data_path, 'r') as file:
                     json_data = json.load(file)
@@ -477,7 +477,7 @@ User Question: {user_input}
            #         )
            #     except ValueError:
            #         pass
-                st.write("general data loaded")
+            st.write("general data loaded")
             prompt = f"""The user has asked a follow-up question about a survey recommendation.
                    Context:
                    -Original question: {question}
