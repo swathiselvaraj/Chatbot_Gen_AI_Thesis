@@ -648,14 +648,13 @@ User Question:
 
        # Call GPT API
         response = client.chat.completions.create(
-                  
-            model="gpt-3.5-turbo",  # Required parameter
-            messages=messages,
-            temperature=0.5,  # More deterministic than 0.7
-            max_tokens=150,   # Limit response length
-            stream=False,     # Disable streaming for faster completion
-            timeout=5,        # Fail fast if API is slow
-            n=1               # Only generate one response
+            response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages= messages,
+            max_tokens=100,  # ← Restrict length
+            temperature=0,   # ← Less randomness = faster
+            timeout=3        # ← Fail fast if slow
+)              # Only generate one response
         )
         result = response.choices[0].message.content
 
