@@ -583,19 +583,19 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
 
 
        # Get question embedding for similarity checks
-       user_embedding = get_embedding(user_input)
+        user_embedding = get_embedding(user_input)
        # if not user_embedding:
        #     return "Sorry, I couldn't process your question. Please try again."
 
 
        # Check against general followups
-       dashboard_threshold = 0.50
-       dashboard_scores = []
-       for source in data.get("dashboard_followups", []):
-           if source.get("embedding"):
-               score = cosine_similarity(user_embedding, source["embedding"])
-               if score >= dashboard_threshold:
-                   dashboard_scores.append((score, source))
+        dashboard_threshold = 0.50
+        dashboard_scores = []
+        for source in data.get("dashboard_followups", []):
+            if source.get("embedding"):
+                score = cosine_similarity(user_embedding, source["embedding"])
+                if score >= dashboard_threshold:
+                    dashboard_scores.append((score, source))
                   
       
 
