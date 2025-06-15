@@ -478,7 +478,7 @@ User Question: {user_input}
            #     except ValueError:
            #         pass
                 st.write("general data loaded")
-                prompt = f"""The user has asked a follow-up question about a survey recommendation.
+            prompt = f"""The user has asked a follow-up question about a survey recommendation.
                    Context:
                    -Original question: {question}
                    - Options: {chr(10).join(options)}
