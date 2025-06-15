@@ -729,12 +729,12 @@ def get_gpt_recommendation(
        if dashboard:
            json_data_path = "data/dashboard_data.json"
            try:
-               with open(json_data_path, 'r') as file:
-                   json_data = json.load(file)
+                with open(json_data_path, 'r') as file:
+                    json_data = json.load(file)
           
            # Create search-friendly data structures
-               flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON
-               search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
+                flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON
+                search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
               
           
 #                 prompt = f"""Question =  {user_input}
@@ -749,7 +749,7 @@ def get_gpt_recommendation(
 # 1. If the question is directly asking for values inside the data : "Dashboard Answer: [value]"
 # 2. If not answer to the question the user asks about the dashboard referencing to the data inside the json file and your general knowledge
 # """
-               prompt = f"""
+                prompt = f"""
 You are a helpful and data-driven assistant. Your job is to answer the user's question based strictly on the given dashboard data.
 
 
