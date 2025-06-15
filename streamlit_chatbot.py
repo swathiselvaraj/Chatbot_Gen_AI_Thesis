@@ -548,6 +548,8 @@ Instructions:
 7. Never mention or quote the raw data keys from the json file in your response.
 8. Always translate the data into natural language that a store manager would understand.
 
+Respond in this format:
+"Answer:  <your answer>"
 
 Available Data (format is "key: value"):
 {search_terms}
@@ -572,7 +574,7 @@ User Question: {follow_up_question}
                 )
 
 
-                st.write("general data loaded")
+                
                 prompt = f"""The user has asked a follow-up question about a survey recommendation.
                    Context:
                    -Original question: {question}
@@ -588,9 +590,9 @@ User Question: {follow_up_question}
 
 
                    Respond in this format:
-                   Always start your response with the exact words: "general Answer"
-                   "Answer general questions:  <your answer>"
+                   "Answer:  <your answer>"
                    """
+
 
 
         elif not is_followup: # Initial recommendation logic
@@ -633,8 +635,7 @@ Instructions:
 
 
 Respond in this format:
-Always start your response with the exact words: 
-**"supermarket Answer:"** followed by your answer.
+"Answer:  <your answer>"
 
 
 User Question:
