@@ -431,7 +431,7 @@ def get_gpt_recommendation(
 # 1. If the question is directly asking for values inside the data : "Dashboard Answer: [value]"
 # 2. If not answer to the question the user asks about the dashboard referencing to the data inside the json file and your general knowledge
 # """
-               prompt = f"""
+                prompt = f"""
 You are a helpful and data-driven assistant. Your job is to answer the user's question based strictly on the given dashboard data.
 
 
@@ -477,8 +477,8 @@ User Question: {user_input}
            #         )
            #     except ValueError:
            #         pass
-               st.write("general data loaded")
-               prompt = f"""The user has asked a follow-up question about a survey recommendation.
+                st.write("general data loaded")
+                prompt = f"""The user has asked a follow-up question about a survey recommendation.
                    Context:
                    -Original question: {question}
                    - Options: {chr(10).join(options)}
