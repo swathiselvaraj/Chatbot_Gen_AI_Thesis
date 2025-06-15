@@ -40,14 +40,6 @@ option_mapping.update({f"option{i+1}": options[i] for i in range(4)})
 #     st.write(f"{key}: {value}")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
 
-
-
-
-# option_mapping = {f"option {i+1}": options[i] for i in range(4)}
-# option_mapping.update({f"option{i+1}": options[i] for i in range(4)})  # Also handle "option1" format
-# # Ensure we have exactly 4 options, pad with empty strings if needed
-# participant_id = query_params.get("pid", str(uuid.uuid4()))
-# --- Session State Initialization ---
 if 'conversation' not in st.session_state:
  st.session_state.conversation = []
 if 'last_recommendation' not in st.session_state:
@@ -108,16 +100,6 @@ if 'followup_used' not in st.session_state:
 
 # --- Data Loading ---
 @st.cache_resource
-# def load_embedding_data():
-#   try:
-#       with open("data/followup_embeddings_list.json", "r") as f:
-#           return json.load(f)
-#   except Exception as e:
-#       st.error(f"Failed to load embeddings: {str(e)}")
-#       return {"general_followups": [], "questions": []}
-
-
-
 
 def load_embedding_data():
    default_structure = {
@@ -142,21 +124,6 @@ def load_embedding_data():
    except Exception as e:
        st.error(f"Failed to load embeddings: {str(e)}")
        return default_structure
-# def load_embedding_data():
-#     try:
-#         with open("data/followup_embeddings_list.json", "r") as f:
-#             data = json.load(f)
-#             # Ensure all required sections exist
-#             if "dashboard_followups" not in data:
-#                 data["dashboard_followups"] = []
-#             return data
-#     except Exception as e:
-#         st.error(f"Failed to load embeddings: {str(e)}")
-#         return {
-#             "general_followups": [],
-#             "questions": [],
-#             "dashboard_followups": []  # Make sure this exists
-#         }
 
 
 data = load_embedding_data()
@@ -185,102 +152,6 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
  except Exception as e:
      st.error(f"Similarity calculation failed: {str(e)}")
      return 0.0
-
-
-
-
-# def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-#     """
-#     Extracts referenced survey option from user input with improved matching
-#     Handles formats:
-#     - 'option X', 'optionX', 'option [text]'
-#     - 'X' (just the number)
-#     - 'why not option X', 'why option X'
-#     - Direct mentions of option text
-#     """
-#     if not user_input or not options:
-#         return None
-
-
-#     user_input_lower = user_input.lower()
-  
-#     # Check for direct number references (1, 2, 3, 4)
-#     for i in range(len(options)):
-#         # Match: "1", "option 1", "option1", "why not option 1"
-#         if (re.search(rf'(^|\b)(option\s*)?({i+1})\b', user_input_lower) or
-#             re.search(rf'(why\s+(not\s+)?option\s*)?({i+1})\b', user_input_lower)):
-#             return options[i]
-
-
-#     # Check for direct text matches (if user quotes part of the option)
-#     for option in options:
-#         # Simple text matching (case insensitive)
-#         option_lower = option.lower()
-#         if len(option_lower) > 5 and option_lower in user_input_lower:
-#             return option
-
-
-#     return None
-
-
-
-
-# def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-#     """
-#     Extracts referenced survey option from user input with:
-#     - Missing space handling ("option2" → "option 2")
-#     - Fuzzy matching ("optioon2" → "option 2")
-#     - Partial text matching ("why not open 1 more")
-#     - Number-only references ("just do 3")
-#     - Option validation
-#     """
-#     if not user_input or not options:
-#         return None
-
-
-#     user_input_lower = user_input.lower()
-#     normalized_options = [opt.lower() for opt in options]
-
-
-#     # 1. Handle "optionX" (missing space)
-#     option_num = None
-#     no_space_match = re.search(r'(?:option|opt|op)?(\d+)', user_input_lower)
-#     if no_space_match:
-#         option_num = int(no_space_match.group(1))
-
-
-#     # 2. Standard "option X" format
-#     spaced_match = re.search(r'(?:option|opt|op)\s*(\d+)', user_input_lower)
-#     if spaced_match:
-#         option_num = int(spaced_match.group(1))
-
-
-#     # 3. Just number reference ("why not 2")
-#     number_only = re.search(r'(?:^|\b)(\d+)(?:\b|$)', user_input_lower)
-#     if number_only and not option_num:
-#         option_num = int(number_only.group(1))
-
-
-#     # Validate option number
-#     if option_num is not None:
-#         if 1 <= option_num <= len(options):
-#             return options[option_num - 1]
-#         return None  # Invalid option number
-
-
-#     # 4. Fuzzy match with option text
-#     for i, opt in enumerate(normalized_options):
-#         # Check for direct text inclusion ("open 1 more" in option text)
-#         if opt in user_input_lower:
-#             return options[i]
-
-
-#         # Fuzzy match for typos (requires fuzzywuzzy package)
-#         if fuzz.partial_ratio(opt, user_input_lower) > 85:  # Adjust threshold as needed
-#             return options[i]
-
-
-#     return None
 
 
 
@@ -391,9 +262,6 @@ def initialize_gsheet():
     
       # Define and verify headers - ensure all are unique
       expected_headers = [
-       #    "participant_id", "question_id", "chatbot_used",
-       #    "total_questions_asked", "total_time_seconds",
-       #    "got_recommendation", "asked_followup", "record_timestamp"
            "participant_id", "question_id", "chatbot_used",
            "total_questions_asked", "total_time_seconds",
            "got_recommendation", "asked_followup", "record_timestamp",
@@ -656,36 +524,6 @@ def get_gpt_recommendation(
         if options is None:
             options = st.session_state.get('original_options', [])  # Fallback to session state
 
-
-       # Include dashboard context if needed
-#         if dashboard:
-#             json_data_path = "data/dashboard_data.json"
-#             try:
-#                 with open(json_data_path, 'r') as file:
-#                     json_data = json.load(file)
-#                     json_context = json.dumps(json_data, indent=2)
-#                     st.write("dashboard data loaded")
-                 
-#                     prompt = f"""You are a strict data analyst assistant. Use ONLY the following JSON data to answer questions.
-
-
-# <json_data>
-# {json_context}
-# </json_data>
-
-
-# RULES:
-# 1. FIRST check if the exact requested data exists in the JSON
-# 2. If found, respond with: "Dashboard Answer: [EXACT VALUE FROM JSON]"
-# 3. If not found, respond with: "Dashboard Answer: Not found in data"
-# 4. NEVER infer, calculate, or invent answers
-# 5. If question is unclear, ask for clarification
-# 6. Max 50 words.
-
-
-# """
-#             except Exception as e:
-               # print(f"Warning: Could not load JSON data - {str(e)}")
         if dashboard:
             json_data_path = "data/dashboard_data.json"
             try:
@@ -695,20 +533,7 @@ def get_gpt_recommendation(
            # Create search-friendly data structures
                 flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON
                 search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
-              
-          
-#                 prompt = f"""Question =  {user_input}
-#                 Answer the Question using ONLY the following data. Never invent answers.
 
-
-# Available Data (format is "key: value"):
-# {search_terms}
-
-
-# Response Format:
-# 1. If the question is directly asking for values inside the data : "Dashboard Answer: [value]"
-# 2. If not answer to the question the user asks about the dashboard referencing to the data inside the json file and your general knowledge
-# """
                 prompt = f"""
 You are a helpful and data-driven assistant. Your job is to answer the user's question based strictly on the given dashboard data.
 
@@ -720,7 +545,7 @@ Instructions:
 4. Always reference specific values or data points to justify your answer.
 5. Format your answer in a clear paragraph style .
 6. Strictly Keep the answer within 50 words.
-7. Never mention or quote the raw data keys (like openedCashDesks_current) in your response.
+7. Never mention or quote the raw data keys from the json file in your response.
 8. Always translate the data into natural language that a store manager would understand.
 
 
@@ -734,57 +559,6 @@ User Question: {follow_up_question}
                 print(f"Warning: Could not load JSON data - {str(e)}")
 
 
-
-
-
-
-
-
-       #             Important: When making recommendations:
-       #             1. Your knowledge is limited only to the data from this dashboard
-       #             2. If the question is about the data in the dashboard data answer pick the data from {json_context} and show it
-       #             3. Reference specific metrics when available
-       #             4. If data contradicts standard recommendations, explain why
-       #             5.. Answer within 50 words
-
-
-       #             Format:
-       #             "Dashboard Answer: <your answer>"
-       #             """
-       # =========================
-       # Construct the user prompt
-       # =========================
-       # if is_followup:
-       #     original_rec = st.session_state.get("original_recommendation")
-
-
-       #     if original_rec:
-       #         recommendation_summary = f"""
-       #         Earlier Recommendation:
-       #         Recommended option: {original_rec['text']}
-       #         Reason: {original_rec['reasoning']}
-       #         """
-       #     else:
-       #         recommendation_summary = "No previous recommendation found."
-
-
-       #     prompt = f"""{recommendation_summary}
-
-
-       #     Follow-up Question: {follow_up_question or question}
-          
-       #     Instructions:
-       #     - If the follow-up refers to the options or prior recommendation, compare and clarify.
-       #     - If not, just answer directly using the original context.
-       #     - Keep the response under 50 words.
-
-
-       #     Format:
-       #     Answer: <your response>
-       #     """
-
-
-   #     ############################
         elif is_followup and non_dashboard:
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
@@ -798,16 +572,6 @@ User Question: {follow_up_question}
                 )
 
 
-           # 3. Handle specific option references - USE current_options
-           # if referenced_option is not None: # <--- CHANGED HERE
-           #     try:
-           #         option_index = options.index(referenced_option) # <--- CHANGED HERE
-           #         option_text = options[option_index] # <--- CHANGED HERE
-           #         context_parts.append(
-           #             f"Specifically asking about Option {option_index + 1}: {option_text}"
-           #         )
-           #     except ValueError:
-           #         pass
                 st.write("general data loaded")
                 prompt = f"""The user has asked a follow-up question about a survey recommendation.
                    Context:
@@ -827,7 +591,6 @@ User Question: {follow_up_question}
                    Always start your response with the exact words: "general Answer"
                    "Answer general questions:  <your answer>"
                    """
-##################
 
 
         elif not is_followup: # Initial recommendation logic
@@ -877,9 +640,7 @@ Always start your response with the exact words:
 User Question:
 {follow_up_question}
 """
-           #return "Please ask a question about the survey."
-      
-
+          
 
        # Add user message to chat history
         messages.append({"role": "user", "content": prompt})
@@ -897,10 +658,6 @@ User Question:
             n=1               # Only generate one response
         )
         result = response.choices[0].message.content
-
-
-      
-          
 
 
        # Store original recommendation if not a follow-up
@@ -953,9 +710,6 @@ User Question:
         })
         save_session_data()
 
-
-
-
         return result
 
 
@@ -975,32 +729,19 @@ def display_conversation():
          st.markdown(f"**Chatbot:** {message}")
 
 
-
-
-
-
-
-
 def save_progress():
   """Save or update progress in Google Sheets"""
   if st.session_state.already_saved:
       return True
 
-
-
-
   if not st.session_state.usage_data.get('start_time'):
       return False
-
-
-
 
   try:
       # Ensure timing variables are defined
       start_time = st.session_state.get("interaction_start_time")
       end_time = st.session_state.get("interaction_end_time")
       total_time = round(end_time - start_time, 2) if start_time and end_time else 0
-
 
 
 
@@ -1037,24 +778,10 @@ def save_progress():
       return False
 
 
-
-
-
-
-# --- Main App Logic ---
-# Get query parameters
-
-
-
-
 # Initialize Google Sheet on first load
 if st.session_state.first_load and not st.session_state.sheet_initialized:
  initialize_gsheet()
  st.session_state.sheet_initialized = True
-
-
-
-
 
 
 # Track question changes
@@ -1064,8 +791,6 @@ if question_id != st.session_state.get('last_question_id'):
    st.session_state.conversation = []
    st.session_state.last_question_id = question_id
    st.session_state.already_saved = False  # Reset saved flag for new question
-
-
 
 
 if st.button("Get Recommendation"):
