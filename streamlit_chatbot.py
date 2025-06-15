@@ -508,47 +508,47 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
    try:
-       user_input = user_input.strip()
-       if not options:
-           options = st.session_state.get('original_options', [])
-       if not user_input:
-           return "Please enter a valid question."
+        user_input = user_input.strip()
+        if not options:
+            options = st.session_state.get('original_options', [])
+        if not user_input:
+            return "Please enter a valid question."
 
 
        # Handle greetings
-       greetings = {"hi", "hello", "hey", "greetings"}
-       if user_input.lower().rstrip('!?.,') in greetings:
-           st.session_state.last_recommendation = None
-           return "Hello! I can help with survey questions. What would you like to know?"
+        greetings = {"hi", "hello", "hey", "greetings"}
+        if user_input.lower().rstrip('!?.,') in greetings:
+            st.session_state.last_recommendation = None
+            return "Hello! I can help with survey questions. What would you like to know?"
 
 
        # Extract referenced option if any
-       referenced_option = extract_referenced_option(user_input, options)
-       option_num = options.index(referenced_option) + 1 if referenced_option else None
+        referenced_option = extract_referenced_option(user_input, options)
+        option_num = options.index(referenced_option) + 1 if referenced_option else None
 
 
        # if option_num is not None:
        #    return get_gpt_recommendation(question =  question_text,referenced_option = option_num )
 
 
-       if option_num is not None:
+        if option_num is not None:
            # return get_gpt_recommendation(
            #     question=question_text,
            #     options=options,  # Pass the full options list
            #     referenced_option=option_num
            # )
-           return get_gpt_recommendation(
-               question=question_text,
-               options=options,
-               referenced_option=option_num,
-               is_followup=True,
-               follow_up_question=user_input,
-               non_dashboard = True
+            return get_gpt_recommendation(
+                question=question_text,
+                options=options,
+                referenced_option=option_num,
+                is_followup=True,
+                follow_up_question=user_input,
+                non_dashboard = True
 
 
-               )
+                )
         
-            user_input_clean = re.sub(r'[^\w\s]', '', user_input).lower().strip()
+        user_input_clean = re.sub(r'[^\w\s]', '', user_input).lower().strip()
     
     # 1. First check for exact matches in all categories
         categories = [
