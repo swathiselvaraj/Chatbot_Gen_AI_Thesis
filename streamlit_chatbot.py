@@ -633,15 +633,31 @@ def get_gpt_recommendation(
                 search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
                 
             
-                prompt = f"""Question =  {user_input}
-                Answer the Question using ONLY the following data. Never invent answers.
+#                 prompt = f"""Question =  {user_input}
+#                 Answer the Question using ONLY the following data. Never invent answers.
+
+# Available Data (format is "key: value"):
+# {search_terms}
+
+# Response Format:
+# 1. If the question is directly asking for values inside the data : "Dashboard Answer: [value]"
+# 2. If not answer to the question the user asks about the dashboard referencing to the data inside the json file and your general knowledge
+# """
+                prompt = f"""
+You are a helpful and data-driven assistant. Your job is to answer the user's question based strictly on the given dashboard data.
+
+Instructions:
+1. Use ONLY the data provided in the 'Available Data' section. Do NOT make up or infer anything beyond it.
+2. If the answer is numerical or factual, state it clearly as: "Dashboard Answer: [value]".
+3. If the question requires reasoning (like trends, comparisons, or suggestions), explain your answer using the values and context from the data.
+4. Always reference specific values or data points to justify your answer.
+5. Format your answer in a clear, bullet-point or paragraph style depending on complexity.
+6.Keep the answer within 50 words
 
 Available Data (format is "key: value"):
 {search_terms}
 
-Response Format:
-1. If the question is directly asking for values inside the data : "Dashboard Answer: [value]"
-2. If not answer to the question the user asks about the dashboard referencing to the data inside the json file and your general knowledge
+User Question: {user_input}
 """
             except Exception as e:
                 print(f"Warning: Could not load JSON data - {str(e)}")
