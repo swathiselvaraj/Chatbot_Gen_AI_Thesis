@@ -720,7 +720,8 @@ Instructions:
 4. Always reference specific values or data points to justify your answer.
 5. Format your answer in a clear paragraph style .
 6. Strictly Keep the answer within 50 words.
-7.**Never quote or mention raw data keys**. Only use plain language . 
+7. Never mention or quote the raw data keys (like openedCashDesks_current) in your response.
+8. Always translate the data into natural language that a store manager would understand.
 
 
 Available Data (format is "key: value"):
