@@ -587,6 +587,9 @@ User Question: {follow_up_question}
                    You must answer the question specifically or use prior context and reasoning to answer concisely in under 50 words.
               
 
+
+                   Respond in this format:
+                   "Answer:  <your answer>"
                    """
 
 
