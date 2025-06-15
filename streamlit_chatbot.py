@@ -686,15 +686,15 @@ def get_gpt_recommendation(
    non_dashboard: bool = False,
    other_questions: bool = False
 ) -> str:
-   try:
+    try:
        # Initialize chat history
-       if 'chat_history' not in st.session_state:
-           st.session_state.chat_history = []
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
 
 
-       messages = st.session_state.chat_history.copy()
-       if options is None:
-           options = st.session_state.get('original_options', [])  # Fallback to session state
+        messages = st.session_state.chat_history.copy()
+        if options is None:
+            options = st.session_state.get('original_options', [])  # Fallback to session state
 
 
        # Include dashboard context if needed
@@ -726,9 +726,9 @@ def get_gpt_recommendation(
 # """
 #             except Exception as e:
                # print(f"Warning: Could not load JSON data - {str(e)}")
-       if dashboard:
-           json_data_path = "data/dashboard_data.json"
-           try:
+        if dashboard:
+            json_data_path = "data/dashboard_data.json"
+            try:
                 with open(json_data_path, 'r') as file:
                     json_data = json.load(file)
           
@@ -769,8 +769,8 @@ Available Data (format is "key: value"):
 
 User Question: {user_input}
 """
-           except Exception as e:
-               print(f"Warning: Could not load JSON data - {str(e)}")
+            except Exception as e:
+                print(f"Warning: Could not load JSON data - {str(e)}")
 
 
 
@@ -824,17 +824,17 @@ User Question: {user_input}
 
 
    #     ############################
-       elif is_followup and non_dashboard:
-           original_rec = st.session_state.get("original_recommendation")
-           context_parts = []
+        elif is_followup and non_dashboard:
+            original_rec = st.session_state.get("original_recommendation")
+            context_parts = []
 
 
-           if original_rec:
-               context_parts.append(
-                   f"Earlier Recommendation:\n"
-                   f"Recommended option: {original_rec['text']}\n"
-                   f"Reason: {original_rec['reasoning']}"
-               )
+            if original_rec:
+                context_parts.append(
+                    f"Earlier Recommendation:\n"
+                    f"Recommended option: {original_rec['text']}\n"
+                    f"Reason: {original_rec['reasoning']}"
+                )
 
 
            # 3. Handle specific option references - USE current_options
@@ -847,8 +847,8 @@ User Question: {user_input}
            #         )
            #     except ValueError:
            #         pass
-               st.write("general data loaded")
-               prompt = f"""The user has asked a follow-up question about a survey recommendation.
+                st.write("general data loaded")
+                prompt = f"""The user has asked a follow-up question about a survey recommendation.
                    Context:
                    -Original question: {question}
                    - Options: {chr(10).join(options)}
@@ -869,10 +869,10 @@ User Question: {user_input}
 ##################
 
 
-       elif not is_followup: # Initial recommendation logic
+        elif not is_followup: # Initial recommendation logic
            # Use current_options for display in prompt
-           options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
-           prompt = f"""Survey Question: {question}
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else "" # <--- CHANGED HERE
+            prompt = f"""Survey Question: {question}
 
 
            Available Options:
@@ -891,7 +891,7 @@ User Question: {user_input}
           
 
 
-       elif other_questions:
+        elif other_questions:
             prompt = f"""
 You are a helpful assistant responding to questions related to managing a supermarket.
 
@@ -942,64 +942,64 @@ User Question:
 
 
        # Store original recommendation if not a follow-up
-       if not is_followup and options:
-           if "Recommended option:" in result and "Reason:" in result:
-               rec_text = result.split("Recommended option:")[1].split("Reason:")[0].strip()
-               reasoning = result.split("Reason:")[1].strip()
-           else:
-               rec_text = result
-               reasoning = "Based on overall analysis of options and dashboard trends."
+        if not is_followup and options:
+            if "Recommended option:" in result and "Reason:" in result:
+                rec_text = result.split("Recommended option:")[1].split("Reason:")[0].strip()
+                reasoning = result.split("Reason:")[1].strip()
+            else:
+                rec_text = result
+                reasoning = "Based on overall analysis of options and dashboard trends."
           
-           st.session_state.original_recommendation = {
-               'text': rec_text,
-               'reasoning': reasoning,
-               'options': options.copy(),
-               'timestamp': time.time()
-           }
+            st.session_state.original_recommendation = {
+                'text': rec_text,
+                'reasoning': reasoning,
+                'options': options.copy(),
+                'timestamp': time.time()
+            }
 
 
        # Update chat history
-       messages.append({"role": "assistant", "content": result})
-       st.session_state.chat_history = messages[-30:]
+        messages.append({"role": "assistant", "content": result})
+        st.session_state.chat_history = messages[-30:]
 
 
-       if is_followup:
-           question_text = follow_up_question
-           st.session_state.followup_questions.append(question_text)
+        if is_followup:
+            question_text = follow_up_question
+            st.session_state.followup_questions.append(question_text)
 
 
    # Determine if the response was valid
-           if "Please ask a question related to supermarkets or their management." in result:
-               answered = "No"
-           else:
-               answered = "Yes"
-           index = len(st.session_state.followup_questions)
-           st.session_state.question_answers.append(f"{index}. {answered}")
+            if "Please ask a question related to supermarkets or their management." in result:
+                answered = "No"
+            else:
+                answered = "Yes"
+            index = len(st.session_state.followup_questions)
+            st.session_state.question_answers.append(f"{index}. {answered}")
           
 
 
 # Format all questions with numbering
-           formatted_questions = [
-               f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)
-           ]
+            formatted_questions = [
+                f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)
+            ]
 
 
 # Store in usage_data
-       st.session_state.usage_data.update({
-           'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
-           'question_answered': "\n".join(st.session_state.question_answers),
-       })
-       save_session_data()
+        st.session_state.usage_data.update({
+            'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
+            'question_answered': "\n".join(st.session_state.question_answers),
+        })
+        save_session_data()
 
 
 
 
-       return result
+        return result
 
 
-   except Exception as e:
-       st.error(f"Recommendation generation failed: {str(e)}")
-       return "Sorry, I couldn't generate a recommendation."
+    except Exception as e:
+        st.error(f"Recommendation generation failed: {str(e)}")
+        return "Sorry, I couldn't generate a recommendation."
 
 
 def display_conversation():
