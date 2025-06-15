@@ -547,6 +547,34 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
 
 
                )
+        
+            user_input_clean = re.sub(r'[^\w\s]', '', user_input).lower().strip()
+    
+    # 1. First check for exact matches in all categories
+        categories = [
+            ('dashboard_followups', True, None),  # (category_name, is_dashboard, required_question_id)
+            ('questions', False, question_id),
+            ('general_followups', False, None)
+        ]
+    
+        for category_name, is_dashboard, req_question_id in categories:
+            for item in data.get(category_name, []):
+            # Skip if this is a question-specific item that doesn't match our question_id
+                if req_question_id and item.get('question_id') != req_question_id:
+                    continue
+                
+                item_text_clean = re.sub(r'[^\w\s]', '', item['text']).lower().strip()
+                if item_text_clean == user_input_clean:
+                # Return immediately with the recommendation
+                    return get_gpt_recommendation(
+                        question=question_text,
+                        is_followup=True,
+                        follow_up_question=user_input,
+                        dashboard=is_dashboard,
+                        non_dashboard=not is_dashboard
+                    )
+    
+    # 2. Only proceed with embedding approach if no exact match was found
 
 
 
@@ -893,16 +921,20 @@ User Question:
 
 
        # Add user message to chat history
-       messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "user", "content": prompt})
 
 
        # Call GPT API
-       response = client.chat.completions.create(
-           model="gpt-3.5-turbo",
-           messages=messages,
-           temperature=0.7
-       )
-       result = response.choices[0].message.content
+        response = client.chat.completions.create(
+          
+            messages=messages,
+            temperature=0.5,  # More deterministic than 0.7
+            max_tokens=150,   # Limit response length
+            stream=False,     # Disable streaming for faster completion
+            timeout=5,        # Fail fast if API is slow
+            n=1               # Only generate one response
+        )
+        result = response.choices[0].message.content
 
 
       
