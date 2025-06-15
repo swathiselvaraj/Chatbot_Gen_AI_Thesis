@@ -507,7 +507,7 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 
 
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
-   try:
+    try:
         user_input = user_input.strip()
         if not options:
             options = st.session_state.get('original_options', [])
