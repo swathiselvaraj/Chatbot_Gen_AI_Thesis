@@ -514,58 +514,48 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         if not user_input:
             return "Please enter a valid question."
 
-
-       # Handle greetings
+        # Handle greetings
         greetings = {"hi", "hello", "hey", "greetings"}
         if user_input.lower().rstrip('!?.,') in greetings:
             st.session_state.last_recommendation = None
             return "Hello! I can help with survey questions. What would you like to know?"
 
-
-       # Extract referenced option if any
+        # Extract referenced option if any
         referenced_option = extract_referenced_option(user_input, options)
         option_num = options.index(referenced_option) + 1 if referenced_option else None
 
-
-       # if option_num is not None:
-       #    return get_gpt_recommendation(question =  question_text,referenced_option = option_num )
-
-
         if option_num is not None:
-           # return get_gpt_recommendation(
-           #     question=question_text,
-           #     options=options,  # Pass the full options list
-           #     referenced_option=option_num
-           # )
             return get_gpt_recommendation(
                 question=question_text,
                 options=options,
                 referenced_option=option_num,
                 is_followup=True,
                 follow_up_question=user_input,
-                non_dashboard = True
-
-
-                )
+                non_dashboard=True
+            )
         
         user_input_clean = re.sub(r'[^\w\s]', '', user_input).lower().strip()
     
-    # 1. First check for exact matches in all categories
+        # 1. First check for exact matches in all categories
         categories = [
-            ('dashboard_followups', True, None),  # (category_name, is_dashboard, required_question_id)
+            ('dashboard_followups', True, None),
             ('questions', False, question_id),
             ('general_followups', False, None)
         ]
     
         for category_name, is_dashboard, req_question_id in categories:
             for item in data.get(category_name, []):
-            # Skip if this is a question-specific item that doesn't match our question_id
+                # Skip if this is a question-specific item that doesn't match our question_id
                 if req_question_id and item.get('question_id') != req_question_id:
                     continue
                 
-                item_text_clean = re.sub(r'[^\w\s]', '', item['text']).lower().strip()
+                # Safely get item text
+                item_text = item.get('text', '')
+                if not item_text:  # Skip if no text
+                    continue
+                    
+                item_text_clean = re.sub(r'[^\w\s]', '', item_text).lower().strip()
                 if item_text_clean == user_input_clean:
-                # Return immediately with the recommendation
                     return get_gpt_recommendation(
                         question=question_text,
                         is_followup=True,
@@ -574,21 +564,12 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                         non_dashboard=not is_dashboard
                     )
     
-    # 2. Only proceed with embedding approach if no exact match was found
-
-
-
-
-      
-
-
-       # Get question embedding for similarity checks
+        # 2. Only proceed with embedding approach if no exact match was found
         user_embedding = get_embedding(user_input)
-       # if not user_embedding:
-       #     return "Sorry, I couldn't process your question. Please try again."
+        if not user_embedding:
+            return "Sorry, I couldn't process your question. Please try again."
 
-
-       # Check against general followups
+        # Check against general followups
         dashboard_threshold = 0.50
         dashboard_scores = []
         for source in data.get("dashboard_followups", []):
@@ -597,12 +578,6 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 if score >= dashboard_threshold:
                     dashboard_scores.append((score, source))
                   
-      
-
-
-              
-
-
         general_threshold = 0.50
         general_scores = []
         for source in data.get("general_followups", []):
@@ -611,8 +586,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 if score >= general_threshold:
                     general_scores.append((score, source))
                   
-      
-       # Check against question-specific followups
+        # Check against question-specific followups
         question_threshold = 0.70
         question_scores = []
         for source in data.get("questions", []):
@@ -622,31 +596,20 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 if score >= question_threshold:
                     question_scores.append((score, source))
                  
-
-
-       # If we have medium confidence matches (either general or question-specific)
+        # If we have medium confidence matches (either general or question-specific)
         if dashboard_scores:
             return get_gpt_recommendation(
                 question=question_text,
-                #options=options,
                 is_followup=True,
                 follow_up_question=user_input,
                 dashboard=True
             )
-          
-           #return get_gpt_recommendation(question=question_text, is_followup=True, follow_up_question=user_input, dashboard=True)
-
-
         elif general_scores or question_scores:
-           # Classify question type for contextual prompt
             return get_gpt_recommendation(
                 question=question_text,
                 is_followup=True,
                 follow_up_question=user_input,
                 non_dashboard=True)
-
-
-      
         else:
             return get_gpt_recommendation(
                 question=question_text,
@@ -655,12 +618,9 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 non_dashboard=False,
                 other_questions=True)
 
-
     except Exception as e:
         st.error(f"Error in followup validation: {str(e)}")
         return "Sorry, I encountered an error processing your question."
-
-
 def flatten_json(y):
    out = {}
    def flatten(x, name=''):
