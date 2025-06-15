@@ -652,7 +652,8 @@ Instructions:
 3. If the question requires reasoning (like trends, comparisons, or suggestions), explain your answer using the values and context from the data.
 4. Always reference specific values or data points to justify your answer.
 5. Format your answer in a clear paragraph style .
-6. Strictly Keep the answer within 50 words
+6. Strictly Keep the answer within 50 words.
+7."Never show or mention any variable names or keys like 'waitingTimeAtCashDesk....' or any other internal identifiers. These are for your reference only. Only show human-friendly information in your response."
 
 Available Data (format is "key: value"):
 {search_terms}
