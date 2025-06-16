@@ -567,14 +567,13 @@ User Question: {user_input}
         elif is_followup and non_dashboard:
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
-
-
-            if original_rec:
-                context_parts.append(
+                if original_rec:
+                    context_parts.append(
                     f"Earlier Recommendation:\n"
                     f"Recommended option: {original_rec['text']}\n"
-                    f"Reason: {original_rec['reasoning']}"
-                )
+                    f"Reason: {original_rec['reasoning']}\n"
+            
+        )
 
 
                 
@@ -588,7 +587,8 @@ User Question: {user_input}
 
 
                    The user has asked a follow-up question about a survey recommendation.
-                   You must answer the question specifically or use prior context and reasoning to answer concisely in under 50 words.
+                   You must answer the question use prior context and reasoning to answer concisely in under 50 words.
+
               
 
 
