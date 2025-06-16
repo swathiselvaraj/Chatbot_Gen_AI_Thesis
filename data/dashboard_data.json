@@ -12,35 +12,35 @@
         "average": [
             {
                 "time": "8 am",
-                "minutes": 0
-            },
-            {
-                "time": "9 am",
                 "minutes": 1
             },
             {
+                "time": "9 am",
+                "minutes": 1.5
+            },
+            {
                 "time": "10 am",
-                "minutes": 3
+                "minutes": 2
             },
             {
                 "time": "11 am",
-                "minutes": 5
+                "minutes": 2.5
             },
             {
                 "time": "12 pm",
-                "minutes": 6
+                "minutes": 3.5
             },
             {
                 "time": "1 pm",
-                "minutes": 7
+                "minutes": 4
             },
             {
                 "time": "2 pm",
-                "minutes": 7
+                "minutes": 6
             },
             {
                 "time": "3 pm",
-                "minutes": 8
+                "minutes": 7
             },
             {
                 "time": "4 pm",
@@ -52,7 +52,7 @@
             },
             {
                 "time": "6 pm",
-                "minutes": 11
+                "minutes": 14
             },
             {
                 "time": "7 pm",
@@ -64,11 +64,11 @@
             },
             {
                 "time": "9 pm",
-                "minutes": 15
+                "minutes": 12
             },
             {
                 "time": "10 pm",
-                "minutes": 15
+                "minutes": 8
             }
         ],
         "target": [
@@ -86,11 +86,11 @@
         "sales2024": [
             {
                 "month": "Jan",
-                "value": 250000
+                "value": 280000
             },
             {
                 "month": "Feb",
-                "value": 300000
+                "value": 350000
             },
             {
                 "month": "Mar",
@@ -98,29 +98,29 @@
             },
             {
                 "month": "Apr",
-                "value": 375000
+                "value": 380000
             }
         ],
         "forecast2024": [
             {
                 "month": "May",
-                "value": 320000
+                "value": 360000
             },
             {
                 "month": "Jun",
-                "value": 270000
+                "value": 280000
             },
             {
                 "month": "Jul",
-                "value": 250000
+                "value": 230000
             },
             {
                 "month": "Aug",
-                "value": 260000
+                "value": 210000
             },
             {
                 "month": "Sep",
-                "value": 280000
+                "value": 310000
             }
         ]
     },
@@ -128,35 +128,35 @@
         "actual": [
             {
                 "time": "8 am",
-                "customers": 0
+                "customers": 10
             },
             {
                 "time": "9 am",
-                "customers": 5
+                "customers": 12
             },
             {
                 "time": "10 am",
-                "customers": 15
+                "customers": 18
             },
             {
                 "time": "11 am",
-                "customers": 25
+                "customers": 30
             },
             {
                 "time": "12 pm",
-                "customers": 35
+                "customers": 25
             },
             {
                 "time": "1 pm",
-                "customers": 50
+                "customers": 40
             },
             {
                 "time": "2 pm",
-                "customers": 55
+                "customers": 40
             },
             {
                 "time": "3 pm",
-                "customers": 60
+                "customers": 40
             },
             {
                 "time": "4 pm",
@@ -168,23 +168,23 @@
             },
             {
                 "time": "6 pm",
-                "customers": 90
-            },
-            {
-                "time": "7 pm",
                 "customers": 100
             },
             {
+                "time": "7 pm",
+                "customers": 90
+            },
+            {
                 "time": "8 pm",
-                "customers": 120
+                "customers": 30
             },
             {
                 "time": "9 pm",
-                "customers": 120
+                "customers": 20
             },
             {
                 "time": "10 pm",
-                "customers": 120
+                "customers": 10
             }
         ],
         "average": [
