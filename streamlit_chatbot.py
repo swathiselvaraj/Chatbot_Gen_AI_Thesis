@@ -262,7 +262,7 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
                 continue
 
     # No valid match found
-    return Nonety functions
+    return None
 
 
 def update_interaction_time():
