@@ -247,8 +247,8 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
     # 1. Try partial or exact text match
     for opt in options:
         opt_lower = opt.lower()
-        if opt_lower in user_input_lower or user_input_lower in opt_lower:
-            return opt
+        # if opt_lower in user_input_lower or user_input_lower in opt_lower:
+        #     return opt
         # Match based on overlap of words
         opt_words = set(opt_lower.split())
         input_words = set(user_input_lower.split())
