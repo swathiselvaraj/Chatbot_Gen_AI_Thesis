@@ -552,7 +552,7 @@ Instructions:
 4. Always reference specific values or data points to justify your answer.
 5. Format your answer in a clear paragraph style .
 6. Strictly Keep the answer within 50 words.
-7.**Never quote or mention raw data keys**. Only use plain language . 
+7. Always justify your answer by referring to the data values only, using natural language descriptions. Do NOT mention, display, or quote any raw data keys or variable names, such as 'openedCashDesks_current' or any other key from the data.
 
 
 Available Data (format is "key: value"):
