@@ -244,22 +244,11 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
     if not user_input or not options:
         return None
 
-    user_input_lower = normalize_numbers(user_input.lower().strip())
-    user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
+    # Clean input punctuation for regex matching
+    user_input_clean = re.sub(r'[.,;!?]', '', user_input.lower().strip())
 
-    for opt in options:
-        opt_lower = normalize_numbers(opt.lower())
-
-        if has_continuous_match(opt_lower, user_input_lower):
-            return opt
-
-        if fuzz.partial_ratio(opt_lower, user_input_clean) > 90:
-            return opt
-
-    # Match explicit patterns like "option 2", but NOT just "2"
-    explicit_option_patterns = [
-        r'\b(?:option|opt|choice|selection)\s*(\d+)',
-    ]
+    # Try explicit patterns first on raw input with digits
+    explicit_option_patterns = [r'\b(?:option|opt|choice|selection)\s*(\d+)']
     for pattern in explicit_option_patterns:
         match = re.search(pattern, user_input_clean)
         if match:
@@ -268,9 +257,22 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
                 if 1 <= option_num <= len(options):
                     return options[option_num - 1]
             except ValueError:
-                continue
+                pass
+
+    # Normalize numbers to words for semantic matching
+    user_input_norm = normalize_numbers(user_input_clean)
+
+    for opt in options:
+        opt_lower = normalize_numbers(opt.lower())
+
+        if has_continuous_match(opt_lower, user_input_norm):
+            return opt
+
+        if fuzz.partial_ratio(opt_lower, user_input_norm) > 90:
+            return opt
 
     return None
+
 
 def update_interaction_time():
   now = time.time()
