@@ -647,7 +647,7 @@ User Question:
 
 
        # Call GPT API
-        st.session_state.conversation.append(("user", prompt))
+        #st.session_state.conversation.append(("user", prompt))
 
 # Start streaming
         stream = client.chat.completions.create(
@@ -666,14 +666,13 @@ User Question:
         for chunk in stream:
             if hasattr(chunk, 'choices') and chunk.choices:
                 choice = chunk.choices[0]
-                if hasattr(choice, 'delta') and isinstance(choice.delta, dict):
-                    content_part = choice.delta.get("content")
+                if hasattr(choice, 'delta'):
+                    content_part = getattr(choice.delta, 'content', None)
                     if content_part:
                         result += content_part
                         placeholder.markdown(f"**Chatbot:** {result}")
-
 # Add assistant message to history AFTER streaming
-        st.session_state.conversation.append(("assistant", result))
+        #st.session_state.conversation.append(("assistant", result))
 
        # Store original recommendation if not a follow-up
         if not is_followup and options:
@@ -853,7 +852,7 @@ if user_input:
    save_session_data()
 
 
-display_conversation()
+#display_conversation()
 
 
 # Debug information
