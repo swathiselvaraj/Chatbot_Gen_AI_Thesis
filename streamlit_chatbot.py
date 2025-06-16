@@ -653,7 +653,7 @@ User Question:
             messages= messages,
             max_tokens=100,  # ← Restrict length
             temperature=0,   # ← Less randomness = faster
-            timeout=3  
+            timeout=3,  
             stream=True      # ← Fail fast if slow  *****
               # Only generate one response
         )
