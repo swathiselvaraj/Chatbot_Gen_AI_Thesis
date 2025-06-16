@@ -908,31 +908,34 @@ if st.button("Get Recommendation"):
 
 
 user_input = st.text_input("Ask a follow-up question:")
-# In your main app section, modify the user input handling:
-if user_input:
-   update_interaction_time()
-   st.session_state.conversation.append(("user", user_input))
-  
-   # First check if it's a simple command
-   if user_input.lower().strip() in ['help', '?']:
-       response = "I can help with:\n- Explaining dashboard terms\n- Analyzing trends\n- Making recommendations\nAsk me anything about the supermarket data!"
-   else:
-       response = validate_followup(user_input, question_id, options = options)
-  
-   st.session_state.conversation.append(("assistant", response))
-   end_interaction_and_accumulate_time()
+if st.button("Submit follow-up") and follow_up_text.strip():
+    update_interaction_time()
+    st.session_state.conversation.append(("user", user_input))
+    if user_input.lower().strip() in ['help', '?']:
+        response = "I can help with:\n- Explaining dashboard terms\n- Analyzing trends\n- Making recommendations\nAsk me anything about the supermarket data!"
+    else:
+        response = validate_followup(user_input, question_id, options = options)
+    st.session_state.conversation.append(("assistant", response))
+    end_interaction_and_accumulate_time()
 
 
    # Update usage data
-   st.session_state.usage_data.update({
-       'chatbot_used': True,
-       'followup_used': True,
-       'total_questions_asked': st.session_state.usage_data.get('total_questions_asked', 0) + 1,
-       'total_time': st.session_state.total_interaction_time
-   })
+    st.session_state.usage_data.update({
+        'chatbot_used': True,
+        'followup_used': True,
+        'total_questions_asked': st.session_state.usage_data.get('total_questions_asked', 0) + 1,
+        'total_time': st.session_state.total_interaction_time
+    })
 
 
-   save_session_data()
+    save_session_data()
+
+# In your main app section, modify the user input handling:
+
+
+   # First check if it's a simple command
+   
+  
 
 
 #display_conversation()
