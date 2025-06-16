@@ -657,7 +657,11 @@ User Question:
             stream=True      # ← Fail fast if slow  *****
               # Only generate one response
         )
-        result = response.choices[0].message.content
+        #result = response.choices[0].message.content
+        result = ""
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.get("content"):
+                result += chunk.choices[0].delta["content"]
 
 
        # Store original recommendation if not a follow-up
