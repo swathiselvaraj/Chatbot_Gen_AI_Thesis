@@ -837,7 +837,7 @@ if user_input:
    save_session_data()
 
 
-display_conversation()
+#display_conversation()
 
 
 # Debug information
