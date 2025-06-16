@@ -647,6 +647,19 @@ User Question:
 
 
        # Call GPT API
+        st.session_state.conversation.append(("user", prompt))
+
+# Start streaming
+        stream = client.chat.completions.create(
+            model="gpt-3.5-turbo-0125",
+            messages=messages,
+            max_tokens=100,
+            temperature=0,
+            timeout=3,
+            stream=True
+        )
+
+# Live output with placeholder
         placeholder = st.empty()
         result = ""
 
@@ -658,6 +671,9 @@ User Question:
                     if content_part:
                         result += content_part
                         placeholder.markdown(f"**Chatbot:** {result}")
+
+# Add assistant message to history AFTER streaming
+        st.session_state.conversation.append(("assistant", result))
 
        # Store original recommendation if not a follow-up
         if not is_followup and options:
@@ -837,7 +853,7 @@ if user_input:
    save_session_data()
 
 
-#display_conversation()
+display_conversation()
 
 
 # Debug information
