@@ -446,22 +446,25 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         if not user_input:
             return "Please enter a valid question."
 
-        greetings = {"hi", "hello", "hey", "greetings"}
-        if user_input.lower().rstrip('!?.,') in greetings:
-            st.session_state.last_recommendation = None
-
-            text = "Hello! I can help with survey questions. What would you like to know?"
-            return text
-
-        # greetings = {"hi", "hello", "hey","how are you", "I have a question", "greetings"}
-        # user_clean = user_input.lower().strip().strip(string.punctuation)
-        # if user_clean in greetings:
+        # greetings = {"hi", "hello", "hey", "greetings"}
+        # if user_input.lower().rstrip('!?.,') in greetings:
         #     st.session_state.last_recommendation = None
-        #     return "Hello! I can help with survey questions. What would you like to know?"
+
+        #     
+            
+
+        greetings = {"hi", "hello", "hey","how are you", "I have a question", "greetings"}
+        user_clean = user_input.lower().strip().strip(string.punctuation)
+        if user_clean in greetings:
+            st.session_state.last_recommendation = None
+            result = "Hello! I can help with survey questions. What would you like to know?"
+            placeholder.markdown(f"**Chatbot:** {result}")
 
 
         if len(user_input) == 1:
-            return "Please ask a question related to the survey."
+            result = "Hello! I can help with survey questions. What would you like to know?"
+            placeholder.markdown(f"**Chatbot:** {result}")
+            
 
 
 
