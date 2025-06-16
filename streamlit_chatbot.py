@@ -534,11 +534,11 @@ def get_gpt_recommendation(
            # Create search-friendly data structures
                 # flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON    **********
                 # search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
-                flat_data = flatten_json(json_data)
-                useful_data = {k: v for k, v in flat_data.items() if is_relevant(k)}
-                search_terms = " ".join([f"{k}:{v}" for k,v in list(useful_data.items())[:50]])
+            flat_data = flatten_json(json_data)
+            useful_data = {k: v for k, v in flat_data.items() if is_relevant(k)}
+            search_terms = " ".join([f"{k}:{v}" for k,v in list(useful_data.items())[:50]])
 
-                prompt = f"""
+            prompt = f"""
 You are a helpful and data-driven assistant. Your job is to answer the user's question based strictly on the given dashboard data.
 
 
@@ -560,8 +560,7 @@ Available Data (format is "key: value"):
 
 User Question: {follow_up_question}
 """
-            except Exception as e:
-                print(f"Warning: Could not load JSON data - {str(e)}")
+
 
 
         elif is_followup and non_dashboard:
