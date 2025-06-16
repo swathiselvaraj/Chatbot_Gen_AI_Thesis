@@ -573,29 +573,49 @@ User Question: {user_input}
                     f"Recommended option: {original_rec['text']}\n"
                     f"Reason: {original_rec['reasoning']}\n"
             
-        )
+                )
 
 
                 
-            prompt = f"""The user has asked a follow-up question about a survey recommendation.
-                   Context:
-                   -Original question: {question}
-                   - Options: {chr(10).join(options)}
-                   {f"- Referenced option: {referenced_option}" if referenced_option else ""}
+            # prompt = f"""The user has asked a follow-up question about a survey recommendation.
+            #        Context:
+            #        -Original question: {question}
+            #        - Options: {chr(10).join(options)}
+            #        {f"- Referenced option: {referenced_option}" if referenced_option else ""}
 
 
 
 
-                   The user has asked a follow-up question about a survey recommendation.
-                   You must answer the question use prior context and reasoning to answer concisely in under 50 words.
+            #        The user has asked a follow-up question about a survey recommendation.
+            #        You must answer the question use prior context and reasoning to answer concisely in under 50 words.
 
               
 
 
-                   Respond in this format:
-                   "Answer:  <your answer>"
-                   """
+            #        Respond in this format:
+            #        "Answer:  <your answer>"
+            #        """
 
+            prompt = f"""The user has asked a follow-up question about a survey recommendation.
+                    Context:
+- Original question: {question}
+- Options: {chr(10).join(options)}
+
+Earlier Recommendation:
+- Recommended option: {original_rec['text']}
+- Reason: {original_rec['reasoning']}
+
+{f"- Referenced option: {referenced_option}" if referenced_option else ""}
+
+Instructions:
+Respond to the user's follow-up comprehensively and concisely (under 50 words). Use reasoning based on the provided context. Address any challenges to the original recommendation, comparisons to other options, or suggestions offered by the user.
+
+Ensure your response is:
+- Direct and reasoned 
+
+Respond in this format:
+"Answer: <your answer>"
+"""
 
 
         elif not is_followup: # Initial recommendation logic
