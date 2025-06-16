@@ -908,7 +908,7 @@ if st.button("Get Recommendation"):
 
 
 user_input = st.text_input("Ask a follow-up question:")
-if st.button("Submit follow-up") and follow_up_text.strip():
+if st.button("Submit follow-up") and user_input.strip():
     update_interaction_time()
     st.session_state.conversation.append(("user", user_input))
     if user_input.lower().strip() in ['help', '?']:
