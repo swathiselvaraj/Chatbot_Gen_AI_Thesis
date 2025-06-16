@@ -99,8 +99,7 @@ if 'followup_used' not in st.session_state:
 
 
 # --- Data Loading ---
-@st.cache_resource
-
+@st.cache_resource   #*****
 def load_embedding_data():
    default_structure = {
        "general_followups": [],
@@ -503,7 +502,12 @@ def flatten_json(y):
    flatten(y)
    return out
 
+@st.cache_data
+def load_dashboard_data():
+    with open("data/dashboard_data.json", 'r') as f:
+        return json.load(f)
 
+dashboard_data = load_dashboard_data()
 def get_gpt_recommendation(
    question: str,
    options: List[str] = None,
@@ -525,14 +529,14 @@ def get_gpt_recommendation(
             options = st.session_state.get('original_options', [])  # Fallback to session state
 
         if dashboard:
-            json_data_path = "data/dashboard_data.json"
-            try:
-                with open(json_data_path, 'r') as file:
-                    json_data = json.load(file)
+            json_data = dashboard_data   #*********
           
            # Create search-friendly data structures
-                flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON
-                search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
+                # flat_data = flatten_json(json_data)  # Helper function to flatten nested JSON    **********
+                # search_terms = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
+                flat_data = flatten_json(json_data)
+                useful_data = {k: v for k, v in flat_data.items() if is_relevant(k)}
+                search_terms = " ".join([f"{k}:{v}" for k,v in list(useful_data.items())[:50]])
 
                 prompt = f"""
 You are a helpful and data-driven assistant. Your job is to answer the user's question based strictly on the given dashboard data.
@@ -646,11 +650,12 @@ User Question:
        # Call GPT API
         response = client.chat.completions.create(
     
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo-0125", ****
             messages= messages,
             max_tokens=100,  # ← Restrict length
             temperature=0,   # ← Less randomness = faster
-            timeout=3        # ← Fail fast if slow
+            timeout=3  
+            stream=True      # ← Fail fast if slow  *****
               # Only generate one response
         )
         result = response.choices[0].message.content
