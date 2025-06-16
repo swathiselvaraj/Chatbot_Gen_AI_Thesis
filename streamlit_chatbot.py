@@ -647,7 +647,7 @@ User Question:
 
 
        # Call GPT API
-        response = client.chat.completions.create(
+        stream = client.chat.completions.create(
     
             model="gpt-3.5-turbo-0125", #****
             messages= messages,
