@@ -632,7 +632,7 @@ The user has asked a follow-up question based on a previous discussion about sup
 Instructions:
 1. Only answer questions that are relevant to supermarket operations, management, sales or planning.
 2. If the user's question is completely unrelated (e.g., about outer space or cooking recipes), respond with:
-  "Please ask a question related to supermarkets or their management."
+  "Please ask a question related to the survey"
 3. If the question is vague but could relate (like "What is a supermarket?"), provide a helpful response.
 4. Answer concisely in under 50 words.
 
@@ -703,7 +703,7 @@ User Question:
 
 
    # Determine if the response was valid
-            if "Please ask a question related to supermarkets or their management." in result:
+            if "Please ask a question related to the survey" in result:
                 answered = "No"
             else:
                 answered = "Yes"
