@@ -647,26 +647,17 @@ User Question:
 
 
        # Call GPT API
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo-0125",
-            messages=messages,
-            max_tokens=100,
-            temperature=0,
-            timeout=3,
-            stream=True
-        )
-
+        placeholder = st.empty()
         result = ""
+
         for chunk in stream:
-    # Ensure 'choices' is present and is a non-empty list
             if hasattr(chunk, 'choices') and chunk.choices:
                 choice = chunk.choices[0]
-
-        # Make sure 'delta' exists and is a dict
-            if hasattr(choice, 'delta') and isinstance(choice.delta, dict):
-                content_part = choice.delta.get("content")
-                if content_part:
-                    result += content_part
+                if hasattr(choice, 'delta') and isinstance(choice.delta, dict):
+                    content_part = choice.delta.get("content")
+                    if content_part:
+                        result += content_part
+                        placeholder.markdown(f"**Chatbot:** {result}")
 
        # Store original recommendation if not a follow-up
         if not is_followup and options:
