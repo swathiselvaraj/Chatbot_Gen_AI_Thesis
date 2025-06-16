@@ -440,14 +440,16 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
     try:
         user_input = user_input.strip()
 
-        if not options:
-            options = st.session_state.get('original_options', [])
-        if not user_input:
-            return "Please enter a valid question."
         words = re.findall(r'\w+', user_input)
         if len(words) < 2:  
             return "Please ask a question related to the survey."
 
+
+        if not options:
+            options = st.session_state.get('original_options', [])
+        if not user_input:
+            return "Please enter a valid question."
+        
         # Handle greetings
         greetings = {"hi", "hello", "hey", "greetings"}
         if user_input.lower().rstrip('!?.,') in greetings:
