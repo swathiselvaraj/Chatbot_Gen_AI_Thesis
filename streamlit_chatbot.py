@@ -962,7 +962,7 @@ if st.button("Send") and user_input.strip():
   
 
 
-display_conversation()
+#display_conversation()
 
 
 # Debug information
