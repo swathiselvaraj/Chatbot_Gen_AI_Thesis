@@ -652,7 +652,7 @@ User Question:
 
 # Start streaming
         stream = client.chat.completions.create(
-            model="gpt-3.5-turbo-0125",
+            model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=100,
             temperature=0,
