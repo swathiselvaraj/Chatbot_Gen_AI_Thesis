@@ -460,8 +460,8 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
         #     return "Hello! I can help with survey questions. What would you like to know?"
 
 
-        # if len(user_input) == 1:
-        #     return "Please ask a question related to the survey."
+        if len(user_input) == 1:
+            return "Please ask a question related to the survey."
 
 
 
@@ -962,7 +962,7 @@ if st.button("Send") and user_input.strip():
   
 
 
-#display_conversation()
+display_conversation()
 
 
 # Debug information
