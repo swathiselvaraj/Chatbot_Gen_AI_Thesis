@@ -647,26 +647,27 @@ User Question:
 
 
        # Call GPT API
-        try:
-            stream = client.chat.completions.create(
-                model="gpt-3.5-turbo-0125",
-                messages=messages,
-                max_tokens=150,
-                temperature=0,
-                timeout=3,
-                stream=True
-            )
-    
-            result = ""
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta:
-                    content_part = chunk.choices[0].delta.get("content", "")
-                    if content_part:
-                        result += content_part
-                
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            result = None  # or handle the error appropriately
+        stream = client.chat.completions.create(
+            model="gpt-3.5-turbo-0125",
+            messages=messages,
+            max_tokens=100,
+            temperature=0,
+            timeout=3,
+            stream=True
+        )
+
+        result = ""
+        for chunk in stream:
+    # Ensure 'choices' is present and is a non-empty list
+            if hasattr(chunk, 'choices') and chunk.choices:
+                choice = chunk.choices[0]
+
+        # Make sure 'delta' exists and is a dict
+            if hasattr(choice, 'delta') and isinstance(choice.delta, dict):
+                content_part = choice.delta.get("content")
+                if content_part:
+                    result += content_part
+
        # Store original recommendation if not a follow-up
         if not is_followup and options:
             if "Recommended option:" in result and "Reason:" in result:
