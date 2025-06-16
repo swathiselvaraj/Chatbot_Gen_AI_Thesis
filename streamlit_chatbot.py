@@ -439,16 +439,22 @@ def save_to_gsheet(data_dict: Dict) -> bool:
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
     try:
         user_input = user_input.strip()
+
         if not options:
             options = st.session_state.get('original_options', [])
         if not user_input:
             return "Please enter a valid question."
+        words = re.findall(r'\w+', user_input)
+        if len(words) < 2:  
+            return "Please ask a question related to the survey."
 
         # Handle greetings
         greetings = {"hi", "hello", "hey", "greetings"}
         if user_input.lower().rstrip('!?.,') in greetings:
             st.session_state.last_recommendation = None
             return "Hello! I can help with survey questions. What would you like to know?"
+        
+        
 
         # Extract referenced option if any
         referenced_option = extract_referenced_option(user_input, options)
@@ -500,7 +506,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
             return "Sorry, I couldn't process your question. Please try again."
 
         # Check against general followups
-        dashboard_threshold = 0.50
+        dashboard_threshold = 0.60
         dashboard_scores = []
         for source in data.get("dashboard_followups", []):
             if source.get("embedding"):
@@ -508,7 +514,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
                 if score >= dashboard_threshold:
                     dashboard_scores.append((score, source))
                   
-        general_threshold = 0.50
+        general_threshold = 0.60
         general_scores = []
         for source in data.get("general_followups", []):
             if source.get("embedding"):
@@ -908,7 +914,7 @@ if st.button("Get Recommendation"):
 
 
 user_input = st.text_input("Ask a follow-up question:")
-if st.button("Submit follow-up") and user_input.strip():
+if st.button("Send") and user_input.strip():
     update_interaction_time()
     st.session_state.conversation.append(("user", user_input))
     if user_input.lower().strip() in ['help', '?']:
