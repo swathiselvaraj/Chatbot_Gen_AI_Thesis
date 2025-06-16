@@ -648,21 +648,20 @@ User Question:
 
        # Call GPT API
         stream = client.chat.completions.create(
-    
-            model="gpt-3.5-turbo-0125", #****
-            messages= messages,
-            max_tokens=100,  # ← Restrict length
-            temperature=0,   # ← Less randomness = faster
-            timeout=3,  
-            stream=True      # ← Fail fast if slow  *****
-              # Only generate one response
+            model="gpt-3.5-turbo-0125",
+            messages=messages,
+            max_tokens=100,
+            temperature=0,
+            timeout=3,
+            stream=True
         )
-        #result = response.choices[0].message.content
+
         result = ""
         for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.get("content"):
-                result += chunk.choices[0].delta["content"]
-
+            if chunk.choices and chunk.choices[0].delta:
+                content_part = chunk.choices[0].delta.get("content")
+                if content_part:
+                    result += content_part
 
        # Store original recommendation if not a follow-up
         if not is_followup and options:
