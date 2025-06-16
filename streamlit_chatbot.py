@@ -441,20 +441,22 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
     try:
         user_input = user_input.strip()
 
+        if not options:
+            options = st.session_state.get('original_options', [])
+        if not user_input:
+            return "Please enter a valid question."
+            
         greetings = {"hi", "hello", "hey","how are you", "I have a question" "greetings"}
-        user_input_clean = user_input.lower().strip(string.punctuation + " ")
-        if user_input_clean in greetings:
-            st.session_state.last_recommendation = None
-            return "Hello! I can help with survey questions. What would you like to know?"
+        if user_input.lower().rstrip('!?.,') in greetings:
+           st.session_state.last_recommendation = None
+           return "Hello! I can help with survey questions. What would you like to know?
+
 
         if len(user_input.strip()) == 1:
             return "Please ask a question related to the survey."
 
 
-        if not options:
-            options = st.session_state.get('original_options', [])
-        if not user_input:
-            return "Please enter a valid question."
+
         
         # Handle greetings
         
