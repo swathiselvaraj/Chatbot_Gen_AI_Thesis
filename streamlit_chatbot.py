@@ -154,75 +154,109 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 
 
+# def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
+#     """
+#     Extracts referenced survey option from user input with:
+#     - Missing space handling ("option2" → "option 2")
+#     - Fuzzy matching ("optioon2" → "option 2")
+#     - Partial text matching ("why not open 1 more")
+#     - Number-only references ("just do 3")
+#     - Exact option text matching
+#     - Option validation
+
+#     Args:
+#         user_input: The user's text input
+#         options: List of available options (1-indexed)
+
+#     Returns:
+#         The matched option text or None if no valid match found
+#     """
+#     if not user_input or not options:
+#         return None
+
+#     # Normalize input and options
+#     user_input_lower = user_input.lower().strip()
+#     normalized_options = [opt.lower().strip() for opt in options]
+
+#     # Remove common punctuation that might interfere with matching
+#     user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
+   
+#     # First check for exact matches of option text
+#     for opt in options:
+#         # Case-insensitive exact match of full option text
+#         if opt.lower() in user_input_lower:
+#             return opt
+        
+#         # Check if option is contained in input (partial match)
+#         if opt.lower() in user_input_clean:
+#             return opt
+        
+#         # Check if input is contained in option (partial match)
+#         if user_input_clean in opt.lower():
+#             return opt
+
+#     option_num = None
+
+#     # Handle "optionX" (missing space) and standard "option X" format
+#     option_patterns = [
+#         r'(?:option|opt|op)\s*(\d+)',  # "option 1", "option1", "opt 2", etc.
+#         r'(?:^|\b)(\d+)(?:\b|$)'       # standalone number "1" or "option 1"
+#     ]
+   
+#     for pattern in option_patterns:
+#         match = re.search(pattern, user_input_clean)
+#         if match:
+#             try:
+#                 option_num = int(match.group(1))
+#                 break  # Use the first match found
+#             except (ValueError, IndexError):
+#                 continue
+
+#     # Validate option number
+#     if option_num is not None:
+#         if 1 <= option_num <= len(options):
+#             return options[option_num - 1]
+#         return None  # Invalid option number
+
+#     # Fuzzy match for typos in option text
+#     for opt in options:
+#         if fuzz.partial_ratio(opt.lower(), user_input_clean) > 85:
+#             return opt
+
+#     return None
+
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-    """
-    Extracts referenced survey option from user input with:
-    - Missing space handling ("option2" → "option 2")
-    - Fuzzy matching ("optioon2" → "option 2")
-    - Partial text matching ("why not open 1 more")
-    - Number-only references ("just do 3")
-    - Exact option text matching
-    - Option validation
-
-    Args:
-        user_input: The user's text input
-        options: List of available options (1-indexed)
-
-    Returns:
-        The matched option text or None if no valid match found
-    """
     if not user_input or not options:
         return None
 
-    # Normalize input and options
     user_input_lower = user_input.lower().strip()
+    user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
     normalized_options = [opt.lower().strip() for opt in options]
 
-    # Remove common punctuation that might interfere with matching
-    user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
-   
-    # First check for exact matches of option text
+    # 1. Exact and partial text match (preferred)
     for opt in options:
-        # Case-insensitive exact match of full option text
-        if opt.lower() in user_input_lower:
+        opt_lower = opt.lower()
+        if opt_lower in user_input_lower or user_input_clean in opt_lower:
             return opt
-        
-        # Check if option is contained in input (partial match)
-        if opt.lower() in user_input_clean:
-            return opt
-        
-        # Check if input is contained in option (partial match)
-        if user_input_clean in opt.lower():
+        if fuzz.partial_ratio(opt_lower, user_input_clean) > 85:
             return opt
 
-    option_num = None
-
-    # Handle "optionX" (missing space) and standard "option X" format
-    option_patterns = [
-        r'(?:option|opt|op)\s*(\d+)',  # "option 1", "option1", "opt 2", etc.
-        r'(?:^|\b)(\d+)(?:\b|$)'       # standalone number "1" or "option 1"
+    # 2. Match patterns like "option 2", "opt2" but NOT standalone "2"
+    explicit_option_patterns = [
+        r'\b(?:option|opt|choice|selection)\s*(\d+)',  # option 1, opt2
     ]
-   
-    for pattern in option_patterns:
+
+    for pattern in explicit_option_patterns:
         match = re.search(pattern, user_input_clean)
         if match:
             try:
                 option_num = int(match.group(1))
-                break  # Use the first match found
-            except (ValueError, IndexError):
+                if 1 <= option_num <= len(options):
+                    return options[option_num - 1]
+            except ValueError:
                 continue
 
-    # Validate option number
-    if option_num is not None:
-        if 1 <= option_num <= len(options):
-            return options[option_num - 1]
-        return None  # Invalid option number
-
-    # Fuzzy match for typos in option text
-    for opt in options:
-        if fuzz.partial_ratio(opt.lower(), user_input_clean) > 85:
-            return opt
-
+    # 3. NO matching on plain digits (e.g., "2" alone), skip this part
     return None
 # Add these near your other utility functions
 
