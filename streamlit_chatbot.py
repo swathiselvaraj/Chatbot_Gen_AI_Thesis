@@ -233,19 +233,24 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
     user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
     normalized_options = [opt.lower().strip() for opt in options]
 
-    # 1. Exact and partial text match (preferred)
+    # 1. Try partial or exact text match
     for opt in options:
         opt_lower = opt.lower()
-        if opt_lower in user_input_lower or user_input_clean in opt_lower:
+        if opt_lower in user_input_lower or user_input_lower in opt_lower:
             return opt
+        # Match based on overlap of words
+        opt_words = set(opt_lower.split())
+        input_words = set(user_input_lower.split())
+        if len(opt_words & input_words) >= 2:  # Require at least 2 shared words
+            return opt
+        # Fuzzy match for general similarity
         if fuzz.partial_ratio(opt_lower, user_input_clean) > 85:
             return opt
 
-    # 2. Match patterns like "option 2", "opt2" but NOT standalone "2"
+    # 2. Match patterns like "option 2", "opt2", but NOT just "2"
     explicit_option_patterns = [
-        r'\b(?:option|opt|choice|selection)\s*(\d+)',  # option 1, opt2
+        r'\b(?:option|opt|choice|selection)\s*(\d+)',
     ]
-
     for pattern in explicit_option_patterns:
         match = re.search(pattern, user_input_clean)
         if match:
@@ -256,9 +261,8 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
             except ValueError:
                 continue
 
-    # 3. NO matching on plain digits (e.g., "2" alone), skip this part
-    return None
-# Add these near your other utility functions
+    # No valid match found
+    return Nonety functions
 
 
 def update_interaction_time():
