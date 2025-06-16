@@ -223,7 +223,18 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 #         if fuzz.partial_ratio(opt.lower(), user_input_clean) > 85:
 #             return opt
 
+
 #     return None
+
+def has_continuous_match(option_text: str, user_input: str, min_ngram_len=2, max_ngram_len=5) -> bool:
+    user_input_lower = user_input.lower()
+    option_tokens = option_text.lower().split()
+    for n in range(max_ngram_len, min_ngram_len - 1, -1):
+        for gram in ngrams(option_tokens, n):
+            phrase = ' '.join(gram)
+            if phrase in user_input_lower:
+                return True
+    return False
 
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
     if not user_input or not options:
@@ -241,7 +252,9 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
         # Match based on overlap of words
         opt_words = set(opt_lower.split())
         input_words = set(user_input_lower.split())
-        if len(opt_words & input_words) >= 4:  # Require at least 2 shared words
+        # if len(opt_words & input_words) >= 4:  # Require at least 2 shared words
+        #     return opt
+        if has_continuous_match(opt_lower, user_input_lower):
             return opt
         # Fuzzy match for general similarity
         if fuzz.partial_ratio(opt_lower, user_input_clean) > 85:
