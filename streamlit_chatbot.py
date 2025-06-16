@@ -241,7 +241,7 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
         # Match based on overlap of words
         opt_words = set(opt_lower.split())
         input_words = set(user_input_lower.split())
-        if len(opt_words & input_words) >= 3:  # Require at least 2 shared words
+        if len(opt_words & input_words) >= 4:  # Require at least 2 shared words
             return opt
         # Fuzzy match for general similarity
         if fuzz.partial_ratio(opt_lower, user_input_clean) > 85:
