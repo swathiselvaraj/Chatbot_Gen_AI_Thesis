@@ -16,22 +16,12 @@ with open("data/dashboard_data.json", "r") as f:
 prompt = f"""
 You are an AI assistant analyzing a business dashboard described in the JSON data below.
 
-Your task is to generate a list of realistic, diverse questions a user might ask about this dashboard when interacting with a chatbot. These should include questions about:
-
-1. Trends over time (e.g., increasing/decreasing values)
-2. Comparisons between actual and target values
-3. Operational suggestions (e.g., open more cash desks?)
-4. Time-specific questions (e.g., peak hours, changes by hour)
-5. Sales analysis and forecasts
-6. Customer traffic patterns
-7. Product performance and anomalies
-
-Make sure the questions reflect curiosity, decision-making needs, or requests for clarification. Keep them clear and natural, as if a user were typing them to a chatbot.
+Your task is to generate a list of realistic, diverse questions a user might ask about this dashboard specifically the product sales part.
 
 Here is the dashboard data:
 {json.dumps(dashboard_json)}
 
-Please return 30 to 40 unique, relevant, and well-phrased questions.
+Please return 10 unique, relevant, and well-phrased questions.
 
 """
 
@@ -56,7 +46,7 @@ for i in range(0, len(questions), batch_size):
     batch = questions[i:i + batch_size]
     embed_response = client.embeddings.create(  # Note the change here
         input=batch,
-        model="text-embedding-ada-002"
+        model="text-embedding-3-small"
     )
     for question, embedding in zip(batch, embed_response.data):
         new_followups.append({
