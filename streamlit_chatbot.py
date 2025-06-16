@@ -532,7 +532,7 @@ def get_gpt_recommendation(
             options = st.session_state.get('original_options', [])  # Fallback to session state
 
         if dashboard:
-           json_data_path = "data/dashboard_data.json"
+            json_data_path = "data/dashboard_data.json"
             try:
                 with open(json_data_path, 'r') as file:
                     json_data = json.load(file)
