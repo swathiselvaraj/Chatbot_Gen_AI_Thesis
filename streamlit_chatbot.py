@@ -227,30 +227,58 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 
 #     return None
-
 def normalize_numbers(text: str) -> str:
     return re.sub(r'\b\d+\b', lambda m: num2words(int(m.group())), text)
 
 def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5) -> bool:
     option_tokens = option_text.split()
+    user_tokens = user_input.split()
+
     for n in range(max_len, min_len - 1, -1):
-        for gram in ngrams(option_tokens, n):
-            phrase = ' '.join(gram)
-            if phrase in user_input:
+        option_ngrams = list(ngrams(option_tokens, n))
+        user_ngrams = list(ngrams(user_tokens, n))
+
+        for opt_ng in option_ngrams:
+            if opt_ng in user_ngrams:
                 return True
     return False
+
 
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
     if not user_input or not options:
         return None
 
-    # Clean input punctuation for regex matching
-    user_input_clean = re.sub(r'[.,;!?]', '', user_input.lower().strip())
+    user_input_lower = user_input.lower()
 
-    # Try explicit patterns first on raw input with digits
-    explicit_option_patterns = [r'\b(?:option|opt|choice|selection)\s*(\d+)']
+    # Step 1: Check for exact presence (case-insensitive) of the option text
+    for opt in options:
+        opt_lower = opt.lower()
+        if opt_lower in user_input_lower:
+            return opt
+
+    # Normalize user input and options for partial/fuzzy matching
+    user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
+    user_input_norm = normalize_numbers(user_input_clean)
+
+    for opt in options:
+        opt_lower = opt.lower()
+        opt_norm = normalize_numbers(opt_lower)
+
+        # Step 2: Check for continuous n-gram matches
+        if has_continuous_match(opt_norm, user_input_norm):
+            return opt
+
+        # Step 3: Use fuzzy partial ratio match as fallback
+        if fuzz.partial_ratio(opt_norm, user_input_norm) > 90:
+            return opt
+
+    # Optional: Check explicit "option N" patterns (if needed)
+    explicit_option_patterns = [
+        r'\b(?:option|opt|choice|selection)\s*(\d+)',
+    ]
+    user_input_no_punct = re.sub(r'[.,;!?]', '', user_input_lower)
     for pattern in explicit_option_patterns:
-        match = re.search(pattern, user_input_clean)
+        match = re.search(pattern, user_input_no_punct)
         if match:
             try:
                 option_num = int(match.group(1))
@@ -258,18 +286,6 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
                     return options[option_num - 1]
             except ValueError:
                 pass
-
-    # Normalize numbers to words for semantic matching
-    user_input_norm = normalize_numbers(user_input_clean)
-
-    for opt in options:
-        opt_lower = normalize_numbers(opt.lower())
-
-        if has_continuous_match(opt_lower, user_input_norm):
-            return opt
-
-        if fuzz.partial_ratio(opt_lower, user_input_norm) > 90:
-            return opt
 
     return None
 
