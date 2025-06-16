@@ -445,14 +445,14 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
             options = st.session_state.get('original_options', [])
         if not user_input:
             return "Please enter a valid question."
-            
+
         greetings = {"hi", "hello", "hey","how are you", "I have a question" "greetings"}
         if user_input.lower().rstrip('!?.,') in greetings:
            st.session_state.last_recommendation = None
            return "Hello! I can help with survey questions. What would you like to know?
 
 
-        if len(user_input.strip()) == 1:
+        if len(user_input) == 1:
             return "Please ask a question related to the survey."
 
 
