@@ -721,11 +721,14 @@ The user has asked a follow-up question based on a previous discussion about sup
 
 
 Instructions:
-1. Only answer questions that are relevant to supermarket operations, management, sales or planning.
-2. If the user's question is completely unrelated (e.g., about outer space or cooking recipes), respond with:
-  "Please ask a question related to the survey"
-3. If the question is vague but could relate (like "What is a supermarket?"), provide a helpful response.
-4. Answer concisely in under 50 words.
+Instructions:
+1. Only answer questions that are relevant to supermarket operations, management, sales, or planning.
+2. If the question is about sales, provide an explanation focused on the supermarket context.
+3. If the user's question is unrelated (e.g., about outer space or cooking recipes), respond with:
+   "Please ask a question related to the survey"
+4. If the question is vague but could relate (like "What is a supermarket?" or "What is sales?"), provide a helpful response in the supermarket context.
+5. Answer concisely in under 50 words.
+
 
 
 
