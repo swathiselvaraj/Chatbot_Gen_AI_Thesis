@@ -567,11 +567,11 @@ User Question: {user_input}
         elif is_followup and non_dashboard:
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
-                if original_rec:
-                    context_parts.append(
-                    f"Earlier Recommendation:\n"
-                    f"Recommended option: {original_rec['text']}\n"
-                    f"Reason: {original_rec['reasoning']}\n"
+            if original_rec:
+                context_parts.append(
+                f"Earlier Recommendation:\n"
+                f"Recommended option: {original_rec['text']}\n"
+                f"Reason: {original_rec['reasoning']}\n"
             
                 )
 
