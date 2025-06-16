@@ -659,22 +659,21 @@ User Question: {user_input}
             #        "Answer:  <your answer>"
             #        """
 
+    
             prompt = f"""The user has asked a follow-up question about a survey recommendation.
-                    Context:
+Context:
 - Original question: {question}
 - Options: {chr(10).join(options)}
 
-Earlier Recommendation:
-- Recommended option: {original_rec['text']}
-- Reason: {original_rec['reasoning']}
+{''.join(context_parts) if context_parts else ''}
 
 {f"- Referenced option: {referenced_option}" if referenced_option else ""}
 
 Instructions:
-Respond to the user's follow-up comprehensively and concisely (under 50 words). Use reasoning based on the provided context. Address any challenges to the original recommendation, comparisons to other options, or suggestions offered by the user.
+Respond to the user's follow-up comprehensively and concisely (under 50 words). Use reasoning based on the provided context.
 
 Ensure your response is:
-- Direct and reasoned 
+- Direct and reasoned
 
 Respond in this format:
 "Answer: <your answer>"
