@@ -319,9 +319,9 @@ def initialize_gsheet():
       sheet = gc.open("Chatbot Usage Log")
     
       try:
-          worksheet = sheet.worksheet("Logs")
+          worksheet = sheet.worksheet("Logs_with_explanation")
       except:
-          worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=20)
+          worksheet = sheet.add_worksheet(title="Logs_with_explanation", rows=5000, cols=20)
     
       # Define and verify headers - ensure all are unique
       expected_headers = [
@@ -462,7 +462,7 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
             return
 
 
-        if len(user_input) == 1:
+        if len(user_input.strip()) == 1:
             result = "Hello! I can help with survey questions. What would you like to know?"
             placeholder.markdown(f"**Chatbot:** {result}")
             return

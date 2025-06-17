@@ -319,9 +319,9 @@ def initialize_gsheet():
       sheet = gc.open("Chatbot Usage Log")
     
       try:
-          worksheet = sheet.worksheet("Logs")
+          worksheet = sheet.worksheet("Logs_without_explanation")
       except:
-          worksheet = sheet.add_worksheet(title="Logs", rows=1000, cols=20)
+          worksheet = sheet.add_worksheet(title="Logs_without_explanation", rows=5000, cols=20)
     
       # Define and verify headers - ensure all are unique
       expected_headers = [
