@@ -15,7 +15,7 @@ from typing import List, Dict, Optional, Tuple
 from nltk.util import ngrams
 from num2words import num2words
 import string
-
+from zoneinfo import ZoneInfo
 
 from fuzzywuzzy import fuzz  # For fuzzy string matchin
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
@@ -291,7 +291,8 @@ def save_session_data():
           "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
           "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
           "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
-          "record_timestamp": pd.Timestamp.now().isoformat(),
+          #"record_timestamp": pd.Timestamp.now().isoformat(),
+          "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
           "user_question": st.session_state.usage_data.get("user_question", ""),
           "question_answered": st.session_state.usage_data.get("question_answered", "")
          
