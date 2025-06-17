@@ -364,7 +364,7 @@ def save_session_data():
           "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
           "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
         #   "record_timestamp": pd.Timestamp.now().isoformat(),
-          "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat()
+          "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
           "user_question": st.session_state.usage_data.get("user_question", ""),
           "question_answered": st.session_state.usage_data.get("question_answered", "")
          
