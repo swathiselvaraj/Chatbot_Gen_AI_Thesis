@@ -12,6 +12,7 @@ from nltk.util import ngrams
 from num2words import num2words
 from zoneinfo import ZoneInfo
 from fuzzywuzzy import fuzz
+from gspread import CellNotFound
 
 # Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
@@ -304,7 +305,7 @@ def save_to_gsheet(data_dict: Dict) -> bool:
                     f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
                     [row_data]
                 )
-            except gspread.exceptions.CellNotFound:
+            except CellNotFound:
                 # If participant_id not found, append a new row
                 worksheet.append_row(row_data)
                 # After appending, get the new row number (least efficient, but only for new participants)
