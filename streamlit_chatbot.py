@@ -595,5 +595,5 @@ if query_params.get("debug", "false") == "true":
     st.write("Participant ID:", participant_id)
     st.write("Session State:", {
         k: v for k, v in st.session_state.items()
-        if k not in ['conversation', '_secrets', 'chat_history'] # Exclude large/sensitive objects from general debug view
+        if k not in ['conversation', '_secrets', 'chat_history'] # Exclude large/sensitive objects from general debug vie
     })
