@@ -266,7 +266,7 @@ def save_session_data() -> bool:
         st.error(f"Session save failed: {str(e)}")
         return False
 
-def save_or_update_row(data_dict):
+def save_to_gsheet(data_dict):
     """
     Saves or updates a row in the Google Sheet using cached worksheet and efficient methods.
     It prioritizes updating an existing row if found, otherwise appends a new one.
