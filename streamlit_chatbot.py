@@ -147,34 +147,6 @@ if st.session_state.gsheet_worksheet is None or st.session_state.gsheet_headers 
 
 # --- Data Loading (for embeddings/followup questions) ---
 @st.cache_resource
-def load_embedding_data():
-    """Loads embedding data from a JSON file, cached for performance."""
-    default_structure = {
-        "general_followups": [],
-        "questions": [],
-        "dashboard_followups": []
-    }
-    try:
-        with open("data/followup_embeddings_list.json", "r") as f:
-            loaded_data = json.load(f)
-            # Ensure all expected keys are present, even if empty
-            for key in default_structure:
-                if key not in loaded_data:
-                    loaded_data[key] = []
-            return loaded_data
-    except FileNotFoundError:
-        st.error("Embeddings file not found. Using empty dataset.")
-        return default_structure
-    except json.JSONDecodeError:
-        st.error("Invalid JSON format in embeddings file. Using empty dataset.")
-        return default_structure
-    except Exception as e:
-        st.error(f"Failed to load embeddings: {str(e)}")
-        return default_structure
-
-# Load the embedding data once at startup
-embedding_data = load_embedding_data()
-
 # --- Utility Functions ---
 def normalize_numbers(text: str) -> str:
     """Converts numerical digits in text to their word form."""
