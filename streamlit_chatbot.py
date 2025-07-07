@@ -12,7 +12,7 @@ from nltk.util import ngrams
 from num2words import num2words
 from zoneinfo import ZoneInfo
 from fuzzywuzzy import fuzz
-from gspread.exceptions import CellNotFound
+
 
 
 # Initialize OpenAI client
@@ -266,7 +266,7 @@ def save_session_data() -> bool:
         st.error(f"Session save failed: {str(e)}")
         return False
 
-def save_to_gsheet(data_dict: Dict) -> bool:
+def save_or_update_row(data_dict):
     """
     Saves or updates a row in the Google Sheet using cached worksheet and efficient methods.
     It prioritizes updating an existing row if found, otherwise appends a new one.
@@ -282,34 +282,33 @@ def save_to_gsheet(data_dict: Dict) -> bool:
         # Prepare the row data based on the cached headers
         row_data = [data_dict.get(h, "") for h in headers]
 
-        # Check if we already know the row number for the current question/participant
+        # Check if we already know the row number for the current participant
         row_index = st.session_state.get('gsheet_row_index')
 
         if row_index:
-            # If we have an index, just update the row directly (most efficient)
+            # Update the row directly if index is known
             worksheet.update(
                 f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
                 [row_data]
             )
         else:
-            # If no index, try to find the participant's row, or append new
             try:
-                # Find the participant_id's cell to get the row number
+                # Try to find the participant_id in the sheet
                 cell = worksheet.find(data_dict["participant_id"])
-                row_index = cell.row  # Get the row number
+                row_index = cell.row
 
-                # Store the row number in session state for future updates to this question
+                # Cache the row index for future use
                 st.session_state.gsheet_row_index = row_index
 
-                # Update the found row directly
+                # Update existing row
                 worksheet.update(
                     f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
                     [row_data]
                 )
-            except CellNotFound:
-                # If participant_id not found, append a new row
+            except Exception:
+                # If participant not found, append new row
                 worksheet.append_row(row_data)
-                # After appending, get the new row number (least efficient, but only for new participants)
+                # Cache the new row index
                 st.session_state.gsheet_row_index = len(worksheet.get_all_values())
 
         return True
@@ -317,6 +316,7 @@ def save_to_gsheet(data_dict: Dict) -> bool:
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
+
 
 # --- Question Change Detection ---
 # This block resets relevant session states when the question ID changes,
