@@ -12,7 +12,8 @@ from nltk.util import ngrams
 from num2words import num2words
 from zoneinfo import ZoneInfo
 from fuzzywuzzy import fuzz
-from gspread import CellNotFound
+from gspread.exceptions import CellNotFound
+
 
 # Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
