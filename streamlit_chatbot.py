@@ -93,6 +93,23 @@ if 'get_recommendation_used' not in st.session_state:
 if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
 
+
+def collect_usage_data():
+    """Collects all usage data into a dictionary for later saving"""
+    return {
+        "participant_id": participant_id,
+        "question_id": question_id,
+        "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
+                                st.session_state.usage_data['followup_used']) else "no",
+        "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
+        "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
+        "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+        "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+        "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
+        "user_question": st.session_state.usage_data.get("user_question", ""),
+        "Youtubeed": st.session_state.usage_data.get("Youtubeed", "")
+    }
+
 # --- Google Sheets Initialization (Cached) ---
 @st.cache_resource
 def get_gsheet_worksheet_and_headers() -> Tuple[Optional[gspread.Worksheet], Optional[List[str]]]:
@@ -238,33 +255,33 @@ def end_interaction_and_accumulate_time():
         st.session_state.interaction_start_time = None
 
 # --- Google Sheets Saving Functions ---
-def save_session_data() -> bool:
-    """
-    Prepares session data and calls the optimized save_to_gsheet function.
-    Returns True if data is saved successfully, False otherwise.
-    """
-    try:
-        data = {
-            "participant_id": participant_id,
-            "question_id": question_id,
-            "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
-                                    st.session_state.usage_data['followup_used']) else "no",
-            "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
-            "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
-            "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
-            "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
-            "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
-            "user_question": st.session_state.usage_data.get("user_question", ""),
-            "Youtubeed": st.session_state.usage_data.get("Youtubeed", "")
-        }
+# def save_session_data() -> bool:
+#     """
+#     Prepares session data and calls the optimized save_to_gsheet function.
+#     Returns True if data is saved successfully, False otherwise.
+#     """
+#     try:
+#         data = {
+#             "participant_id": participant_id,
+#             "question_id": question_id,
+#             "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
+#                                     st.session_state.usage_data['followup_used']) else "no",
+#             "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
+#             "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
+#             "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+#             "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+#             "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
+#             "user_question": st.session_state.usage_data.get("user_question", ""),
+#             "Youtubeed": st.session_state.usage_data.get("Youtubeed", "")
+#         }
 
-        if save_to_gsheet(data):
-            st.session_state.already_saved = True
-            return True
-        return False
-    except Exception as e:
-        st.error(f"Session save failed: {str(e)}")
-        return False
+#         if save_to_gsheet(data):
+#             st.session_state.already_saved = True
+#             return True
+#         return False
+#     except Exception as e:
+#         st.error(f"Session save failed: {str(e)}")
+#         return False
 
 def save_to_gsheet(data_dict):
     """
@@ -331,10 +348,7 @@ if question_id != st.session_state.get('last_question_id'):
 
 # --- AI and Chatbot Logic ---
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
-    """
-    Validates user's follow-up questions and initiates GPT recommendation.
-    Checks for referenced options and handles invalid inputs.
-    """
+    """Validates user's follow-up questions and initiates GPT recommendation."""
     try:
         user_input = user_input.strip()
 
@@ -424,6 +438,22 @@ Limit every response to 50 words or fewer.
 Respond in this format:
 Chatbot answer: "<your answer here>"
 """
+        st.session_state.followup_questions.append(follow_up_question)
+
+        # Determine if the response was a valid answer or a rejection
+        if "Please ask a question related to the survey" in result:
+            answered = "No"
+        else:
+            answered = "Yes"
+        index = len(st.session_state.followup_questions)
+        st.session_state.Youtubes.append(f"{index}. {answered}")
+
+        # Store formatted questions and answers in usage_data
+        st.session_state.usage_data.update({
+            'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
+            'Youtubeed': "\n".join(st.session_state.Youtubes),
+        })
+
         else:  # Initial recommendation logic
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
             prompt = f"""Survey Question: {question}
@@ -501,7 +531,7 @@ Chatbot answer: "<your answer here>"
                 'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
                 'Youtubeed': "\n".join(st.session_state.Youtubes),
             })
-            save_session_data() # Save updated usage data after a follow-up
+             # Save updated usage data after a follow-up
 
         return result
 
@@ -523,6 +553,7 @@ def display_conversation():
 # --- Streamlit UI Elements ---
 
 # Button for getting initial recommendation
+# Button for getting initial recommendation
 if st.button("Get Recommendation"):
     update_interaction_time()
     recommendation = get_gpt_recommendation(question_text, options=options, is_followup=False)
@@ -536,7 +567,7 @@ if st.button("Get Recommendation"):
         'get_recommendation': True,
         'total_time': st.session_state.get('total_interaction_time', 0)
     })
-    save_session_data() # Save data to Google Sheet
+    # Don't save here - just update the session state
 
 # Text input for follow-up questions
 user_input = st.text_input("Ask a follow-up question:")
@@ -559,8 +590,13 @@ if st.button("Send") and user_input.strip():
         'total_questions_asked': st.session_state.usage_data.get('total_questions_asked', 0) + 1,
         'total_time': st.session_state.total_interaction_time
     })
-    save_session_data() # Save data to Google Sheet
+    # Don't save here - just update the session state
 
+# At the very end of your script, after all interactions are complete:
+if not st.session_state.already_saved and st.session_state.usage_data.get('chatbot_used', False):
+    data_to_save = collect_usage_data()
+    if save_to_gsheet(data_to_save):
+        st.session_state.already_saved = True
 # Debug information (optional, controlled by 'debug' query param)
 if query_params.get("debug", "false") == "true":
     st.write("### Debug Information")
