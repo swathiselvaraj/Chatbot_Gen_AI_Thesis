@@ -13,6 +13,8 @@ from num2words import num2words
 from zoneinfo import ZoneInfo
 from fuzzywuzzy import fuzz
 
+
+
 # Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 
@@ -77,9 +79,7 @@ if 'usage_data' not in st.session_state:
         'get_recommendation': False,
         'followup_used': False,
         'start_time': None,
-        'total_time': 0,  # Accumulates total interaction time
-        'user_question': "",
-        'Youtubeed': ""
+        'total_time': 0  # Accumulates total interaction time
     }
 
 if 'interaction_active' not in st.session_state:
@@ -93,31 +93,9 @@ if 'get_recommendation_used' not in st.session_state:
 if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
 
-# --- Question Change Detection ---
-if question_id != st.session_state.get('last_question_id'):
-    # Reset all question-specific states
-    st.session_state.followup_questions = []
-    st.session_state.Youtubes = []
-    st.session_state.conversation = []
-    st.session_state.gsheet_row_index = None
-    st.session_state.last_question_id = question_id
-    st.session_state.already_saved = False
-    st.session_state.usage_data = {
-        'participant_id': participant_id,
-        'question_id': question_id,
-        'chatbot_used': False,
-        'total_questions_asked': 0,
-        'get_recommendation': False,
-        'followup_used': False,
-        'start_time': None,
-        'total_time': 0,
-        'user_question': "",
-        'Youtubeed': ""
-    }
-    
-def collect_usage_data():
+def collect_usage_data(batch_mode=False):
     """Collects all usage data into a dictionary for later saving"""
-    return {
+    data = {
         "participant_id": participant_id,
         "question_id": question_id,
         "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
@@ -130,26 +108,41 @@ def collect_usage_data():
         "user_question": st.session_state.usage_data.get("user_question", ""),
         "Youtubeed": st.session_state.usage_data.get("Youtubeed", "")
     }
-
+    
+    if batch_mode:
+        return [data]  # Return as list for batch processing
+    return data
 # --- Google Sheets Initialization (Cached) ---
+@st.cache_resource
 @st.cache_resource
 def get_gsheet_worksheet_and_headers() -> Tuple[Optional[gspread.Worksheet], Optional[List[str]]]:
     """
     Connects to Google Sheets, gets/creates the worksheet, and fetches headers.
-    This function is cached to run only once per app deployment/session.
+    Uses batch operations for efficiency.
     """
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
         sheet = gc.open("Chatbot Usage Log")
 
         try:
-            worksheet = sheet.worksheet("Logs_with_explanation") # Consistent worksheet name
+            worksheet = sheet.worksheet("Logs_with_explanation")
         except gspread.exceptions.WorksheetNotFound:
-            # If worksheet doesn't exist, create it
-            worksheet = sheet.add_worksheet(title="Logs_with_explanation", rows=5000, cols=20) # Consistent worksheet name
-            st.warning("Created new worksheet: 'Logs_with_explanation'.")
+            # Create worksheet with batch operation
+            requests = [{
+                'addSheet': {
+                    'properties': {
+                        'title': "Logs_with_explanation",
+                        'gridProperties': {
+                            'rowCount': 5000,
+                            'columnCount': 20
+                        }
+                    }
+                }
+            }]
+            sheet.batch_update({'requests': requests})
+            worksheet = sheet.worksheet("Logs_with_explanation")
 
-        # Define expected headers for the sheet
+        # Define expected headers
         expected_headers = [
             "participant_id", "question_id", "chatbot_used",
             "total_questions_asked", "total_time_seconds",
@@ -157,17 +150,46 @@ def get_gsheet_worksheet_and_headers() -> Tuple[Optional[gspread.Worksheet], Opt
             "user_question", "Youtubeed"
         ]
 
-        # Get current headers from the sheet's first row
-        current_headers = worksheet.row_values(1)
+        # Get current headers with batch operation
+        header_range = worksheet.range('A1:J1')
+        current_headers = [cell.value for cell in header_range]
 
         # Clear and append headers only if they are missing or don't match
         if not current_headers or set(current_headers) != set(expected_headers):
             st.info("Updating Google Sheet headers...")
-            worksheet.clear()  # Clears entire sheet if headers need correction
-            worksheet.append_row(expected_headers)
-            headers = expected_headers  # Use the expected headers after setting them
+            
+            # Clear sheet with batch operation
+            requests = [{
+                'updateCells': {
+                    'range': {
+                        'sheetId': worksheet.id,
+                        'startRowIndex': 0,
+                        'endRowIndex': worksheet.row_count,
+                        'startColumnIndex': 0,
+                        'endColumnIndex': len(expected_headers)
+                    },
+                    'fields': 'userEnteredValue'
+                }
+            }, {
+                'updateCells': {
+                    'range': {
+                        'sheetId': worksheet.id,
+                        'startRowIndex': 0,
+                        'endRowIndex': 1,
+                        'startColumnIndex': 0,
+                        'endColumnIndex': len(expected_headers)
+                    },
+                    'rows': [{
+                        'values': [{'userEnteredValue': {'stringValue': h}} for h in expected_headers]
+                    }],
+                    'fields': 'userEnteredValue'
+                }
+            }]
+            
+            worksheet.spreadsheet.batch_update({'requests': requests})
+            headers = expected_headers
         else:
-            headers = current_headers  # Use the existing headers if they match
+            headers = current_headers
 
         return worksheet, headers
 
@@ -175,7 +197,79 @@ def get_gsheet_worksheet_and_headers() -> Tuple[Optional[gspread.Worksheet], Opt
         st.error(f"Google Sheets connection failed: {str(e)}")
         return None, None
 
+
+
+def batch_save_to_gsheet(data_dicts: List[dict]) -> bool:
+    """
+    Saves multiple records to Google Sheets in a single batch operation.
+    """
+    try:
+        worksheet = st.session_state.gsheet_worksheet
+        headers = st.session_state.gsheet_headers
+
+        if not worksheet or not headers:
+            st.error("Google Sheet is not initialized. Cannot save data.")
+            return False
+
+        # Prepare batch request
+        requests = []
+        
+        for data_dict in data_dicts:
+            row_data = [data_dict.get(h, "") for h in headers]
+            
+            # For each record, check if we have a row index
+            row_index = None
+            if 'participant_id' in data_dict and 'question_id' in data_dict:
+                # Try to find existing row
+                try:
+                    participant_cell = worksheet.find(data_dict["participant_id"])
+                    question_cell = worksheet.find(data_dict["question_id"])
+                    if participant_cell.row == question_cell.row:
+                        row_index = participant_cell.row
+                except Exception:
+                    pass
+
+            if row_index:
+                # Update existing row
+                for i, value in enumerate(row_data):
+                    requests.append({
+                        'updateCells': {
+                            'range': {
+                                'sheetId': worksheet.id,
+                                'startRowIndex': row_index - 1,
+                                'endRowIndex': row_index,
+                                'startColumnIndex': i,
+                                'endColumnIndex': i + 1
+                            },
+                            'rows': [{
+                                'values': [{'userEnteredValue': {'stringValue': str(value)}}]
+                            }],
+                            'fields': 'userEnteredValue'
+                        }
+                    })
+            else:
+                # Append new row
+                requests.append({
+                    'appendCells': {
+                        'sheetId': worksheet.id,
+                        'rows': [{
+                            'values': [{'userEnteredValue': {'stringValue': str(value)}} for value in row_data]
+                        }],
+                        'fields': 'userEnteredValue'
+                    }
+                })
+
+        # Execute the batch request
+        if requests:
+            worksheet.spreadsheet.batch_update({'requests': requests})
+            
+        return True
+
+    except Exception as e:
+        st.error(f"Failed to batch save to Google Sheets: {str(e)}")
+        return False
 # Initialize Google Sheet and cache worksheet/headers on first load of the app
+# This block runs once at the start of a session or if the cached resources are not available.
 if st.session_state.gsheet_worksheet is None or st.session_state.gsheet_headers is None:
     st.session_state.gsheet_worksheet, st.session_state.gsheet_headers = get_gsheet_worksheet_and_headers()
     if st.session_state.gsheet_worksheet and st.session_state.gsheet_headers:
@@ -184,6 +278,8 @@ if st.session_state.gsheet_worksheet is None or st.session_state.gsheet_headers 
         st.error("Failed to initialize Google Sheet. Data saving will not work.")
         st.session_state.sheet_initialized = False
 
+# --- Data Loading (for embeddings/followup questions) ---
+@st.cache_resource
 # --- Utility Functions ---
 def normalize_numbers(text: str) -> str:
     """Converts numerical digits in text to their word form."""
@@ -272,10 +368,38 @@ def end_interaction_and_accumulate_time():
         st.session_state.interaction_active = False
         st.session_state.interaction_start_time = None
 
+# --- Google Sheets Saving Functions ---
+# def save_session_data() -> bool:
+#     """
+#     Prepares session data and calls the optimized save_to_gsheet function.
+#     Returns True if data is saved successfully, False otherwise.
+#     """
+#     try:
+#         data = {
+#             "participant_id": participant_id,
+#             "question_id": question_id,
+#             "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
+#                                     st.session_state.usage_data['followup_used']) else "no",
+#             "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
+#             "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
+#             "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+#             "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+#             "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
+#             "user_question": st.session_state.usage_data.get("user_question", ""),
+#             "Youtubeed": st.session_state.usage_data.get("Youtubeed", "")
+#         }
+
+#         if save_to_gsheet(data):
+#             st.session_state.already_saved = True
+#             return True
+#         return False
+#     except Exception as e:
+#         st.error(f"Session save failed: {str(e)}")
+#         return False
+
 def save_to_gsheet(data_dict):
     """
-    Saves or updates a row in the Google Sheet using cached worksheet and efficient methods.
-    It prioritizes updating an existing row if found, otherwise appends a new one.
+    Saves or updates a row in the Google Sheet using batch operations.
     """
     try:
         worksheet = st.session_state.gsheet_worksheet
@@ -291,37 +415,94 @@ def save_to_gsheet(data_dict):
         # Check if we already know the row number for the current participant
         row_index = st.session_state.get('gsheet_row_index')
 
+        # Create a batch request list
+        requests = []
+
         if row_index:
             # Update the row directly if index is known
-            worksheet.update(
-                f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
-                [row_data]
-            )
+            for i, value in enumerate(row_data):
+                col_letter = chr(65 + i)  # A, B, C, etc.
+                requests.append({
+                    'updateCells': {
+                        'range': {
+                            'sheetId': worksheet.id,
+                            'startRowIndex': row_index - 1,
+                            'endRowIndex': row_index,
+                            'startColumnIndex': i,
+                            'endColumnIndex': i + 1
+                        },
+                        'rows': [{
+                            'values': [{'userEnteredValue': {'stringValue': str(value)}}]
+                        }],
+                        'fields': 'userEnteredValue'
+                    }
+                })
         else:
             try:
                 # Try to find the participant_id in the sheet
                 cell = worksheet.find(data_dict["participant_id"])
                 row_index = cell.row
-
-                # Cache the row index for future use
                 st.session_state.gsheet_row_index = row_index
 
-                # Update existing row
-                worksheet.update(
-                    f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
-                    [row_data]
-                )
+                # Update existing row with batch
+                for i, value in enumerate(row_data):
+                    col_letter = chr(65 + i)  # A, B, C, etc.
+                    requests.append({
+                        'updateCells': {
+                            'range': {
+                                'sheetId': worksheet.id,
+                                'startRowIndex': row_index - 1,
+                                'endRowIndex': row_index,
+                                'startColumnIndex': i,
+                                'endColumnIndex': i + 1
+                            },
+                            'rows': [{
+                                'values': [{'userEnteredValue': {'stringValue': str(value)}}]
+                            }],
+                            'fields': 'userEnteredValue'
+                        }
+                    })
             except Exception:
-                # If participant not found, append new row
-                worksheet.append_row(row_data)
-                # Cache the new row index
-                st.session_state.gsheet_row_index = len(worksheet.get_all_values())
+                # If participant not found, append new row with batch
+                requests.append({
+                    'appendCells': {
+                        'sheetId': worksheet.id,
+                        'rows': [{
+                            'values': [{'userEnteredValue': {'stringValue': str(value)}} for value in row_data]
+                        }],
+                        'fields': 'userEnteredValue'
+                    }
+                })
+                # We won't know the row index until after the batch executes
+
+        # Execute the batch request
+        if requests:
+            worksheet.spreadsheet.batch_update({'requests': requests})
+            
+            # If we appended, find the new row index
+            if not row_index and 'appendCells' in requests[0]:
+                try:
+                    cell = worksheet.find(data_dict["participant_id"])
+                    st.session_state.gsheet_row_index = cell.row
+                except Exception:
+                    pass
 
         return True
 
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
+
+# --- Question Change Detection ---
+# This block resets relevant session states when the question ID changes,
+# ensuring a fresh start for a new question's data logging.
+if question_id != st.session_state.get('last_question_id'):
+    st.session_state.followup_questions = []
+    st.session_state.Youtubes = []
+    st.session_state.conversation = []
+    st.session_state.gsheet_row_index = None  # CRITICAL: Reset the row index for a new question
+    st.session_state.last_question_id = question_id
+    st.session_state.already_saved = False  # Reset saved flag for new question
 
 # --- AI and Chatbot Logic ---
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
@@ -415,6 +596,22 @@ Limit every response to 50 words or fewer.
 Respond in this format:
 Chatbot answer: "<your answer here>"
 """
+        st.session_state.followup_questions.append(follow_up_question)
+
+        # Determine if the response was a valid answer or a rejection
+        if "Please ask a question related to the survey" in result:
+            answered = "No"
+        else:
+            answered = "Yes"
+        index = len(st.session_state.followup_questions)
+        st.session_state.Youtubes.append(f"{index}. {answered}")
+
+        # Store formatted questions and answers in usage_data
+        st.session_state.usage_data.update({
+            'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
+            'Youtubeed': "\n".join(st.session_state.Youtubes),
+        })
+
         else:  # Initial recommendation logic
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
             prompt = f"""Survey Question: {question}
@@ -492,6 +689,7 @@ Chatbot answer: "<your answer here>"
                 'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
                 'Youtubeed': "\n".join(st.session_state.Youtubes),
             })
+             # Save updated usage data after a follow-up
 
         return result
 
@@ -513,6 +711,7 @@ def display_conversation():
 # --- Streamlit UI Elements ---
 
 # Button for getting initial recommendation
+# Button for getting initial recommendation
 if st.button("Get Recommendation"):
     update_interaction_time()
     recommendation = get_gpt_recommendation(question_text, options=options, is_followup=False)
@@ -526,6 +725,7 @@ if st.button("Get Recommendation"):
         'get_recommendation': True,
         'total_time': st.session_state.get('total_interaction_time', 0)
     })
+    # Don't save here - just update the session state
 
 # Text input for follow-up questions
 user_input = st.text_input("Ask a follow-up question:")
@@ -548,24 +748,13 @@ if st.button("Send") and user_input.strip():
         'total_questions_asked': st.session_state.usage_data.get('total_questions_asked', 0) + 1,
         'total_time': st.session_state.total_interaction_time
     })
+    # Don't save here - just update the session state
 
-# At the very end of your script, after all interactions are complete:
-if (not st.session_state.already_saved and 
-    st.session_state.usage_data.get('chatbot_used', False) and 
-    st.session_state.sheet_initialized):
-    
-    # Collect all usage data
-    data_to_save = collect_usage_data()
-    
-    # Attempt to save
-    if save_to_gsheet(data_to_save):
+if not st.session_state.already_saved and st.session_state.usage_data.get('chatbot_used', False):
+    data_to_save = collect_usage_data(batch_mode=True)
+    if batch_save_to_gsheet(data_to_save):
         st.session_state.already_saved = True
-        if query_params.get("debug", "false") == "true":
-            st.write("Debug: Successfully saved data to Google Sheets")
-    else:
-        st.error("Failed to save data to Google Sheets")
-
-# Debug information (optional, controlled by 'debug' query param)
+        
 if query_params.get("debug", "false") == "true":
     st.write("### Debug Information")
     st.write("Query Parameters:", query_params)
