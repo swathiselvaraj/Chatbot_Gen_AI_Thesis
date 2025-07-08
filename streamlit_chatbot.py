@@ -27,53 +27,6 @@ from pathlib import Path
 DB_PATH = Path("chatbot_data.db")
 
 
-def init_db():
-   """Initialize the database with required tables"""
-   with sqlite3.connect(DB_PATH) as conn:
-       c = conn.cursor()
-      
-       # Main usage table (matches your Google Sheets structure)
-       c.execute("""
-       CREATE TABLE IF NOT EXISTS usage_logs (
-           id INTEGER PRIMARY KEY AUTOINCREMENT,
-           participant_id TEXT NOT NULL,
-           question_id TEXT NOT NULL,
-           chatbot_used TEXT,
-           total_questions_asked INTEGER,
-           total_time_seconds REAL,
-           got_recommendation TEXT,
-           asked_followup TEXT,
-           record_timestamp TEXT,
-           user_question TEXT,
-           question_answered TEXT,
-           UNIQUE(participant_id, question_id)
-       )
-       """)
-      
-       # Conversation history table
-       c.execute("""
-       CREATE TABLE IF NOT EXISTS conversation_history (
-           id INTEGER PRIMARY KEY AUTOINCREMENT,
-           participant_id TEXT NOT NULL,
-           question_id TEXT NOT NULL,
-           message_type TEXT CHECK(message_type IN ('user', 'assistant')),
-           content TEXT,
-           timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-           FOREIGN KEY (participant_id, question_id)
-               REFERENCES usage_logs(participant_id, question_id)
-       )
-       """)
-      
-       conn.commit()
-
-
-# Initialize the database when the app starts
-if not DB_PATH.exists():
-   init_db()
-
-
-
-
 from fuzzywuzzy import fuzz  # For fuzzy string matchin
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 query_params = st.query_params
@@ -188,65 +141,59 @@ def initialize_db():
         st.error(f"Database initialization failed: {str(e)}")
         return False
 
-def save_to_db(data_dict: Dict) -> bool:
-    """Save data to SQLite database"""
+def save_to_db():
+    """Saves all session data to your existing SQLite database"""
     try:
-        conn = sqlite3.connect('chatbot_data.db')
-        c = conn.cursor()
-        
-        # Upsert pattern using SQLite's ON CONFLICT
-        c.execute('''INSERT INTO usage_data
-                     (participant_id, question_id, chatbot_used,
-                      total_questions_asked, total_time_seconds,
-                      got_recommendation, asked_followup, record_timestamp,
-                      user_question, question_answered)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                     ON CONFLICT(participant_id, question_id) 
-                     DO UPDATE SET
-                         chatbot_used = excluded.chatbot_used,
-                         total_questions_asked = excluded.total_questions_asked,
-                         total_time_seconds = excluded.total_time_seconds,
-                         got_recommendation = excluded.got_recommendation,
-                         asked_followup = excluded.asked_followup,
-                         record_timestamp = excluded.record_timestamp,
-                         user_question = excluded.user_question,
-                         question_answered = excluded.question_answered''',
-                  (data_dict['participant_id'],
-                   data_dict['question_id'],
-                   data_dict['chatbot_used'],
-                   data_dict['total_questions_asked'],
-                   data_dict['total_time_seconds'],
-                   data_dict['got_recommendation'],
-                   data_dict['asked_followup'],
-                   data_dict['record_timestamp'],
-                   data_dict['user_question'],
-                   data_dict['question_answered']))
-        
-        # Save conversation logs
-        if 'conversation' in st.session_state:
-            for role, message in st.session_state.conversation:
-                c.execute('''INSERT INTO conversation_logs
-                             (participant_id, question_id, message_type,
-                              message_content, timestamp)
-                             VALUES (?, ?, ?, ?, ?)''',
-                          (data_dict['participant_id'],
-                           data_dict['question_id'],
-                           role,
-                           message,
-                           datetime.now().isoformat()))
-        
-        conn.commit()
+        # Prepare data dictionary
+        data = {
+            'participant_id': participant_id,
+            'question_id': question_id,
+            'chatbot_used': "yes" if st.session_state.usage_data['chatbot_used'] else "no",
+            'total_questions_asked': st.session_state.usage_data['total_questions_asked'],
+            'total_time_seconds': round(st.session_state.get('total_interaction_time', 0), 2),
+            'got_recommendation': "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+            'asked_followup': "yes" if st.session_state.usage_data['followup_used'] else "no",
+            'record_timestamp': datetime.now().isoformat(),
+            'user_question': "\n".join(st.session_state.followup_questions),
+            'question_answered': "\n".join(st.session_state.question_answers)
+        }
+
+        with sqlite3.connect(DB_PATH) as conn:
+            c = conn.cursor()
+            
+            # Upsert main data
+            c.execute('''
+            INSERT INTO usage_data VALUES (
+                NULL, :participant_id, :question_id, :chatbot_used, 
+                :total_questions_asked, :total_time_seconds, 
+                :got_recommendation, :asked_followup, 
+                :record_timestamp, :user_question, :question_answered
+            )
+            ON CONFLICT(participant_id, question_id) DO UPDATE SET
+                chatbot_used = excluded.chatbot_used,
+                total_questions_asked = excluded.total_questions_asked,
+                total_time_seconds = excluded.total_time_seconds,
+                got_recommendation = excluded.got_recommendation,
+                asked_followup = excluded.asked_followup,
+                record_timestamp = excluded.record_timestamp,
+                user_question = excluded.user_question,
+                question_answered = excluded.question_answered
+            ''', data)
+            
+            # Save conversation history
+            if 'conversation' in st.session_state:
+                for role, message in st.session_state.conversation:
+                    c.execute('''
+                    INSERT INTO conversation_logs VALUES (
+                        NULL, ?, ?, ?, ?, datetime('now')
+                    )''', (participant_id, question_id, role, message))
+            
+            conn.commit()
         return True
         
     except sqlite3.Error as e:
-        st.error(f"SQLite error: {str(e)}")
+        st.error(f"Database error: {e}")
         return False
-    except Exception as e:
-        st.error(f"Database save failed: {str(e)}")
-        return False
-    finally:
-        if conn:
-            conn.close()
 # --- Data Loading (for embeddings/followup questions) ---
 @st.cache_resource
 # --- Utility Functions ---
