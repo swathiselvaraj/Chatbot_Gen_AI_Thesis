@@ -134,7 +134,7 @@ def initialize_database():
             )
         """)
         conn.commit()
-e
+
 
 def save_session_data():
     try:
