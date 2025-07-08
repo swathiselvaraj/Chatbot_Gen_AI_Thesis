@@ -24,7 +24,7 @@ from pathlib import Path
 
 
 # Database setup
-DB_PATH = Path("chatbot_data.db")
+DB_PATH = "data_chat.db""
 
 
 from fuzzywuzzy import fuzz  # For fuzzy string matchin
@@ -105,41 +105,36 @@ if 'get_recommendation_used' not in st.session_state:
 if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
 
-def initialize_db():
-    """Initialize SQLite database and create tables if they don't exist"""
-    try:
-        conn = sqlite3.connect('chatbot_data.db')
+def initialize_database():
+    with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS usage_logs (
+                participant_id TEXT,
+                question_id TEXT,
+                chatbot_used TEXT,
+                total_questions_asked INTEGER,
+                total_time_seconds REAL,
+                got_recommendation TEXT,
+                asked_followup TEXT,
+                record_timestamp TEXT,
+                user_question TEXT,
+                question_answered TEXT,
+                PRIMARY KEY (participant_id, question_id)
+            )
+        """)
         
-        # Create main usage table
-        c.execute('''CREATE TABLE IF NOT EXISTS usage_data
-                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      participant_id TEXT,
-                      question_id TEXT,
-                      chatbot_used TEXT,
-                      total_questions_asked INTEGER,
-                      total_time_seconds REAL,
-                      got_recommendation TEXT,
-                      asked_followup TEXT,
-                      record_timestamp TEXT,
-                      user_question TEXT,
-                      question_answered TEXT)''')
-        
-        # Create conversation log table
-        c.execute('''CREATE TABLE IF NOT EXISTS conversation_logs
-                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      participant_id TEXT,
-                      question_id TEXT,
-                      message_type TEXT,
-                      message_content TEXT,
-                      timestamp TEXT)''')
-        
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS conversation_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                participant_id TEXT,
+                question_id TEXT,
+                message_type TEXT,
+                content TEXT
+            )
+        """)
         conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        st.error(f"Database initialization failed: {str(e)}")
-        return False
+e
 
 def save_session_data():
     try:
