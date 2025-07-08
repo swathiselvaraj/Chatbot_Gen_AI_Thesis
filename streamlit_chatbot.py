@@ -612,7 +612,7 @@ if st.button("Get Recommendation"):
         'get_recommendation': True,
         'total_time': st.session_state.get('total_interaction_time', 0)
     })
-    # Don't save here - just update the session state
+
 
 # Text input for follow-up questions
 user_input = st.text_input("Ask a follow-up question:")
