@@ -194,51 +194,33 @@ def save_to_db(data_dict: Dict) -> bool:
         conn = sqlite3.connect('chatbot_data.db')
         c = conn.cursor()
         
-        # Check if record already exists
-        c.execute('''SELECT id FROM usage_data 
-                     WHERE participant_id = ? AND question_id = ?''',
-                  (data_dict['participant_id'], data_dict['question_id']))
-        existing_record = c.fetchone()
-        
-        if existing_record:
-            # Update existing record
-            c.execute('''UPDATE usage_data SET
-                         chatbot_used = ?,
-                         total_questions_asked = ?,
-                         total_time_seconds = ?,
-                         got_recommendation = ?,
-                         asked_followup = ?,
-                         record_timestamp = ?,
-                         user_question = ?,
-                         question_answered = ?
-                         WHERE id = ?''',
-                      (data_dict['chatbot_used'],
-                       data_dict['total_questions_asked'],
-                       data_dict['total_time_seconds'],
-                       data_dict['got_recommendation'],
-                       data_dict['asked_followup'],
-                       data_dict['record_timestamp'],
-                       data_dict['user_question'],
-                       data_dict['question_answered'],
-                       existing_record[0]))
-        else:
-            # Insert new record
-            c.execute('''INSERT INTO usage_data
-                         (participant_id, question_id, chatbot_used,
-                          total_questions_asked, total_time_seconds,
-                          got_recommendation, asked_followup, record_timestamp,
-                          user_question, question_answered)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                      (data_dict['participant_id'],
-                       data_dict['question_id'],
-                       data_dict['chatbot_used'],
-                       data_dict['total_questions_asked'],
-                       data_dict['total_time_seconds'],
-                       data_dict['got_recommendation'],
-                       data_dict['asked_followup'],
-                       data_dict['record_timestamp'],
-                       data_dict['user_question'],
-                       data_dict['question_answered']))
+        # Upsert pattern using SQLite's ON CONFLICT
+        c.execute('''INSERT INTO usage_data
+                     (participant_id, question_id, chatbot_used,
+                      total_questions_asked, total_time_seconds,
+                      got_recommendation, asked_followup, record_timestamp,
+                      user_question, question_answered)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     ON CONFLICT(participant_id, question_id) 
+                     DO UPDATE SET
+                         chatbot_used = excluded.chatbot_used,
+                         total_questions_asked = excluded.total_questions_asked,
+                         total_time_seconds = excluded.total_time_seconds,
+                         got_recommendation = excluded.got_recommendation,
+                         asked_followup = excluded.asked_followup,
+                         record_timestamp = excluded.record_timestamp,
+                         user_question = excluded.user_question,
+                         question_answered = excluded.question_answered''',
+                  (data_dict['participant_id'],
+                   data_dict['question_id'],
+                   data_dict['chatbot_used'],
+                   data_dict['total_questions_asked'],
+                   data_dict['total_time_seconds'],
+                   data_dict['got_recommendation'],
+                   data_dict['asked_followup'],
+                   data_dict['record_timestamp'],
+                   data_dict['user_question'],
+                   data_dict['question_answered']))
         
         # Save conversation logs
         if 'conversation' in st.session_state:
@@ -254,11 +236,17 @@ def save_to_db(data_dict: Dict) -> bool:
                            datetime.now().isoformat()))
         
         conn.commit()
-        conn.close()
         return True
-    except Exception as e:
-        st.error(f"Failed to save to database: {str(e)}")
+        
+    except sqlite3.Error as e:
+        st.error(f"SQLite error: {str(e)}")
         return False
+    except Exception as e:
+        st.error(f"Database save failed: {str(e)}")
+        return False
+    finally:
+        if conn:
+            conn.close()
 # --- Data Loading (for embeddings/followup questions) ---
 @st.cache_resource
 # --- Utility Functions ---
