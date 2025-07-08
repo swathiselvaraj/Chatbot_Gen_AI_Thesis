@@ -141,55 +141,67 @@ def initialize_db():
         st.error(f"Database initialization failed: {str(e)}")
         return False
 
-def save_to_db():
-    """Saves all session data to your existing SQLite database"""
+def save_session_data():
     try:
-         data = {
-            'participant_id': participant_id,
-            'question_id': question_id,
-            'chatbot_used': "yes" if st.session_state.usage_data['chatbot_used'] else "no",
-            'total_questions_asked': st.session_state.usage_data['total_questions_asked'],
-            'total_time_seconds': round(st.session_state.get('total_interaction_time', 0), 2),
-            'got_recommendation': "yes" if st.session_state.usage_data['get_recommendation'] else "no",
-            'asked_followup': "yes" if st.session_state.usage_data['followup_used'] else "no",
-            'record_timestamp': datetime.now().isoformat(),
-            'user_question': "\n".join(st.session_state.followup_questions),
-            'question_answered': "\n".join(st.session_state.question_answers)
+        # Build data dictionary
+        data = {
+            "participant_id": participant_id,
+            "question_id": question_id,
+            "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
+                                      st.session_state.usage_data['followup_used']) else "no",
+            "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
+            "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
+            "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+            "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+            "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
+            "user_question": st.session_state.usage_data.get("user_question", ""),
+            "question_answered": st.session_state.usage_data.get("question_answered", "")
         }
-        
+
         with sqlite3.connect(DB_PATH) as conn:
-            conn.execute("PRAGMA foreign_keys = ON")
             c = conn.cursor()
-            
-            # Upsert pattern that works with your UNIQUE constraint
-            c.execute('''
-            INSERT OR REPLACE INTO usage_data (
-                participant_id, question_id, chatbot_used,
-                total_questions_asked, total_time_seconds,
-                got_recommendation, asked_followup,
-                record_timestamp, user_question, question_answered
-            ) VALUES (
-                :participant_id, :question_id, :chatbot_used,
-                :total_questions_asked, :total_time_seconds,
-                :got_recommendation, :asked_followup,
-                :record_timestamp, :user_question, :question_answered
-            )
-            ''', data)
-            
+
+            # Upsert into usage_logs
+            c.execute("""
+                INSERT INTO usage_logs (
+                    participant_id, question_id, chatbot_used,
+                    total_questions_asked, total_time_seconds,
+                    got_recommendation, asked_followup,
+                    record_timestamp, user_question, question_answered
+                ) VALUES (
+                    :participant_id, :question_id, :chatbot_used,
+                    :total_questions_asked, :total_time_seconds,
+                    :got_recommendation, :asked_followup,
+                    :record_timestamp, :user_question, :question_answered
+                )
+                ON CONFLICT(participant_id, question_id)
+                DO UPDATE SET
+                    chatbot_used = excluded.chatbot_used,
+                    total_questions_asked = excluded.total_questions_asked,
+                    total_time_seconds = excluded.total_time_seconds,
+                    got_recommendation = excluded.got_recommendation,
+                    asked_followup = excluded.asked_followup,
+                    record_timestamp = excluded.record_timestamp,
+                    user_question = excluded.user_question,
+                    question_answered = excluded.question_answered
+            """, data)
+
             # Save conversation history
             if 'conversation' in st.session_state:
                 for role, message in st.session_state.conversation:
-                    c.execute('''
-                    INSERT INTO conversation_logs VALUES (
-                        NULL, ?, ?, ?, ?, datetime('now')
-                    )''', (participant_id, question_id, role, message))
-            
+                    c.execute("""
+                        INSERT INTO conversation_history (
+                            participant_id, question_id, message_type, content
+                        ) VALUES (?, ?, ?, ?)
+                    """, (data['participant_id'], data['question_id'], role, message))
+
             conn.commit()
         return True
-        
-    except sqlite3.Error as e:
-        st.error(f"Database error: {e}")
+
+    except Exception as e:
+        st.error(f"Database save failed: {e}")
         return False
+
 
 
 
