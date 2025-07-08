@@ -102,23 +102,23 @@ participant_id = query_params.get("pid", str(uuid.uuid4()))
 
 
 if 'conversation' not in st.session_state:
-st.session_state.conversation = []
+    st.session_state.conversation = []
 if 'last_recommendation' not in st.session_state:
-st.session_state.last_recommendation = None
+    st.session_state.last_recommendation = None
 if 'last_question_id' not in st.session_state:
-st.session_state.last_question_id = None
+    st.session_state.last_question_id = None
 if 'first_load' not in st.session_state:
-st.session_state.first_load = True
+    st.session_state.first_load = True
 if 'sheet_initialized' not in st.session_state:
-st.session_state.sheet_initialized = False
+    st.session_state.sheet_initialized = False
 if 'already_saved' not in st.session_state:  # New flag to track saves
-st.session_state.already_saved = False
+    st.session_state.already_saved = False
 if 'original_recommendation' not in st.session_state:
- st.session_state.original_recommendation = None
+    st.session_state.original_recommendation = None
 if 'followup_questions' not in st.session_state:
- st.session_state.followup_questions = []
+    st.session_state.followup_questions = []
 if 'question_answers' not in st.session_state:
- st.session_state.question_answers = []
+    st.session_state.question_answers = []
 
 
 if "original_options" not in st.session_state:
@@ -129,38 +129,38 @@ if "original_options" not in st.session_state:
 
 
 if 'usage_data' not in st.session_state:
-st.session_state.usage_data = {
-    'participant_id': participant_id,
-    'question_id': question_id,
-    'chatbot_used': False,
-    'total_questions_asked': 0,
-    'get_recommendation': False,
-    'followup_used': False,
-    'start_time': None,
-    'total_time': 0  # This will accumulate all interaction time
-}
+    st.session_state.usage_data = {
+        'participant_id': participant_id,
+        'question_id': question_id,
+        'chatbot_used': False,
+        'total_questions_asked': 0,
+        'get_recommendation': False,
+        'followup_used': False,
+        'start_time': None,
+        'total_time': 0  # This will accumulate all interaction time
+    }
 
 
 if 'interaction_active' not in st.session_state:
-st.session_state.interaction_active = False
+    st.session_state.interaction_active = False
 if 'total_interaction_time' not in st.session_state:
-st.session_state.total_interaction_time = 0
+    st.session_state.total_interaction_time = 0
 if 'last_interaction_time' not in st.session_state:
-st.session_state.last_interaction_time = None
+    st.session_state.last_interaction_time = None
 if 'get_recommendation_used' not in st.session_state:
-st.session_state.get_recommendation_used = False
+    st.session_state.get_recommendation_used = False
 if 'followup_used' not in st.session_state:
-st.session_state.followup_used = False
+    st.session_state.followup_used = False
 
 
 def initialize_db():
    """Initialize SQLite database and create tables if they don't exist"""
-   try:
-       conn = sqlite3.connect('chatbot_data.db')
-       c = conn.cursor()
+    try:
+        conn = sqlite3.connect('chatbot_data.db')
+        c = conn.cursor()
       
        # Create main usage table
-       c.execute('''CREATE TABLE IF NOT EXISTS usage_data
+        c.execute('''CREATE TABLE IF NOT EXISTS usage_data
                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
                      participant_id TEXT,
                      question_id TEXT,
@@ -174,7 +174,7 @@ def initialize_db():
                      question_answered TEXT)''')
       
        # Create conversation log table
-       c.execute('''CREATE TABLE IF NOT EXISTS conversation_logs
+        c.execute('''CREATE TABLE IF NOT EXISTS conversation_logs
                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
                      participant_id TEXT,
                      question_id TEXT,
@@ -182,29 +182,29 @@ def initialize_db():
                      message_content TEXT,
                      timestamp TEXT)''')
       
-       conn.commit()
-       conn.close()
-       return True
-   except Exception as e:
-       st.error(f"Database initialization failed: {str(e)}")
-       return False
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"Database initialization failed: {str(e)}")
+        return False
 
 
 def save_to_db(data_dict: Dict) -> bool:
    """Save data to SQLite database"""
-   try:
-       conn = sqlite3.connect('chatbot_data.db')
-       c = conn.cursor()
+    try:
+        conn = sqlite3.connect('chatbot_data.db')
+        c = conn.cursor()
       
        # Check if record already exists
-       c.execute('''SELECT id FROM usage_data
+        c.execute('''SELECT id FROM usage_data
                     WHERE participant_id = ? AND question_id = ?''',
                  (data_dict['participant_id'], data_dict['question_id']))
-       existing_record = c.fetchone()
+        existing_record = c.fetchone()
       
-       if existing_record:
+        if existing_record:
            # Update existing record
-           c.execute('''UPDATE usage_data SET
+            c.execute('''UPDATE usage_data SET
                         chatbot_used = ?,
                         total_questions_asked = ?,
                         total_time_seconds = ?,
@@ -214,53 +214,53 @@ def save_to_db(data_dict: Dict) -> bool:
                         user_question = ?,
                         question_answered = ?
                         WHERE id = ?''',
-                     (data_dict['chatbot_used'],
-                      data_dict['total_questions_asked'],
-                      data_dict['total_time_seconds'],
-                      data_dict['got_recommendation'],
-                      data_dict['asked_followup'],
-                      data_dict['record_timestamp'],
-                      data_dict['user_question'],
-                      data_dict['question_answered'],
-                      existing_record[0]))
-       else:
+                        (data_dict['chatbot_used'],
+                        data_dict['total_questions_asked'],
+                        data_dict['total_time_seconds'],
+                        data_dict['got_recommendation'],
+                        data_dict['asked_followup'],
+                        data_dict['record_timestamp'],
+                        data_dict['user_question'],
+                        data_dict['question_answered'],
+                        existing_record[0]))
+        else:
            # Insert new record
-           c.execute('''INSERT INTO usage_data
+            c.execute('''INSERT INTO usage_data
                         (participant_id, question_id, chatbot_used,
                          total_questions_asked, total_time_seconds,
                          got_recommendation, asked_followup, record_timestamp,
                          user_question, question_answered)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                     (data_dict['participant_id'],
-                      data_dict['question_id'],
-                      data_dict['chatbot_used'],
-                      data_dict['total_questions_asked'],
-                      data_dict['total_time_seconds'],
-                      data_dict['got_recommendation'],
-                      data_dict['asked_followup'],
-                      data_dict['record_timestamp'],
-                      data_dict['user_question'],
-                      data_dict['question_answered']))
+                        (data_dict['participant_id'],
+                        data_dict['question_id'],
+                        data_dict['chatbot_used'],
+                        data_dict['total_questions_asked'],
+                        data_dict['total_time_seconds'],
+                        data_dict['got_recommendation'],
+                        data_dict['asked_followup'],
+                        data_dict['record_timestamp'],
+                        data_dict['user_question'],
+                            data_dict['question_answered']))
       
        # Save conversation logs
-       if 'conversation' in st.session_state:
-           for role, message in st.session_state.conversation:
-               c.execute('''INSERT INTO conversation_logs
+        if 'conversation' in st.session_state:
+            for role, message in st.session_state.conversation:
+                c.execute('''INSERT INTO conversation_logs
                             (participant_id, question_id, message_type,
                              message_content, timestamp)
                             VALUES (?, ?, ?, ?, ?)''',
-                         (data_dict['participant_id'],
-                          data_dict['question_id'],
-                          role,
-                          message,
-                          datetime.now().isoformat()))
+                            (data_dict['participant_id'],
+                                data_dict['question_id'],
+                            role,
+                            message,
+                            datetime.now().isoformat()))
       
-       conn.commit()
-       conn.close()
-       return True
-   except Exception as e:
-       st.error(f"Failed to save to database: {str(e)}")
-       return False
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"Failed to save to database: {str(e)}")
+        return False
 # --- Data Loading (for embeddings/followup questions) ---
 @st.cache_resource
 # --- Utility Functions ---
@@ -278,15 +278,15 @@ def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5
    user_tokens = user_input.split()
 
 
-   for n in range(max_len, min_len - 1, -1):
-       option_ngrams = list(ngrams(option_tokens, n))
-       user_ngrams = list(ngrams(user_tokens, n))
+    for n in range(max_len, min_len - 1, -1):
+        option_ngrams = list(ngrams(option_tokens, n))
+        user_ngrams = list(ngrams(user_tokens, n))
 
 
-       for opt_ng in option_ngrams:
-           if opt_ng in user_ngrams:
+        for opt_ng in option_ngrams:
+            if opt_ng in user_ngrams:
                return True
-   return False
+    return False
 
 
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
@@ -294,8 +294,8 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
    Identifies if the user's input references one of the available options
    using exact, n-gram, and fuzzy matching.
    """
-   if not user_input or not options:
-       return None
+    if not user_input or not options:
+        return None
 
 
    user_input_lower = user_input.lower()
