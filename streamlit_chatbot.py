@@ -266,26 +266,22 @@ def normalize_numbers(text: str) -> str:
    """Converts numerical digits in text to their word form."""
    return re.sub(r'\b\d+\b', lambda m: num2words(int(m.group())), text)
 
-
 def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5) -> bool:
-   """
-   Checks for continuous n-gram matches between option text and user input.
-   Used for more robust matching of user's referenced options.
-   """
-   option_tokens = option_text.split()
-   user_tokens = user_input.split()
-
+    """
+    Checks for continuous n-gram matches between option text and user input.
+    Used for more robust matching of user's referenced options.
+    """
+    option_tokens = option_text.split()
+    user_tokens = user_input.split()
 
     for n in range(max_len, min_len - 1, -1):
         option_ngrams = list(ngrams(option_tokens, n))
         user_ngrams = list(ngrams(user_tokens, n))
 
-
         for opt_ng in option_ngrams:
             if opt_ng in user_ngrams:
-               return True
+                return True
     return False
-
 
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
    """
