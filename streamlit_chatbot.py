@@ -144,8 +144,7 @@ def initialize_db():
 def save_to_db():
     """Saves all session data to your existing SQLite database"""
     try:
-        # Prepare data dictionary
-        data = {
+         data = {
             'participant_id': participant_id,
             'question_id': question_id,
             'chatbot_used': "yes" if st.session_state.usage_data['chatbot_used'] else "no",
@@ -157,27 +156,24 @@ def save_to_db():
             'user_question': "\n".join(st.session_state.followup_questions),
             'question_answered': "\n".join(st.session_state.question_answers)
         }
-
+        
         with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("PRAGMA foreign_keys = ON")
             c = conn.cursor()
             
-            # Upsert main data
+            # Upsert pattern that works with your UNIQUE constraint
             c.execute('''
-            INSERT INTO usage_data VALUES (
-                NULL, :participant_id, :question_id, :chatbot_used, 
-                :total_questions_asked, :total_time_seconds, 
-                :got_recommendation, :asked_followup, 
+            INSERT OR REPLACE INTO usage_data (
+                participant_id, question_id, chatbot_used,
+                total_questions_asked, total_time_seconds,
+                got_recommendation, asked_followup,
+                record_timestamp, user_question, question_answered
+            ) VALUES (
+                :participant_id, :question_id, :chatbot_used,
+                :total_questions_asked, :total_time_seconds,
+                :got_recommendation, :asked_followup,
                 :record_timestamp, :user_question, :question_answered
             )
-            ON CONFLICT(participant_id, question_id) DO UPDATE SET
-                chatbot_used = excluded.chatbot_used,
-                total_questions_asked = excluded.total_questions_asked,
-                total_time_seconds = excluded.total_time_seconds,
-                got_recommendation = excluded.got_recommendation,
-                asked_followup = excluded.asked_followup,
-                record_timestamp = excluded.record_timestamp,
-                user_question = excluded.user_question,
-                question_answered = excluded.question_answered
             ''', data)
             
             # Save conversation history
@@ -194,6 +190,9 @@ def save_to_db():
     except sqlite3.Error as e:
         st.error(f"Database error: {e}")
         return False
+
+
+
 # --- Data Loading (for embeddings/followup questions) ---
 @st.cache_resource
 # --- Utility Functions ---
