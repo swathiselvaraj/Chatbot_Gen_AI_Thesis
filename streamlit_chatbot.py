@@ -152,7 +152,6 @@ if 'get_recommendation_used' not in st.session_state:
 if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
 
-
 def initialize_db():
    """Initialize SQLite database and create tables if they don't exist"""
     try:
@@ -298,129 +297,125 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
         return None
 
 
-   user_input_lower = user_input.lower()
+    user_input_lower = user_input.lower()
 
 
    # 1. Check for exact presence (case-insensitive) of the option text
-   for opt in options:
-       opt_lower = opt.lower()
-       if opt_lower in user_input_lower:
-           return opt
+    for opt in options:
+        opt_lower = opt.lower()
+        if opt_lower in user_input_lower:
+            return opt
 
 
    # Normalize user input and options for partial/fuzzy matching
-   user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
-   user_input_norm = normalize_numbers(user_input_clean)
+    user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
+    user_input_norm = normalize_numbers(user_input_clean)
 
 
-   for opt in options:
-       opt_lower = opt.lower()
-       opt_norm = normalize_numbers(opt_lower)
+    for opt in options:
+        opt_lower = opt.lower()
+        opt_norm = normalize_numbers(opt_lower)
 
 
        # 2. Check for continuous n-gram matches
-       if has_continuous_match(opt_norm, user_input_norm):
-           return opt
+        if has_continuous_match(opt_norm, user_input_norm):
+            return opt
 
 
        # 3. Use fuzzy partial ratio match as fallback
-       if fuzz.partial_ratio(opt_norm, user_input_norm) > 90:
-           return opt
+        if fuzz.partial_ratio(opt_norm, user_input_norm) > 90:
+            return opt
 
 
    # Optional: Check explicit "option N" patterns (e.g., "option 1")
-   explicit_option_patterns = [
-       r'\b(?:option|opt|choice|selection)\s*(\d+)',
-   ]
-   user_input_no_punct = re.sub(r'[.,;!?]', '', user_input_lower)
-   for pattern in explicit_option_patterns:
-       match = re.search(pattern, user_input_no_punct)
-       if match:
-           try:
-               option_num = int(match.group(1))
-               if 1 <= option_num <= len(options):
-                   return options[option_num - 1]
-           except ValueError:
-               pass
-
-
-   return None
-
-
-def update_interaction_time():
-   """Starts or updates the timer for user interaction."""
-   now = time.time()
-   if not st.session_state.interaction_active:
-       st.session_state.interaction_start_time = now
-       st.session_state.interaction_active = True
-   st.session_state.last_interaction_time = now
-
-
-def end_interaction_and_accumulate_time():
-   """Ends the current interaction segment and adds its duration to total time."""
-   if st.session_state.interaction_active and st.session_state.interaction_start_time:
-       now = time.time()
-       duration = now - st.session_state.interaction_start_time
-       st.session_state.total_interaction_time += duration
-       st.session_state.interaction_active = False
-       st.session_state.interaction_start_time = None
-
-
-
-
-
-
-def initialize_gsheet():
-"""Initialize the Google Sheet with proper unique headers"""
-try:
-    gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-    sheet = gc.open("Chatbot Usage Log")
-
-
-
-
-    try:
-        worksheet = sheet.worksheet("Logs_with_explanation")
-    except:
-        worksheet = sheet.add_worksheet(title="Logs_with_explanation", rows=5000, cols=20)
-     # Define and verify headers - ensure all are unique
-    expected_headers = [
-         "participant_id", "question_id", "chatbot_used",
-         "total_questions_asked", "total_time_seconds",
-         "got_recommendation", "asked_followup", "record_timestamp",
-         "user_question", "question_answered"
-
+    explicit_option_patterns = [
+        r'\b(?:option|opt|choice|selection)\s*(\d+)',
     ]
-     current_headers = worksheet.row_values(1)
-     # Only update headers if they don't match exactly
-    if not current_headers or set(current_headers) != set(expected_headers):
-        worksheet.clear()
-        worksheet.append_row(expected_headers)
-     return worksheet
- except Exception as e:
-    st.error(f"Google Sheets initialization failed: {str(e)}")
+    user_input_no_punct = re.sub(r'[.,;!?]', '', user_input_lower)
+    for pattern in explicit_option_patterns:
+        match = re.search(pattern, user_input_no_punct)
+        if match:
+            try:
+                option_num = int(match.group(1))
+                if 1 <= option_num <= len(options):
+                    return options[option_num - 1]
+            except ValueError:
+                pass
+
+
     return None
 
 
+def update_interaction_time():
+    """Starts or updates the timer for user interaction."""
+    now = time.time()
+    if not st.session_state.interaction_active:
+        st.session_state.interaction_start_time = now
+        st.session_state.interaction_active = True
+    st.session_state.last_interaction_time = now
+
+
+def end_interaction_and_accumulate_time():
+    """Ends the current interaction segment and adds its duration to total time."""
+    if st.session_state.interaction_active and st.session_state.interaction_start_time:
+        now = time.time()
+        duration = now - st.session_state.interaction_start_time
+        st.session_state.total_interaction_time += duration
+        st.session_state.interaction_active = False
+        st.session_state.interaction_start_time = None
+
+
+
+
+
+
+# def initialize_gsheet():
+# """Initialize the Google Sheet with proper unique headers"""
+#     try:
+#         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+#         sheet = gc.open("Chatbot Usage Log")
+#     try:
+#         worksheet = sheet.worksheet("Logs_with_explanation")
+#     except:
+#         worksheet = sheet.add_worksheet(title="Logs_with_explanation", rows=5000, cols=20)
+#      # Define and verify headers - ensure all are unique
+#     expected_headers = [
+#          "participant_id", "question_id", "chatbot_used",
+#          "total_questions_asked", "total_time_seconds",
+#          "got_recommendation", "asked_followup", "record_timestamp",
+#          "user_question", "question_answered"
+
+#     ]
+#      current_headers = worksheet.row_values(1)
+#      # Only update headers if they don't match exactly
+#     if not current_headers or set(current_headers) != set(expected_headers):
+#         worksheet.clear()
+#         worksheet.append_row(expected_headers)
+#      return worksheet
+#  except Exception as e:
+#     st.error(f"Google Sheets initialization failed: {str(e)}")
+#     return None
+
+
 def save_session_data():
- try:
+    try:
     # Use total_interaction_time instead of calculating fresh
-    data = {
-        "participant_id": participant_id,
-        "question_id": question_id,
-        "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
+        data = {
+            "participant_id": participant_id,
+            "question_id": question_id,
+            "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
                                  st.session_state.usage_data['followup_used']) else "no",
-        "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
-        "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
-        "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
-        "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+            "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
+            "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
+            "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+            "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
         #"record_timestamp": pd.Timestamp.now().isoformat(),
-        "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
-        "user_question": st.session_state.usage_data.get("user_question", ""),
-        "question_answered": st.session_state.usage_data.get("question_answered", "")
+            "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
+            "user_question": st.session_state.usage_data.get("user_question", ""),
+            "question_answered": st.session_state.usage_data.get("question_answered", "")
      
-    }
-    def save_session_data():
+        }
+def save_session_data():
    data = {
        # ... your existing data collection ...
    }
@@ -462,90 +457,46 @@ def save_session_data():
 
 
 def save_to_gsheet(data_dict: Dict) -> bool:
- try:
-     worksheet = initialize_gsheet()
-     if not worksheet:
-         return False
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    try:
+        worksheet = initialize_gsheet()
+        if not worksheet:
+            return False
 
     # Get all records with expected headers to avoid duplicates
-     records = worksheet.get_all_records(expected_headers=[
+        records = worksheet.get_all_records(expected_headers=[
          "participant_id", "question_id", "chatbot_used",
          "total_questions_asked", "total_time_seconds",
          "got_recommendation", "asked_followup", "record_timestamp", "user_question",
         "question_answered"
-     ])
+        ])
      # Find existing record
-     row_index = None
-     for i, record in enumerate(records):
-         pid_match = str(record.get("participant_id", "")).strip() == str(data_dict.get("participant_id", "")).strip()
-         qid_match = str(record.get("question_id", "")).strip() == str(data_dict.get("question_id", "")).strip()
-         if pid_match and qid_match:
-             row_index = i + 2  # +2 to account for header row and 1-based indexing
-             break
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        row_index = None
+        for i, record in enumerate(records):
+            pid_match = str(record.get("participant_id", "")).strip() == str(data_dict.get("participant_id", "")).strip()
+            qid_match = str(record.get("question_id", "")).strip() == str(data_dict.get("question_id", "")).strip()
+            if pid_match and qid_match:
+                row_index = i + 2  # +2 to account for header row and 1-based indexing
+                break
 
     # Prepare complete data row
-     headers = worksheet.row_values(1)
-     row_data = {k: data_dict.get(k, "") for k in headers}
-      if row_index:
+        headers = worksheet.row_values(1)
+        row_data = {k: data_dict.get(k, "") for k in headers}
+        if row_index:
         # Update existing row
-         worksheet.update(
-             f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
-             [[row_data.get(h, "") for h in headers]]
-         )
-     else:
+            worksheet.update(
+                f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
+                [[row_data.get(h, "") for h in headers]]
+            )
+        else:
         # Add new row
-         worksheet.append_row([row_data.get(h, "") for h in headers])
-      return True
+            worksheet.append_row([row_data.get(h, "") for h in headers])
+            return True
 
+    except Exception as e:
+        st.error(f"Failed to save to Google Sheets: {str(e)}")
+        return False
 
-
-
-
-
-
-
-except Exception as e:
-     st.error(f"Failed to save to Google Sheets: {str(e)}")
-     return False
-
-
-
-
-
-
-
-
- return "Sorry, I encountered an error processing your question."
+    return "Sorry, I encountered an error processing your question."
 
 
 
@@ -555,7 +506,7 @@ except Exception as e:
 # --- AI and Chatbot Logic ---
 def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
    """Validates user's follow-up questions and initiates GPT recommendation."""
-   try:
+    try:
        user_input = user_input.strip()
 
 
