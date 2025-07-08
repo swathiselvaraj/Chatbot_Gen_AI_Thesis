@@ -316,53 +316,67 @@ def end_interaction_and_accumulate_time():
 #     st.error(f"Google Sheets initialization failed: {str(e)}")
 #     return None
 
-
 def save_session_data():
     try:
-    # Use total_interaction_time instead of calculating fresh
+        # Build data dictionary
         data = {
             "participant_id": participant_id,
             "question_id": question_id,
             "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
-                                 st.session_state.usage_data['followup_used']) else "no",
+                                      st.session_state.usage_data['followup_used']) else "no",
             "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
             "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
             "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
             "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
-        #"record_timestamp": pd.Timestamp.now().isoformat(),
             "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
             "user_question": st.session_state.usage_data.get("user_question", ""),
             "question_answered": st.session_state.usage_data.get("question_answered", "")
-     
         }
 
         with sqlite3.connect(DB_PATH) as conn:
-           c = conn.cursor()
-          
-           # Upsert pattern for main data
-           c.execute("""
-           INSERT INTO usage_logs (...) VALUES (...)
-           ON CONFLICT(participant_id, question_id)
-           DO UPDATE SET
-               chatbot_used = excluded.chatbot_used,
-               ...
-           """, (data.values()))
-          
-           # Save conversation history
-           if 'conversation' in st.session_state:
-               for role, message in st.session_state.conversation:
-                   c.execute("""
-                   INSERT INTO conversation_history
-                   (participant_id, question_id, message_type, content)
-                   VALUES (?, ?, ?, ?)
-                   """, (data['participant_id'], data['question_id'], role, message))
-          
-           conn.commit()
-      
+            c = conn.cursor()
+
+            # Upsert into usage_logs
+            c.execute("""
+                INSERT INTO usage_logs (
+                    participant_id, question_id, chatbot_used,
+                    total_questions_asked, total_time_seconds,
+                    got_recommendation, asked_followup,
+                    record_timestamp, user_question, question_answered
+                ) VALUES (
+                    :participant_id, :question_id, :chatbot_used,
+                    :total_questions_asked, :total_time_seconds,
+                    :got_recommendation, :asked_followup,
+                    :record_timestamp, :user_question, :question_answered
+                )
+                ON CONFLICT(participant_id, question_id)
+                DO UPDATE SET
+                    chatbot_used = excluded.chatbot_used,
+                    total_questions_asked = excluded.total_questions_asked,
+                    total_time_seconds = excluded.total_time_seconds,
+                    got_recommendation = excluded.got_recommendation,
+                    asked_followup = excluded.asked_followup,
+                    record_timestamp = excluded.record_timestamp,
+                    user_question = excluded.user_question,
+                    question_answered = excluded.question_answered
+            """, data)
+
+            # Save conversation history
+            if 'conversation' in st.session_state:
+                for role, message in st.session_state.conversation:
+                    c.execute("""
+                        INSERT INTO conversation_history (
+                            participant_id, question_id, message_type, content
+                        ) VALUES (?, ?, ?, ?)
+                    """, (data['participant_id'], data['question_id'], role, message))
+
+            conn.commit()
         return True
+
     except Exception as e:
         st.error(f"Database save failed: {e}")
         return False
+
 
 
 # def save_to_gsheet(data_dict: Dict) -> bool:
