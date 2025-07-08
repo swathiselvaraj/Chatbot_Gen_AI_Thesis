@@ -24,7 +24,7 @@ from pathlib import Path
 
 
 # Database setup
-DB_PATH = "data_chat.db""
+DB_PATH = "data_chat.db"
 
 
 from fuzzywuzzy import fuzz  # For fuzzy string matchin
