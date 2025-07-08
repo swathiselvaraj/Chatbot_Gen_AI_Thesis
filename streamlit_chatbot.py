@@ -431,12 +431,6 @@ def save_session_data():
         return False
 
 
-
-
-
-
-
-
 def save_to_gsheet(data_dict: Dict) -> bool:
     try:
         worksheet = initialize_gsheet()
@@ -491,40 +485,40 @@ def validate_followup(user_input: str, question_id: str, options: List[str], que
        user_input = user_input.strip()
 
 
-       if not options:
-           options = st.session_state.get('original_options', [])
-       if not user_input:
-           return "Please enter a valid question."
+        if not options:
+            options = st.session_state.get('original_options', [])
+        if not user_input:
+            return "Please enter a valid question."
 
 
-       placeholder = st.empty()
+        placeholder = st.empty()
 
 
        # Extract referenced option if any
-       referenced_option = extract_referenced_option(user_input, options)
-       option_num = options.index(referenced_option) + 1 if referenced_option else None
+        referenced_option = extract_referenced_option(user_input, options)
+        option_num = options.index(referenced_option) + 1 if referenced_option else None
 
 
-       if option_num is not None:
-           return get_gpt_recommendation(
-               question=question_text,
-               options=options,
-               referenced_option=option_num,
-               is_followup=True,
-               follow_up_question=user_input,
-           )
+        if option_num is not None:
+            return get_gpt_recommendation(
+                question=question_text,
+                options=options,
+                referenced_option=option_num,
+                is_followup=True,
+                follow_up_question=user_input,
+            )
 
 
-       return get_gpt_recommendation(
-           question=question_text,
-           is_followup=True,
-           follow_up_question=user_input
-       )
+        return get_gpt_recommendation(
+            question=question_text,
+            is_followup=True,
+            follow_up_question=user_input
+        )
 
 
-   except Exception as e:
-       st.error(f"Error in followup validation: {str(e)}")
-       return "Sorry, I encountered an error processing your question."
+    except Exception as e:
+        st.error(f"Error in followup validation: {str(e)}")
+        return "Sorry, I encountered an error processing your question."
 
 
 def get_gpt_recommendation(
@@ -539,28 +533,28 @@ def get_gpt_recommendation(
    Generates a recommendation or response from the GPT model based on the context.
    Supports initial recommendations and follow-up questions.
    """
-   try:
-       if 'chat_history' not in st.session_state:
-           st.session_state.chat_history = []
+    try:
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
 
 
-       messages = st.session_state.chat_history.copy()
-       if options is None:
-           options = st.session_state.get('original_options', [])
+        messages = st.session_state.chat_history.copy()
+        if options is None:
+            options = st.session_state.get('original_options', [])
 
 
-       if is_followup:
-           original_rec = st.session_state.get("original_recommendation")
-           context_parts = []
-           if original_rec:
-               context_parts.append(
+        if is_followup:
+            original_rec = st.session_state.get("original_recommendation")
+            context_parts = []
+            if original_rec:
+                context_parts.append(
                    f"Earlier Recommendation:\n"
                    f"Recommended option: {original_rec['text']}\n"
                    f"Reason: {original_rec['reasoning']}\n"
-               )
+                )
 
 
-           prompt = f"""You are a chatbot that answers questions strictly related to supermarket scenarios, including sales, marketing, and data insights provided in a specific JSON file. Your responses must always adhere to the following rules and context.
+            prompt = f"""You are a chatbot that answers questions strictly related to supermarket scenarios, including sales, marketing, and data insights provided in a specific JSON file. Your responses must always adhere to the following rules and context.
 
 
 Context:
@@ -591,28 +585,28 @@ Limit every response to 50 words or fewer.
 Respond in this format:
 Chatbot answer: "<your answer here>"
 """
-       st.session_state.followup_questions.append(follow_up_question)
+        st.session_state.followup_questions.append(follow_up_question)
 
 
        # Determine if the response was a valid answer or a rejection
-       if "Please ask a question related to the survey" in result:
-           answered = "No"
-       else:
-           answered = "Yes"
-       index = len(st.session_state.followup_questions)
-       st.session_state.Youtubes.append(f"{index}. {answered}")
+        if "Please ask a question related to the survey" in result:
+            answered = "No"
+        else:
+             answered = "Yes"
+        index = len(st.session_state.followup_questions)
+            st.session_state.Youtubes.append(f"{index}. {answered}")
 
 
        # Store formatted questions and answers in usage_data
        st.session_state.usage_data.update({
-           'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
-           'Youtubeed': "\n".join(st.session_state.Youtubes),
-       })
+            'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
+            'Youtubeed': "\n".join(st.session_state.Youtubes),
+        })
 
 
-       else:  # Initial recommendation logic
-           options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
-           prompt = f"""Survey Question: {question}
+        else:  # Initial recommendation logic
+            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+            prompt = f"""Survey Question: {question}
 
 
            Available Options:
@@ -631,85 +625,85 @@ Chatbot answer: "<your answer here>"
 
 
        # Add user message to chat history
-       messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "user", "content": prompt})
 
 
        # Start streaming response from OpenAI
-       stream = client.chat.completions.create(
-           model="gpt-4.1-mini", # Assuming this model ID is correct/available
-           messages=messages,
-           max_tokens=100,
-           temperature=0,
-           timeout=3,
-           stream=True
-       )
+        stream = client.chat.completions.create(
+            model="gpt-4.1-mini", # Assuming this model ID is correct/available
+            messages=messages,
+            max_tokens=100,
+            temperature=0,
+            timeout=3,
+            stream=True
+        )
 
 
        # Live output with placeholder
-       placeholder = st.empty()
-       result = ""
+        placeholder = st.empty()
+        result = ""
 
 
-       for chunk in stream:
-           if hasattr(chunk, 'choices') and chunk.choices:
-               choice = chunk.choices[0]
-               if hasattr(choice, 'delta'):
-                   content_part = getattr(choice.delta, 'content', None)
-                   if content_part:
-                       result += content_part
-                       placeholder.markdown(f"**Chatbot:** {result}")
+        for chunk in stream:
+            if hasattr(chunk, 'choices') and chunk.choices:
+                choice = chunk.choices[0]
+                if hasattr(choice, 'delta'):
+                    content_part = getattr(choice.delta, 'content', None)
+                    if content_part:
+                        result += content_part
+                        placeholder.markdown(f"**Chatbot:** {result}")
 
 
        # Store original recommendation if this was an initial recommendation
-       if not is_followup and options:
-           if "Recommended option:" in result and "Reason:" in result:
-               rec_text = result.split("Recommended option:")[1].split("Reason:")[0].strip()
-               reasoning = result.split("Reason:")[1].strip()
-           else:
-               rec_text = result
-               reasoning = "Based on overall analysis of options and dashboard trends."
+        if not is_followup and options:
+            if "Recommended option:" in result and "Reason:" in result:
+                rec_text = result.split("Recommended option:")[1].split("Reason:")[0].strip()
+                reasoning = result.split("Reason:")[1].strip()
+            else:
+                rec_text = result
+                reasoning = "Based on overall analysis of options and dashboard trends."
 
 
-           st.session_state.original_recommendation = {
-               'text': rec_text,
-               'reasoning': reasoning,
-               'options': options.copy(),
-               'timestamp': time.time()
-           }
+            st.session_state.original_recommendation = {
+                'text': rec_text,
+                'reasoning': reasoning,
+                'options': options.copy(),
+                'timestamp': time.time()
+            }
 
 
        # Update chat history with the assistant's response
-       messages.append({"role": "assistant", "content": result})
-       st.session_state.chat_history = messages[-30:] # Keep last 30 messages for context
+        messages.append({"role": "assistant", "content": result})
+        st.session_state.chat_history = messages[-30:] # Keep last 30 messages for context
 
 
-       if is_followup:
-           st.session_state.followup_questions.append(follow_up_question)
+        if is_followup:
+            st.session_state.followup_questions.append(follow_up_question)
 
 
            # Determine if the response was a valid answer or a rejection
-           if "Please ask a question related to the survey" in result:
-               answered = "No"
-           else:
-               answered = "Yes"
-           index = len(st.session_state.followup_questions)
-           st.session_state.Youtubes.append(f"{index}. {answered}")
+            if "Please ask a question related to the survey" in result:
+                answered = "No"
+            else:
+                answered = "Yes"
+            index = len(st.session_state.followup_questions)
+            st.session_state.Youtubes.append(f"{index}. {answered}")
 
 
            # Store formatted questions and answers in usage_data
-           st.session_state.usage_data.update({
+            st.session_state.usage_data.update({
                'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
-               'Youtubeed': "\n".join(st.session_state.Youtubes),
-           })
+                'Youtubeed': "\n".join(st.session_state.Youtubes),
+            })
             # Save updated usage data after a follow-up
 
 
-       return result
+        return result
 
 
-   except Exception as e:
-       st.error(f"Recommendation generation failed: {str(e)}")
-       return "Sorry, I couldn't generate a recommendation."
+    except Exception as e:
+        st.error(f"Recommendation generation failed: {str(e)}")
+        return "Sorry, I couldn't generate a recommendation."
 
 
 
