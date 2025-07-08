@@ -12,6 +12,9 @@ from nltk.util import ngrams
 from num2words import num2words
 from zoneinfo import ZoneInfo
 from fuzzywuzzy import fuzz
+import random
+import time
+from threading import Thread
 
 
 
@@ -93,9 +96,10 @@ if 'get_recommendation_used' not in st.session_state:
 if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
 
-def collect_usage_data(batch_mode=False):
+
+def collect_usage_data():
     """Collects all usage data into a dictionary for later saving"""
-    data = {
+    return {
         "participant_id": participant_id,
         "question_id": question_id,
         "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
@@ -108,41 +112,50 @@ def collect_usage_data(batch_mode=False):
         "user_question": st.session_state.usage_data.get("user_question", ""),
         "Youtubeed": st.session_state.usage_data.get("Youtubeed", "")
     }
+
+def save_with_random_delay(data_dict, min_delay=5, max_delay=30):
+    """
+    Saves data to Google Sheets after a random delay between min_delay and max_delay seconds.
+    Runs in a background thread to avoid blocking the main app.
+    """
+    def delayed_save():
+        # Generate random delay
+        delay = random.randint(min_delay, max_delay)
+        time.sleep(delay)
+        
+        # Attempt to save (with retry logic)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if save_to_gsheet(data_dict):
+                    st.session_state.already_saved = True
+                    break
+            except Exception as e:
+                if attempt == max_retries - 1:  # Last attempt failed
+                    print(f"Failed to save after {max_retries} attempts: {str(e)}")
     
-    if batch_mode:
-        return [data]  # Return as list for batch processing
-    return data
+    # Start the thread
+    Thread(target=delayed_save).start()
+
 # --- Google Sheets Initialization (Cached) ---
-@st.cache_resource
 @st.cache_resource
 def get_gsheet_worksheet_and_headers() -> Tuple[Optional[gspread.Worksheet], Optional[List[str]]]:
     """
     Connects to Google Sheets, gets/creates the worksheet, and fetches headers.
-    Uses batch operations for efficiency.
+    This function is cached to run only once per app deployment/session.
     """
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
         sheet = gc.open("Chatbot Usage Log")
 
         try:
-            worksheet = sheet.worksheet("Logs_with_explanation")
+            worksheet = sheet.worksheet("Logs_with_explanation") # Consistent worksheet name
         except gspread.exceptions.WorksheetNotFound:
-            # Create worksheet with batch operation
-            requests = [{
-                'addSheet': {
-                    'properties': {
-                        'title': "Logs_with_explanation",
-                        'gridProperties': {
-                            'rowCount': 5000,
-                            'columnCount': 20
-                        }
-                    }
-                }
-            }]
-            sheet.batch_update({'requests': requests})
-            worksheet = sheet.worksheet("Logs_with_explanation")
+            # If worksheet doesn't exist, create it
+            worksheet = sheet.add_worksheet(title="Logs_with_explanation", rows=5000, cols=20) # Consistent worksheet name
+            st.warning("Created new worksheet: 'Logs_with_explanation'.")
 
-        # Define expected headers
+        # Define expected headers for the sheet
         expected_headers = [
             "participant_id", "question_id", "chatbot_used",
             "total_questions_asked", "total_time_seconds",
@@ -150,46 +163,17 @@ def get_gsheet_worksheet_and_headers() -> Tuple[Optional[gspread.Worksheet], Opt
             "user_question", "Youtubeed"
         ]
 
-        # Get current headers with batch operation
-        header_range = worksheet.range('A1:J1')
-        current_headers = [cell.value for cell in header_range]
+        # Get current headers from the sheet's first row
+        current_headers = worksheet.row_values(1)
 
         # Clear and append headers only if they are missing or don't match
         if not current_headers or set(current_headers) != set(expected_headers):
             st.info("Updating Google Sheet headers...")
-            
-            # Clear sheet with batch operation
-            requests = [{
-                'updateCells': {
-                    'range': {
-                        'sheetId': worksheet.id,
-                        'startRowIndex': 0,
-                        'endRowIndex': worksheet.row_count,
-                        'startColumnIndex': 0,
-                        'endColumnIndex': len(expected_headers)
-                    },
-                    'fields': 'userEnteredValue'
-                }
-            }, {
-                'updateCells': {
-                    'range': {
-                        'sheetId': worksheet.id,
-                        'startRowIndex': 0,
-                        'endRowIndex': 1,
-                        'startColumnIndex': 0,
-                        'endColumnIndex': len(expected_headers)
-                    },
-                    'rows': [{
-                        'values': [{'userEnteredValue': {'stringValue': h}} for h in expected_headers]
-                    }],
-                    'fields': 'userEnteredValue'
-                }
-            }]
-            
-            worksheet.spreadsheet.batch_update({'requests': requests})
-            headers = expected_headers
+            worksheet.clear()  # Clears entire sheet if headers need correction
+            worksheet.append_row(expected_headers)
+            headers = expected_headers  # Use the expected headers after setting them
         else:
-            headers = current_headers
+            headers = current_headers  # Use the existing headers if they match
 
         return worksheet, headers
 
@@ -197,77 +181,6 @@ def get_gsheet_worksheet_and_headers() -> Tuple[Optional[gspread.Worksheet], Opt
         st.error(f"Google Sheets connection failed: {str(e)}")
         return None, None
 
-
-
-def batch_save_to_gsheet(data_dicts: List[dict]) -> bool:
-    """
-    Saves multiple records to Google Sheets in a single batch operation.
-    """
-    try:
-        worksheet = st.session_state.gsheet_worksheet
-        headers = st.session_state.gsheet_headers
-
-        if not worksheet or not headers:
-            st.error("Google Sheet is not initialized. Cannot save data.")
-            return False
-
-        # Prepare batch request
-        requests = []
-        
-        for data_dict in data_dicts:
-            row_data = [data_dict.get(h, "") for h in headers]
-            
-            # For each record, check if we have a row index
-            row_index = None
-            if 'participant_id' in data_dict and 'question_id' in data_dict:
-                # Try to find existing row
-                try:
-                    participant_cell = worksheet.find(data_dict["participant_id"])
-                    question_cell = worksheet.find(data_dict["question_id"])
-                    if participant_cell.row == question_cell.row:
-                        row_index = participant_cell.row
-                except Exception:
-                    pass
-
-            if row_index:
-                # Update existing row
-                for i, value in enumerate(row_data):
-                    requests.append({
-                        'updateCells': {
-                            'range': {
-                                'sheetId': worksheet.id,
-                                'startRowIndex': row_index - 1,
-                                'endRowIndex': row_index,
-                                'startColumnIndex': i,
-                                'endColumnIndex': i + 1
-                            },
-                            'rows': [{
-                                'values': [{'userEnteredValue': {'stringValue': str(value)}}]
-                            }],
-                            'fields': 'userEnteredValue'
-                        }
-                    })
-            else:
-                # Append new row
-                requests.append({
-                    'appendCells': {
-                        'sheetId': worksheet.id,
-                        'rows': [{
-                            'values': [{'userEnteredValue': {'stringValue': str(value)}} for value in row_data]
-                        }],
-                        'fields': 'userEnteredValue'
-                    }
-                })
-
-        # Execute the batch request
-        if requests:
-            worksheet.spreadsheet.batch_update({'requests': requests})
-            
-        return True
-
-    except Exception as e:
-        st.error(f"Failed to batch save to Google Sheets: {str(e)}")
-        return False
 # Initialize Google Sheet and cache worksheet/headers on first load of the app
 # This block runs once at the start of a session or if the cached resources are not available.
 if st.session_state.gsheet_worksheet is None or st.session_state.gsheet_headers is None:
@@ -397,9 +310,28 @@ def end_interaction_and_accumulate_time():
 #         st.error(f"Session save failed: {str(e)}")
 #         return False
 
+def save_session_data() -> bool:
+    """
+    Prepares session data and saves with random delay.
+    Returns True immediately (actual save happens in background).
+    """
+    try:
+        if st.session_state.already_saved:
+            return True
+            
+        data = collect_usage_data()
+        save_with_random_delay(data)
+        return True
+        
+    except Exception as e:
+        st.error(f"Session save preparation failed: {str(e)}")
+        return False
+
+
 def save_to_gsheet(data_dict):
     """
-    Saves or updates a row in the Google Sheet using batch operations.
+    Saves or updates a row in the Google Sheet using cached worksheet and efficient methods.
+    It prioritizes updating an existing row if found, otherwise appends a new one.
     """
     try:
         worksheet = st.session_state.gsheet_worksheet
@@ -415,83 +347,38 @@ def save_to_gsheet(data_dict):
         # Check if we already know the row number for the current participant
         row_index = st.session_state.get('gsheet_row_index')
 
-        # Create a batch request list
-        requests = []
-
         if row_index:
             # Update the row directly if index is known
-            for i, value in enumerate(row_data):
-                col_letter = chr(65 + i)  # A, B, C, etc.
-                requests.append({
-                    'updateCells': {
-                        'range': {
-                            'sheetId': worksheet.id,
-                            'startRowIndex': row_index - 1,
-                            'endRowIndex': row_index,
-                            'startColumnIndex': i,
-                            'endColumnIndex': i + 1
-                        },
-                        'rows': [{
-                            'values': [{'userEnteredValue': {'stringValue': str(value)}}]
-                        }],
-                        'fields': 'userEnteredValue'
-                    }
-                })
+            worksheet.update(
+                f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
+                [row_data]
+            )
         else:
             try:
                 # Try to find the participant_id in the sheet
                 cell = worksheet.find(data_dict["participant_id"])
                 row_index = cell.row
+
+                # Cache the row index for future use
                 st.session_state.gsheet_row_index = row_index
 
-                # Update existing row with batch
-                for i, value in enumerate(row_data):
-                    col_letter = chr(65 + i)  # A, B, C, etc.
-                    requests.append({
-                        'updateCells': {
-                            'range': {
-                                'sheetId': worksheet.id,
-                                'startRowIndex': row_index - 1,
-                                'endRowIndex': row_index,
-                                'startColumnIndex': i,
-                                'endColumnIndex': i + 1
-                            },
-                            'rows': [{
-                                'values': [{'userEnteredValue': {'stringValue': str(value)}}]
-                            }],
-                            'fields': 'userEnteredValue'
-                        }
-                    })
+                # Update existing row
+                worksheet.update(
+                    f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
+                    [row_data]
+                )
             except Exception:
-                # If participant not found, append new row with batch
-                requests.append({
-                    'appendCells': {
-                        'sheetId': worksheet.id,
-                        'rows': [{
-                            'values': [{'userEnteredValue': {'stringValue': str(value)}} for value in row_data]
-                        }],
-                        'fields': 'userEnteredValue'
-                    }
-                })
-                # We won't know the row index until after the batch executes
-
-        # Execute the batch request
-        if requests:
-            worksheet.spreadsheet.batch_update({'requests': requests})
-            
-            # If we appended, find the new row index
-            if not row_index and 'appendCells' in requests[0]:
-                try:
-                    cell = worksheet.find(data_dict["participant_id"])
-                    st.session_state.gsheet_row_index = cell.row
-                except Exception:
-                    pass
+                # If participant not found, append new row
+                worksheet.append_row(row_data)
+                # Cache the new row index
+                st.session_state.gsheet_row_index = len(worksheet.get_all_values())
 
         return True
 
     except Exception as e:
         st.error(f"Failed to save to Google Sheets: {str(e)}")
         return False
+
 
 # --- Question Change Detection ---
 # This block resets relevant session states when the question ID changes,
@@ -750,11 +637,11 @@ if st.button("Send") and user_input.strip():
     })
     # Don't save here - just update the session state
 
+# At the very end of your script, after all interactions are complete:
 if not st.session_state.already_saved and st.session_state.usage_data.get('chatbot_used', False):
-    data_to_save = collect_usage_data(batch_mode=True)
-    if batch_save_to_gsheet(data_to_save):
-        st.session_state.already_saved = True
-        
+    data_to_save = collect_usage_data()
+    save_session_data() 
+# Debug information (optional, controlled by 'debug' query param)
 if query_params.get("debug", "false") == "true":
     st.write("### Debug Information")
     st.write("Query Parameters:", query_params)
