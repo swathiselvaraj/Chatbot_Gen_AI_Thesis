@@ -153,41 +153,40 @@ if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
 
 def initialize_db():
-   """Initialize SQLite database and create tables if they don't exist"""
+    """Initialize SQLite database and create tables if they don't exist"""
     try:
         conn = sqlite3.connect('chatbot_data.db')
         c = conn.cursor()
-      
-       # Create main usage table
+        
+        # Create main usage table
         c.execute('''CREATE TABLE IF NOT EXISTS usage_data
-                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     participant_id TEXT,
-                     question_id TEXT,
-                     chatbot_used TEXT,
-                     total_questions_asked INTEGER,
-                     total_time_seconds REAL,
-                     got_recommendation TEXT,
-                     asked_followup TEXT,
-                     record_timestamp TEXT,
-                     user_question TEXT,
-                     question_answered TEXT)''')
-      
-       # Create conversation log table
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      participant_id TEXT,
+                      question_id TEXT,
+                      chatbot_used TEXT,
+                      total_questions_asked INTEGER,
+                      total_time_seconds REAL,
+                      got_recommendation TEXT,
+                      asked_followup TEXT,
+                      record_timestamp TEXT,
+                      user_question TEXT,
+                      question_answered TEXT)''')
+        
+        # Create conversation log table
         c.execute('''CREATE TABLE IF NOT EXISTS conversation_logs
-                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     participant_id TEXT,
-                     question_id TEXT,
-                     message_type TEXT,
-                     message_content TEXT,
-                     timestamp TEXT)''')
-      
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      participant_id TEXT,
+                      question_id TEXT,
+                      message_type TEXT,
+                      message_content TEXT,
+                      timestamp TEXT)''')
+        
         conn.commit()
         conn.close()
         return True
     except Exception as e:
         st.error(f"Database initialization failed: {str(e)}")
         return False
-
 
 def save_to_db(data_dict: Dict) -> bool:
    """Save data to SQLite database"""
