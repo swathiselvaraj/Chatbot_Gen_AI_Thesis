@@ -284,45 +284,38 @@ def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5
     return False
 
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-   """
-   Identifies if the user's input references one of the available options
-   using exact, n-gram, and fuzzy matching.
-   """
+    """
+    Identifies if the user's input references one of the available options
+    using exact, n-gram, and fuzzy matching.
+    """
     if not user_input or not options:
         return None
 
-
     user_input_lower = user_input.lower()
 
-
-   # 1. Check for exact presence (case-insensitive) of the option text
+    # 1. Check for exact presence (case-insensitive) of the option text
     for opt in options:
         opt_lower = opt.lower()
         if opt_lower in user_input_lower:
             return opt
 
-
-   # Normalize user input and options for partial/fuzzy matching
+    # Normalize user input and options for partial/fuzzy matching
     user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
     user_input_norm = normalize_numbers(user_input_clean)
-
 
     for opt in options:
         opt_lower = opt.lower()
         opt_norm = normalize_numbers(opt_lower)
 
-
-       # 2. Check for continuous n-gram matches
+        # 2. Check for continuous n-gram matches
         if has_continuous_match(opt_norm, user_input_norm):
             return opt
 
-
-       # 3. Use fuzzy partial ratio match as fallback
+        # 3. Use fuzzy partial ratio match as fallback
         if fuzz.partial_ratio(opt_norm, user_input_norm) > 90:
             return opt
 
-
-   # Optional: Check explicit "option N" patterns (e.g., "option 1")
+    # Optional: Check explicit "option N" patterns (e.g., "option 1")
     explicit_option_patterns = [
         r'\b(?:option|opt|choice|selection)\s*(\d+)',
     ]
@@ -337,9 +330,7 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
             except ValueError:
                 pass
 
-
     return None
-
 
 def update_interaction_time():
     """Starts or updates the timer for user interaction."""
