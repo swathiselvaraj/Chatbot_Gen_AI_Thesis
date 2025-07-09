@@ -18,6 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from fuzzywuzzy import fuzz
 
+
 # --- NEW: Firebase Firestore Imports ---
 from google.cloud import firestore
 from google.oauth2 import service_account
@@ -247,12 +248,9 @@ def get_gpt_recommendation(
     user_input_for_logging: Optional[str] = None,
     referenced_option: Optional[str] = None,
     non_dashboard: bool = False,
-    client=None # Added client as an argument for better modularity
+
 ) -> Tuple[str, bool]: # Return type now includes bool for answered_relevantly
 
-    if client is None:
-        st.error("Error: OpenAI client not provided to get_gpt_recommendation.")
-        return "An internal error occurred. Please configure the chatbot.", False
 
     try:
         if 'chat_history' not in st.session_state:
