@@ -297,9 +297,9 @@ def get_gpt_recommendation(
    options: List[str] = None,
    is_followup: bool = False,
    follow_up_question: Optional[str] = None,
-   referenced_option: Optional[str] = None,
+   referenced_option: Optional[int] = None,
    user_input_for_logging: Optional[str] = None,
-) -> str:
+) -> Tuple[str, bool]
  # Return type now includes bool for answered_relevantly
 
 
