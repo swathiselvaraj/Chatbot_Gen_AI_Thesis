@@ -413,8 +413,7 @@ if question_id != st.session_state.get('last_question_id'):
 
 # --- Streamlit UI and Interaction Logic ---
 st.header("Decision Support Chatbot")
-st.markdown(f"**Question:** {question_text}")
-st.markdown(f"**Options:**")
+
 for i, opt in enumerate(options):
     if opt:
         st.markdown(f"- {opt}")
