@@ -120,37 +120,89 @@ def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5
                 return True
     return False
 
+@st.cache_resource
+# --- Utility Functions ---
+def normalize_numbers(text: str) -> str:
+   """Converts numerical digits in text to their word form."""
+   return re.sub(r'\b\d+\b', lambda m: num2words(int(m.group())), text)
+
+
+def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5) -> bool:
+   """
+   Checks for continuous n-gram matches between option text and user input.
+   Used for more robust matching of user's referenced options.
+   """
+   option_tokens = option_text.split()
+   user_tokens = user_input.split()
+
+
+   for n in range(max_len, min_len - 1, -1):
+       option_ngrams = list(ngrams(option_tokens, n))
+       user_ngrams = list(ngrams(user_tokens, n))
+
+
+       for opt_ng in option_ngrams:
+           if opt_ng in user_ngrams:
+               return True
+   return False
+
+
 def extract_referenced_option(user_input: str, options: List[str]) -> Optional[str]:
-    if not user_input or not options:
-        return None
-    user_input_lower = user_input.lower()
-    for opt in options:
-        opt_lower = opt.lower()
-        if opt_lower in user_input_lower:
-            return opt
-    user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
-    user_input_norm = normalize_numbers(user_input_clean)
-    for opt in options:
-        opt_lower = opt.lower()
-        opt_norm = normalize_numbers(opt_lower)
-        if has_continuous_match(opt_norm, user_input_norm):
-            return opt
-        if fuzz.partial_ratio(opt_norm, user_input_norm) > 90:
-            return opt
-    explicit_option_patterns = [
-        r'\b(?:option|opt|choice|selection)\s*(\d+)',
-    ]
-    user_input_no_punct = re.sub(r'[.,;!?]', '', user_input_lower)
-    for pattern in explicit_option_patterns:
-        match = re.search(pattern, user_input_no_punct)
-        if match:
-            try:
-                option_num = int(match.group(1))
-                if 1 <= option_num <= len(options):
-                    return options[option_num - 1]
-            except ValueError:
-                pass
-    return None
+   """
+   Identifies if the user's input references one of the available options
+   using exact, n-gram, and fuzzy matching.
+   """
+   if not user_input or not options:
+       return None
+
+
+   user_input_lower = user_input.lower()
+
+
+   # 1. Check for exact presence (case-insensitive) of the option text
+   for opt in options:
+       opt_lower = opt.lower()
+       if opt_lower in user_input_lower:
+           return opt
+
+
+   # Normalize user input and options for partial/fuzzy matching
+   user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
+   user_input_norm = normalize_numbers(user_input_clean)
+
+
+   for opt in options:
+       opt_lower = opt.lower()
+       opt_norm = normalize_numbers(opt_lower)
+
+
+       # 2. Check for continuous n-gram matches
+       if has_continuous_match(opt_norm, user_input_norm):
+           return opt
+
+
+       # 3. Use fuzzy partial ratio match as fallback
+       if fuzz.partial_ratio(opt_norm, user_input_norm) > 90:
+           return opt
+
+
+   # Optional: Check explicit "option N" patterns (e.g., "option 1")
+   explicit_option_patterns = [
+       r'\b(?:option|opt|choice|selection)\s*(\d+)',
+   ]
+   user_input_no_punct = re.sub(r'[.,;!?]', '', user_input_lower)
+   for pattern in explicit_option_patterns:
+       match = re.search(pattern, user_input_no_punct)
+       if match:
+           try:
+               option_num = int(match.group(1))
+               if 1 <= option_num <= len(options):
+                   return options[option_num - 1]
+           except ValueError:
+               pass
+
+
+   return None
 
 def update_interaction_time():
     now = time.time()
@@ -414,10 +466,6 @@ if question_id != st.session_state.get('last_question_id'):
 # --- Streamlit UI and Interaction Logic ---
 st.header("Decision Support Chatbot")
 
-for i, opt in enumerate(options):
-    if opt:
-        st.markdown(f"- {opt}")
-
 
 if st.button("Get Recommendation"):
     update_interaction_time()
@@ -473,6 +521,9 @@ if st.button("Send") and user_input.strip():
 
     referenced_option = extract_referenced_option(user_input, options) # Call it once here
 
+    option_num = options.index(referenced_option) + 1 if referenced_option else None
+
+
     if user_input.lower().strip() in ['help', '?']:
         response = (
             "I can help with:\n"
@@ -487,7 +538,7 @@ if st.button("Send") and user_input.strip():
             question_text,
             options=options,
             is_followup=True,
-            referenced_option=referenced_option, # Pass the found option
+            referenced_option=option_num, # Pass the found option
             user_input_for_logging=user_input
         )
     else: # If no help requested and no option was referenced
