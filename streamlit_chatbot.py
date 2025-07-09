@@ -31,7 +31,6 @@ def get_firestore_client():
         key_dict = json.loads(st.secrets["firestore"]["textkey"])
         creds = service_account.Credentials.from_service_account_info(key_dict)
         db = firestore.Client(credentials=creds, project=key_dict["project_id"])
-        st.success("Firestore client initialized successfully!")
         return db
     except Exception as e:
         st.error(f"Error initializing Firestore: {e}. "
@@ -464,7 +463,7 @@ if question_id != st.session_state.get('last_question_id'):
     st.session_state.already_saved = False
 
 # --- Streamlit UI and Interaction Logic ---
-st.header("Decision Support Chatbot")
+
 
 
 if st.button("Get Recommendation"):
