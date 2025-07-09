@@ -242,14 +242,13 @@ def log_individual_chatbot_interaction(
 
 
 def get_gpt_recommendation(
-    question: str,
-    options: List[str] = None,
-    is_followup: bool = False,
-    user_input_for_logging: Optional[str] = None,
-    referenced_option: Optional[str] = None,
-    non_dashboard: bool = False,
-
-) -> Tuple[str, bool]: # Return type now includes bool for answered_relevantly
+   question: str,
+   options: List[str] = None,
+   is_followup: bool = False,
+   follow_up_question: Optional[str] = None,
+   referenced_option: Optional[str] = None,
+) -> str:
+ # Return type now includes bool for answered_relevantly
 
 
     try:
