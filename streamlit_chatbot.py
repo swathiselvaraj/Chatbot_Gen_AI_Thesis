@@ -1,5 +1,3 @@
-
-
 import streamlit as st
 from openai import OpenAI
 import time
@@ -21,13 +19,9 @@ import sqlite3
 from datetime import datetime
 import sqlite3
 from pathlib import Path
-
-
-# Database setup
-DB_PATH = "data_chat.db"
-
-
 from fuzzywuzzy import fuzz  # For fuzzy string matchin
+
+
 client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 query_params = st.query_params
 question_id = query_params.get("qid", "Q1")
@@ -37,22 +31,13 @@ question_text = query_params.get("qtext", "What is your decision?")
 #&options = options_raw.split("|")
 options_raw = query_params.get("opts", "Option 1|Option 2|Option 3|Option 4")  # Default now has 4 options
 options = options_raw.split("|")
-##&
-
-
 
 while len(options) < 4:
  options.append("") # Ensure at least 4 options, padding with empty strings if needed
 
-
 option_mapping = {f"option {i+1}": options[i] for i in range(4)}
 option_mapping.update({f"option{i+1}": options[i] for i in range(4)})
-# for key, value in option_mapping.items():
-#     st.write(f"{key}: {value}")
 participant_id = query_params.get("pid", str(uuid.uuid4()))
-
-
-
 
 if 'conversation' not in st.session_state:
     st.session_state.conversation = []
@@ -72,14 +57,14 @@ if 'followup_questions' not in st.session_state:
     st.session_state.followup_questions = []
 if 'question_answers' not in st.session_state:
     st.session_state.question_answers = []
-
+if 'last_followup_time' not in st.session_state:
+    st.session_state.last_followup_time = 0
 
 if "original_options" not in st.session_state:
- st.session_state.original_options = options
- st.session_state.option_mapping = {
-     f"option{i+1}": options[i] for i in range(len(options))
- }
-
+    st.session_state.original_options = options
+    st.session_state.option_mapping = {
+    f"option{i+1}": options[i] for i in range(len(options))
+    }
 
 if 'usage_data' not in st.session_state:
     st.session_state.usage_data = {
@@ -93,7 +78,6 @@ if 'usage_data' not in st.session_state:
         'total_time': 0  # This will accumulate all interaction time
     }
 
-
 if 'interaction_active' not in st.session_state:
     st.session_state.interaction_active = False
 if 'total_interaction_time' not in st.session_state:
@@ -104,101 +88,6 @@ if 'get_recommendation_used' not in st.session_state:
     st.session_state.get_recommendation_used = False
 if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
-
-def initialize_database():
-    with sqlite3.connect(DB_PATH) as conn:
-        c = conn.cursor()
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS usage_logs (
-                participant_id TEXT,
-                question_id TEXT,
-                chatbot_used TEXT,
-                total_questions_asked INTEGER,
-                total_time_seconds REAL,
-                got_recommendation TEXT,
-                asked_followup TEXT,
-                record_timestamp TEXT,
-                user_question TEXT,
-                question_answered TEXT,
-                PRIMARY KEY (participant_id, question_id)
-            )
-        """)
-        
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS conversation_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                participant_id TEXT,
-                question_id TEXT,
-                message_type TEXT,
-                content TEXT
-            )
-        """)
-        conn.commit()
-
-
-def save_session_data():
-    try:
-        # Build data dictionary
-        data = {
-            "participant_id": participant_id,
-            "question_id": question_id,
-            "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
-                                      st.session_state.usage_data['followup_used']) else "no",
-            "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
-            "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
-            "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
-            "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
-            "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
-            "user_question": st.session_state.usage_data.get("user_question", ""),
-            "question_answered": st.session_state.usage_data.get("question_answered", "")
-        }
-
-        with sqlite3.connect(DB_PATH) as conn:
-            c = conn.cursor()
-
-            # Upsert into usage_logs
-            c.execute("""
-                INSERT INTO usage_logs (
-                    participant_id, question_id, chatbot_used,
-                    total_questions_asked, total_time_seconds,
-                    got_recommendation, asked_followup,
-                    record_timestamp, user_question, question_answered
-                ) VALUES (
-                    :participant_id, :question_id, :chatbot_used,
-                    :total_questions_asked, :total_time_seconds,
-                    :got_recommendation, :asked_followup,
-                    :record_timestamp, :user_question, :question_answered
-                )
-                ON CONFLICT(participant_id, question_id)
-                DO UPDATE SET
-                    chatbot_used = excluded.chatbot_used,
-                    total_questions_asked = excluded.total_questions_asked,
-                    total_time_seconds = excluded.total_time_seconds,
-                    got_recommendation = excluded.got_recommendation,
-                    asked_followup = excluded.asked_followup,
-                    record_timestamp = excluded.record_timestamp,
-                    user_question = excluded.user_question,
-                    question_answered = excluded.question_answered
-            """, data)
-
-            # Save conversation history
-            if 'conversation' in st.session_state:
-                for role, message in st.session_state.conversation:
-                    c.execute("""
-                        INSERT INTO conversation_history (
-                            participant_id, question_id, message_type, content
-                        ) VALUES (?, ?, ?, ?)
-                    """, (data['participant_id'], data['question_id'], role, message))
-
-            conn.commit()
-        return True
-
-    except Exception as e:
-        st.error(f"Database save failed: {e}")
-        return False
-
-
-
 
 # --- Data Loading (for embeddings/followup questions) ---
 @st.cache_resource
@@ -215,9 +104,11 @@ def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5
     option_tokens = option_text.split()
     user_tokens = user_input.split()
 
+
     for n in range(max_len, min_len - 1, -1):
         option_ngrams = list(ngrams(option_tokens, n))
         user_ngrams = list(ngrams(user_tokens, n))
+
 
         for opt_ng in option_ngrams:
             if opt_ng in user_ngrams:
@@ -232,31 +123,38 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
     if not user_input or not options:
         return None
 
+
     user_input_lower = user_input.lower()
 
-    # 1. Check for exact presence (case-insensitive) of the option text
+
+   # 1. Check for exact presence (case-insensitive) of the option text
     for opt in options:
         opt_lower = opt.lower()
         if opt_lower in user_input_lower:
             return opt
 
-    # Normalize user input and options for partial/fuzzy matching
+
+   # Normalize user input and options for partial/fuzzy matching
     user_input_clean = re.sub(r'[.,;!?]', '', user_input_lower)
     user_input_norm = normalize_numbers(user_input_clean)
+
 
     for opt in options:
         opt_lower = opt.lower()
         opt_norm = normalize_numbers(opt_lower)
 
-        # 2. Check for continuous n-gram matches
+
+       # 2. Check for continuous n-gram matches
         if has_continuous_match(opt_norm, user_input_norm):
             return opt
 
-        # 3. Use fuzzy partial ratio match as fallback
+
+       # 3. Use fuzzy partial ratio match as fallback
         if fuzz.partial_ratio(opt_norm, user_input_norm) > 90:
             return opt
 
-    # Optional: Check explicit "option N" patterns (e.g., "option 1")
+
+   # Optional: Check explicit "option N" patterns (e.g., "option 1")
     explicit_option_patterns = [
         r'\b(?:option|opt|choice|selection)\s*(\d+)',
     ]
@@ -270,6 +168,7 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
                     return options[option_num - 1]
             except ValueError:
                 pass
+
 
     return None
 
@@ -292,214 +191,164 @@ def end_interaction_and_accumulate_time():
         st.session_state.interaction_start_time = None
 
 
+def initialize_gsheet():
+    """Initialize the Google Sheet with proper unique headers"""
+    try:
+        gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+        sheet = gc.open("Chatbot Usage Log")
+        try:
+         worksheet = sheet.worksheet("Logs_with_explanation")
+        except:
+            worksheet = sheet.add_worksheet(title="Logs_with_explanation", rows=5000, cols=20)
+     # Define and verify headers - ensure all are unique
+        expected_headers = [
+            "participant_id", "question_id", "chatbot_used",
+             "total_questions_asked", "total_time_seconds",
+             "got_recommendation", "asked_followup", "record_timestamp",
+            "user_question", "question_answered"
+        ]
+        current_headers = worksheet.row_values(1)
+     # Only update headers if they don't match exactly
+        if not current_headers or set(current_headers) != set(expected_headers):
+            worksheet.clear()
+            worksheet.append_row(expected_headers)
+            return worksheet
+    except Exception as e:
+        st.error(f"Google Sheets initialization failed: {str(e)}")
+        return None
 
 
-
-
-# def initialize_gsheet():
-# """Initialize the Google Sheet with proper unique headers"""
+# --- Google Sheets Saving Functions ---
+# def save_session_data() -> bool:
+#     """
+#     Prepares session data and calls the optimized save_to_gsheet function.
+#     Returns True if data is saved successfully, False otherwise.
+#     """
 #     try:
-#         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-#         sheet = gc.open("Chatbot Usage Log")
-#     try:
-#         worksheet = sheet.worksheet("Logs_with_explanation")
-#     except:
-#         worksheet = sheet.add_worksheet(title="Logs_with_explanation", rows=5000, cols=20)
-#      # Define and verify headers - ensure all are unique
-#     expected_headers = [
-#          "participant_id", "question_id", "chatbot_used",
-#          "total_questions_asked", "total_time_seconds",
-#          "got_recommendation", "asked_followup", "record_timestamp",
-#          "user_question", "question_answered"
+#         data = {
+#             "participant_id": participant_id,
+#             "question_id": question_id,
+#             "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
+#                                     st.session_state.usage_data['followup_used']) else "no",
+#             "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
+#             "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
+#             "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
+#             "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+#             "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
+#             "user_question": st.session_state.usage_data.get("user_question", ""),
+#             "Youtubeed": st.session_state.usage_data.get("Youtubeed", "")
+#         }
 
-#     ]
-#      current_headers = worksheet.row_values(1)
-#      # Only update headers if they don't match exactly
-#     if not current_headers or set(current_headers) != set(expected_headers):
-#         worksheet.clear()
-#         worksheet.append_row(expected_headers)
-#      return worksheet
-#  except Exception as e:
-#     st.error(f"Google Sheets initialization failed: {str(e)}")
-#     return None
+
+#         if save_to_gsheet(data):
+#             st.session_state.already_saved = True
+#             return True
+#         return False
+#     except Exception as e:
+#         st.error(f"Session save failed: {str(e)}")
+#         return False
+
 
 def save_session_data():
     try:
-        # Build data dictionary
+        # Use total_interaction_time instead of calculating fresh
         data = {
             "participant_id": participant_id,
             "question_id": question_id,
             "chatbot_used": "yes" if (st.session_state.usage_data['chatbot_used'] or
-                                      st.session_state.usage_data['followup_used']) else "no",
+                                 st.session_state.usage_data['followup_used']) else "no",
             "total_questions_asked": st.session_state.usage_data['total_questions_asked'],
             "total_time_seconds": round(st.session_state.get('total_interaction_time', 0), 2),
             "got_recommendation": "yes" if st.session_state.usage_data['get_recommendation'] else "no",
             "asked_followup": "yes" if st.session_state.usage_data['followup_used'] else "no",
+            #"record_timestamp": pd.Timestamp.now().isoformat(),
             "record_timestamp": pd.Timestamp.now(tz=ZoneInfo("Europe/Berlin")).isoformat(),
             "user_question": st.session_state.usage_data.get("user_question", ""),
             "question_answered": st.session_state.usage_data.get("question_answered", "")
         }
 
-        with sqlite3.connect(DB_PATH) as conn:
-            c = conn.cursor()
-
-            # Upsert into usage_logs
-            c.execute("""
-                INSERT INTO usage_logs (
-                    participant_id, question_id, chatbot_used,
-                    total_questions_asked, total_time_seconds,
-                    got_recommendation, asked_followup,
-                    record_timestamp, user_question, question_answered
-                ) VALUES (
-                    :participant_id, :question_id, :chatbot_used,
-                    :total_questions_asked, :total_time_seconds,
-                    :got_recommendation, :asked_followup,
-                    :record_timestamp, :user_question, :question_answered
-                )
-                ON CONFLICT(participant_id, question_id)
-                DO UPDATE SET
-                    chatbot_used = excluded.chatbot_used,
-                    total_questions_asked = excluded.total_questions_asked,
-                    total_time_seconds = excluded.total_time_seconds,
-                    got_recommendation = excluded.got_recommendation,
-                    asked_followup = excluded.asked_followup,
-                    record_timestamp = excluded.record_timestamp,
-                    user_question = excluded.user_question,
-                    question_answered = excluded.question_answered
-            """, data)
-
-            # Save conversation history
-            if 'conversation' in st.session_state:
-                for role, message in st.session_state.conversation:
-                    c.execute("""
-                        INSERT INTO conversation_history (
-                            participant_id, question_id, message_type, content
-                        ) VALUES (?, ?, ?, ?)
-                    """, (data['participant_id'], data['question_id'], role, message))
-
-            conn.commit()
-        return True
-
+        if save_to_gsheet(data):
+            st.session_state.already_saved = True
+            return True
+        return False
     except Exception as e:
-        st.error(f"Database save failed: {e}")
+        st.error(f"Session save failed: {str(e)}")
         return False
 
 
-
-# def save_to_gsheet(data_dict: Dict) -> bool:
-#     try:
-#         worksheet = initialize_gsheet()
-#         if not worksheet:
-#             return False
-
-#     # Get all records with expected headers to avoid duplicates
-#         records = worksheet.get_all_records(expected_headers=[
-#          "participant_id", "question_id", "chatbot_used",
-#          "total_questions_asked", "total_time_seconds",
-#          "got_recommendation", "asked_followup", "record_timestamp", "user_question",
-#         "question_answered"
-#         ])
-#      # Find existing record
-#         row_index = None
-#         for i, record in enumerate(records):
-#             pid_match = str(record.get("participant_id", "")).strip() == str(data_dict.get("participant_id", "")).strip()
-#             qid_match = str(record.get("question_id", "")).strip() == str(data_dict.get("question_id", "")).strip()
-#             if pid_match and qid_match:
-#                 row_index = i + 2  # +2 to account for header row and 1-based indexing
-#                 break
-
-#     # Prepare complete data row
-#         headers = worksheet.row_values(1)
-#         row_data = {k: data_dict.get(k, "") for k in headers}
-#         if row_index:
-#         # Update existing row
-#             worksheet.update(
-#                 f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
-#                 [[row_data.get(h, "") for h in headers]]
-#             )
-#         else:
-#         # Add new row
-#             worksheet.append_row([row_data.get(h, "") for h in headers])
-#             return True
-
-#     except Exception as e:
-#         st.error(f"Failed to save to Google Sheets: {str(e)}")
-#         return False
-
-#     return "Sorry, I encountered an error processing your question."
-
-
-
-
-
-
-## --- AI and Chatbot Logic ---
-def validate_followup(user_input: str, question_id: str, options: List[str], question_text: str = "") -> str:
-    """Validates user's follow-up questions and initiates GPT recommendation."""
+def save_to_gsheet(data_dict: Dict) -> bool:
     try:
-        user_input = user_input.strip()
+        worksheet = initialize_gsheet()
+        if not worksheet:
+            return False
 
-        if not options:
-            options = st.session_state.get('original_options', [])
-        if not user_input:
-            return "Please enter a valid question."
+        # Get all records with expected headers to avoid duplicates
+        records = worksheet.get_all_records(expected_headers=[
+            "participant_id", "question_id", "chatbot_used",
+            "total_questions_asked", "total_time_seconds",
+            "got_recommendation", "asked_followup", "record_timestamp", "user_question",
+            "question_answered"
+        ])
+        # Find existing record
+        row_index = None
+        for i, record in enumerate(records):
+            pid_match = str(record.get("participant_id", "")).strip() == str(data_dict.get("participant_id", "")).strip()
+            qid_match = str(record.get("question_id", "")).strip() == str(data_dict.get("question_id", "")).strip()
+            if pid_match and qid_match:
+                row_index = i + 2  # +2 to account for header row and 1-based indexing
+                break
 
-        placeholder = st.empty()
-
-        # Extract referenced option if any
-        referenced_option = extract_referenced_option(user_input, options)
-        option_num = options.index(referenced_option) + 1 if referenced_option else None
-
-        if option_num is not None:
-            return get_gpt_recommendation(
-                question=question_text,
-                options=options,
-                referenced_option=option_num,
-                is_followup=True,
-                follow_up_question=user_input,
+        # Prepare complete data row
+        headers = worksheet.row_values(1)
+        row_data = {k: data_dict.get(k, "") for k in headers}
+        if row_index:
+            # Update existing row
+            worksheet.update(
+                f"A{row_index}:{chr(65 + len(headers) - 1)}{row_index}",
+                [[row_data.get(h, "") for h in headers]]
             )
-
-        return get_gpt_recommendation(
-            question=question_text,
-            is_followup=True,
-            follow_up_question=user_input
-        )
-
+        else:
+            # Add new row
+            worksheet.append_row([row_data.get(h, "") for h in headers])
+        return True
     except Exception as e:
-        st.error(f"Error in followup validation: {str(e)}")
-        return "Sorry, I encountered an error processing your question."
+        st.error(f"Failed to save to Google Sheets: {str(e)}")
+        return False
+    return "Sorry, I encountered an error processing your question."
 
+
+
+
+
+
+# --- AI and Chatbot Logic ---
 def get_gpt_recommendation(
-    question: str,
-    options: List[str] = None,
-    is_followup: bool = False,
-    follow_up_question: Optional[str] = None,
-    referenced_option: Optional[str] = None,
-    non_dashboard: bool = False,
+   question: str,
+   options: List[str] = None,
+   is_followup: bool = False,
+   follow_up_question: Optional[str] = None,
+   referenced_option: Optional[str] = None,
+   non_dashboard: bool = False,
 ) -> str:
-    """
-    Generates a recommendation or response from the GPT model based on the context.
-    Supports initial recommendations and follow-up questions.
-    """
-    try:
-        if 'chat_history' not in st.session_state:
-            st.session_state.chat_history = []
+   try:
+       if 'chat_history' not in st.session_state:
+           st.session_state.chat_history = []
 
-        messages = st.session_state.chat_history.copy()
-        if options is None:
-            options = st.session_state.get('original_options', [])
+       messages = st.session_state.chat_history.copy()
+       if options is None:
+           options = st.session_state.get('original_options', [])
 
-        if is_followup:
-            original_rec = st.session_state.get("original_recommendation")
-            context_parts = []
-            if original_rec:
-                context_parts.append(
-                    f"Earlier Recommendation:\n"
-                    f"Recommended option: {original_rec['text']}\n"
-                    f"Reason: {original_rec['reasoning']}\n"
-                )
+       if is_followup:
+           original_rec = st.session_state.get("original_recommendation")
+           context_parts = []
+           if original_rec:
+               context_parts.append(
+                   f"Earlier Recommendation:\n"
+                   f"Recommended option: {original_rec['text']}\n"
+                   f"Reason: {original_rec['reasoning']}\n"
+               )
 
-            prompt = f"""You are a chatbot that answers questions strictly related to supermarket scenarios, including sales, marketing, and data insights provided in a specific JSON file. Your responses must always adhere to the following rules and context.
+           prompt = f"""You are a chatbot that answers questions strictly related to supermarket scenarios, including sales, marketing, and data insights provided in a specific JSON file. Your responses must always adhere to the following rules and context.
 
 Context:
 - Original question: {question}
@@ -525,25 +374,9 @@ Limit every response to 50 words or fewer.
 Respond in this format:
 Chatbot answer: "<your answer here>"
 """
-            st.session_state.followup_questions.append(follow_up_question)
-
-            # Determine if the response was a valid answer or a rejection
-            if "Please ask a question related to the survey" in result:
-                answered = "No"
-            else:
-                answered = "Yes"
-            index = len(st.session_state.followup_questions)
-            st.session_state.Youtubes.append(f"{index}. {answered}")
-
-            # Store formatted questions and answers in usage_data
-            st.session_state.usage_data.update({
-                'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
-                'Youtubeed': "\n".join(st.session_state.Youtubes),
-            })
-
-        else:  # Initial recommendation logic
-            options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
-            prompt = f"""Survey Question: {question}
+       else:
+           options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
+           prompt = f"""Survey Question: {question}
 
 Available Options:
 {options_text}
@@ -552,80 +385,73 @@ Please recommend the best option with reasoning (limit to 50 words).
 
 Format:
 Recommended option: <option number or text>
-
 Reason: <short explanation>
 """
 
-        # Add user message to chat history
-        messages.append({"role": "user", "content": prompt})
+       # Add user message to chat history
+       messages.append({"role": "user", "content": prompt})
 
-        # Start streaming response from OpenAI
-        stream = client.chat.completions.create(
-            model="gpt-4.1-mini", # Assuming this model ID is correct/available
-            messages=messages,
-            max_tokens=100,
-            temperature=0,
-            timeout=3,
-            stream=True
-        )
+       # Start streaming response from OpenAI
+       stream = client.chat.completions.create(
+           model="gpt-4.1-mini",
+           messages=messages,
+           max_tokens=100,
+           temperature=0,
+           timeout=3,
+           stream=True
+       )
 
-        # Live output with placeholder
-        placeholder = st.empty()
-        result = ""
+       placeholder = st.empty()
+       result = ""
 
-        for chunk in stream:
-            if hasattr(chunk, 'choices') and chunk.choices:
-                choice = chunk.choices[0]
-                if hasattr(choice, 'delta'):
-                    content_part = getattr(choice.delta, 'content', None)
-                    if content_part:
-                        result += content_part
-                        placeholder.markdown(f"**Chatbot:** {result}")
+       for chunk in stream:
+           if hasattr(chunk, 'choices') and chunk.choices:
+               choice = chunk.choices[0]
+               if hasattr(choice, 'delta'):
+                   content_part = getattr(choice.delta, 'content', None)
+                   if content_part:
+                       result += content_part
+                       placeholder.markdown(f"**Chatbot:** {result}")
 
-        # Store original recommendation if this was an initial recommendation
-        if not is_followup and options:
-            if "Recommended option:" in result and "Reason:" in result:
-                rec_text = result.split("Recommended option:")[1].split("Reason:")[0].strip()
-                reasoning = result.split("Reason:")[1].strip()
-            else:
-                rec_text = result
-                reasoning = "Based on overall analysis of options and dashboard trends."
+       # Store original recommendation if this was an initial recommendation
+       if not is_followup and options:
+           if "Recommended option:" in result and "Reason:" in result:
+               rec_text = result.split("Recommended option:")[1].split("Reason:")[0].strip()
+               reasoning = result.split("Reason:")[1].strip()
+           else:
+               rec_text = result
+               reasoning = "Based on overall analysis of options and dashboard trends."
 
-            st.session_state.original_recommendation = {
-                'text': rec_text,
-                'reasoning': reasoning,
-                'options': options.copy(),
-                'timestamp': time.time()
-            }
+           st.session_state.original_recommendation = {
+               'text': rec_text,
+               'reasoning': reasoning,
+               'options': options.copy(),
+               'timestamp': time.time()
+           }
 
-        # Update chat history with the assistant's response
-        messages.append({"role": "assistant", "content": result})
-        st.session_state.chat_history = messages[-30:] # Keep last 30 messages for context
+       # Update chat history
+       messages.append({"role": "assistant", "content": result})
+       st.session_state.chat_history = messages[-30:]  # Keep last 30 messages
 
-        if is_followup:
-            st.session_state.followup_questions.append(follow_up_question)
+       if is_followup:
+           st.session_state.followup_questions.append(follow_up_question)
+           if "Please ask a question related to the survey" in result:
+               answered = "No"
+           else:
+               answered = "Yes"
+           index = len(st.session_state.followup_questions)
+           st.session_state.Youtubes.append(f"{index}. {answered}")
 
-            # Determine if the response was a valid answer or a rejection
-            if "Please ask a question related to the survey" in result:
-                answered = "No"
-            else:
-                answered = "Yes"
-            index = len(st.session_state.followup_questions)
-            st.session_state.Youtubes.append(f"{index}. {answered}")
+           st.session_state.usage_data.update({
+               'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
+               'Youtubeed': "\n".join(st.session_state.Youtubes),
+           })
 
-            # Store formatted questions and answers in usage_data
-            st.session_state.usage_data.update({
-                'user_question': "\n".join([f"{i+1}. {q}" for i, q in enumerate(st.session_state.followup_questions)]),
-                'Youtubeed': "\n".join(st.session_state.Youtubes),
-            })
-            # Save updated usage data after a follow-up
+       return result
 
-        return result
-
-    except Exception as e:
-        st.error(f"Recommendation generation failed: {str(e)}")
-        return "Sorry, I couldn't generate a recommendation."
-
+   except Exception as e:
+       st.error(f"Recommendation generation failed: {str(e)}")
+       return "Sorry, I couldn't generate a recommendation."
 def display_conversation():
     if 'conversation' not in st.session_state:
         st.session_state.conversation = []
@@ -634,6 +460,7 @@ def display_conversation():
         role, message = st.session_state.conversation[-1]
         if role != "user":
             st.markdown(f"**Chatbot:** {message}")
+
 
 def save_progress():
     """Save or update progress in Google Sheets"""
@@ -671,10 +498,12 @@ def save_progress():
         st.error(f"Progress save failed: {str(e)}")
         return False
 
+
 # Initialize Google Sheet on first load
-# if st.session_state.first_load and not st.session_state.sheet_initialized:
-#     initialize_gsheet()
-#     st.session_state.sheet_initialized = True
+if st.session_state.first_load and not st.session_state.sheet_initialized:
+    initialize_gsheet()
+    st.session_state.sheet_initialized = True
+
 
 # Track question changes
 if question_id != st.session_state.get('last_question_id'):
@@ -684,11 +513,13 @@ if question_id != st.session_state.get('last_question_id'):
     st.session_state.last_question_id = question_id
     st.session_state.already_saved = False  # Reset saved flag for new question
 
+
 if st.button("Get Recommendation"):
     update_interaction_time()
     recommendation = get_gpt_recommendation(question_text, options=options, is_followup=False)
     st.session_state.conversation.append(("assistant", recommendation))
     end_interaction_and_accumulate_time()
+
     # Update usage data
     st.session_state.usage_data.update({
         'chatbot_used': True,
@@ -698,14 +529,23 @@ if st.button("Get Recommendation"):
     })
     save_session_data()
 
+
 user_input = st.text_input("Ask a follow-up question:")
 if st.button("Send") and user_input.strip():
     update_interaction_time()
     st.session_state.conversation.append(("user", user_input))
+
     if user_input.lower().strip() in ['help', '?']:
-        response = "I can help with:\n- Explaining dashboard terms\n- Analyzing trends\n- Making recommendations\nAsk me anything about the supermarket data!"
+        response = (
+            "I can help with:\n"
+            "- Explaining dashboard terms\n"
+            "- Analyzing trends\n"
+            "- Making recommendations\n"
+            "Ask me anything about the supermarket data!"
+        )
     else:
         response = validate_followup(user_input, question_id, options=options)
+
     st.session_state.conversation.append(("assistant", response))
     end_interaction_and_accumulate_time()
 
@@ -716,8 +556,8 @@ if st.button("Send") and user_input.strip():
         'total_questions_asked': st.session_state.usage_data.get('total_questions_asked', 0) + 1,
         'total_time': st.session_state.total_interaction_time
     })
-
     save_session_data()
+
 
 # Debug information
 if query_params.get("debug", "false") == "true":
