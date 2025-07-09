@@ -500,15 +500,15 @@ if st.button("Get Recommendation"):
 
 
 # Display chatbot conversation
-if st.session_state.conversation:
-    st.markdown("---")
-    st.subheader("Chat History")
-    for role, message in st.session_state.conversation:
-        if role == "user":
-            st.markdown(f"**You:** {message}")
-        else:
-            st.markdown(f"**Chatbot:** {message}")
-    st.markdown("---")
+# if st.session_state.conversation:
+#     st.markdown("---")
+#     st.subheader("Chat History")
+#     for role, message in st.session_state.conversation:
+#         if role == "user":
+#             st.markdown(f"**You:** {message}")
+#         else:
+#             st.markdown(f"**Chatbot:** {message}")
+#     st.markdown("---")
 
 
 user_input = st.text_input("Ask a follow-up question:")
