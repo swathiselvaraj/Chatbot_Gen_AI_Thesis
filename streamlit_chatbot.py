@@ -247,6 +247,7 @@ def get_gpt_recommendation(
    is_followup: bool = False,
    follow_up_question: Optional[str] = None,
    referenced_option: Optional[str] = None,
+   user_input_for_logging: Optional[str] = None,
 ) -> str:
  # Return type now includes bool for answered_relevantly
 
