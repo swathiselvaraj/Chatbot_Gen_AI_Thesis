@@ -60,3 +60,4 @@ fuzzywuzzy>=0.18.0
 python-Levenshtein>=0.12.2
 nltk==3.8.1
 num2words==0.5.12
+google-cloud-firestore==2.21.0
