@@ -484,7 +484,7 @@ if st.button("Send") and user_input.strip():
             "- Making recommendations\n"
             "Ask me anything about the supermarket data!"
         )
-            answered_relevantly = True
+        answered_relevantly = True
     elif referenced_option: # Check if a referenced_option was found (it will be truthy if not None)
         response, answered_relevantly = get_gpt_recommendation(
             question_text,
