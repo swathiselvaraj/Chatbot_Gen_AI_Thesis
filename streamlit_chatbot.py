@@ -348,7 +348,7 @@ def get_gpt_recommendation(
             if prompt_context_data:
                 context_parts.append(prompt_context_data)
             
-             st.markdown(f"**context part:** {context_parts}")
+            st.markdown(f"**context part:** {context_parts}")
 
 
             prompt_content = f"""You are a chatbot that answers questions strictly related to supermarket scenarios, including sales, marketing, and data insights provided in a specific JSON file. Your responses must always adhere to the following rules and context.
