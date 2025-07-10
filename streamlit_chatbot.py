@@ -292,13 +292,6 @@ def log_individual_chatbot_interaction(
         st.error(f"Failed to log individual interaction to Firestore: {str(e)}")
 
 
-import json
-import re
-import time
-from typing import List, Optional, Tuple
-import streamlit as st
-from your_module import flatten_json  # Replace with actual module if needed
-
 def get_gpt_recommendation(
     question: str,
     options: List[str] = None,
