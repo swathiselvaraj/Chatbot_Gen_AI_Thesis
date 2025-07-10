@@ -365,7 +365,7 @@ User's Follow-up Question: {follow_up_question}
 
 Rules:
 1. First, check if the question pertains to the JSON data. If it does, use the data to provide your answer.
-2. If not, check if the topic is relevant to supermarket scenarios, retail operations, marketing, or sales.
+2. If not, check if the topic is relevant to supermarket scenarios, including staffing decisions, retail operations, logistics, marketing, or sales.
 3. If the question is about the original question, the four options, or challenges to the recommended solution:
    - Use all available context to justify the recommended option with clear, logical reasoning grounded in operational efficiency, real-world supermarket workflows, effective sales and marketing strategies, and staff capacity.
    - Highlight why the recommended option is more practical or sustainable than alternatives, considering factors such as staff utilization, customer wait times, and service quality.
@@ -383,7 +383,7 @@ Respond in this format:
         else: # Initial question
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
             prompt_content = f"""{prompt_context_data}
-            
+
 Survey Question: {question}
 
 Available Options:
@@ -396,6 +396,7 @@ Select the best option based on the available information in the JSON data and s
 
 Format:
 Recommended option: <option number or text>
+
 Reason: <short explanation, max 50 words>
 """
 
