@@ -365,16 +365,18 @@ Rules:
 1. First, check if the question pertains to the JSON data. If it does, use the data to provide your answer.
 2. If not, check if the topic is relevant to supermarket scenarios, retail operations, marketing, or sales.
 3. If the question is about the original question, the four options, or challenges to the recommended solution:
-   - Respond using all the available context and justify the recommended option.
-4. If a user suggests an alternative option, acknowledge their reasoning but explain clearly and concisely why the recommended option is better, based on logic, operational research, or available data.
-5. If the question does not match any of the above categories, strictly respond with :
-   "Please ask a question related to the survey." donot change this sentence
-6. If the user asks "why" regarding the recommendation, explain the reason provided in the context, clearly and concisely.
+   - Use all available context to justify the recommended option with clear, logical reasoning grounded in operational efficiency, real-world supermarket workflows, effective sales and marketing strategies, and staff capacity.
+   - Highlight why the recommended option is more practical or sustainable than alternatives, considering factors such as staff utilization, customer wait times, and service quality.
+4. If a user suggests an alternative option, acknowledge their reasoning but explain clearly and concisely why the recommended option is better. Use principles from retail operations, staff utilization, queue management, effective sales and marketing strategies, or the provided data to support your response.
+5. If the question does not match any of the above categories, strictly respond with:
+   "Please ask a question related to the survey." Do not change this sentence.
+6. If the user asks "why" regarding the recommendation, explain the reasoning provided in the context. Where relevant, clarify feasibility in terms of staffing capacity, service quality, flexibility, and customer experience—not just literal possibility.
 
 Limit every response to 50 words or fewer.
 
 Respond in this format:
 <your answer here>
+
 """
         else: # Initial question
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
