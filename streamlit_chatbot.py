@@ -345,7 +345,7 @@ def get_gpt_recommendation(
                 )
             # Always include the data context if it was loaded for follow-ups
             if prompt_context_data:
-                 context_parts.append(prompt_context_data)
+                context_parts.append(prompt_context_data)
 
 
             prompt_content = f"""You are a chatbot that answers questions strictly related to supermarket scenarios, including sales, marketing, and data insights provided in a specific JSON file. Your responses must always adhere to the following rules and context.
@@ -372,7 +372,7 @@ Rules:
 Limit every response to 50 words or fewer.
 
 Respond in this format:
-Chatbot answer: "<your answer here>"
+"<your answer here>"
 """
         else: # Initial question
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
