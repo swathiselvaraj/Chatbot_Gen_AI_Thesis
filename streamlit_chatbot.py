@@ -335,7 +335,7 @@ def get_gpt_recommendation(
                 st.warning(f"Warning: Error decoding JSON from {json_data_path}. Chatbot will operate without specific data context.")
                 prompt_context_data = "" # No data available
 
-            Follow-up: {follow_up_question}
+
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
             if original_rec:
