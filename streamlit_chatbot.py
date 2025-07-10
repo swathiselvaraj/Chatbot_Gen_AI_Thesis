@@ -308,8 +308,8 @@ def get_gpt_recommendation(
             st.session_state.chat_history = []
 
         messages = st.session_state.chat_history.copy()
-        if options is None:
-            options = st.session_state.get('original_options', [])
+        if not options:
+            options = st.session_state.get('original_options') or []
 
         
         # Load and flatten JSON data only if it's a follow-up
@@ -356,7 +356,7 @@ Context:
 {chr(10).join(options)}
 
 {''.join(context_parts) if context_parts else ''}
-{f"- Referenced option: {referenced_option}" if referenced_option else ''}
+{f"- Referenced option: {referenced_option}" if referenced_option is not None else ''}
 
 Rules:
 1. First, check if the question pertains to the JSON data. If it does, use the data to provide your answer.
@@ -412,19 +412,14 @@ Reason: <short explanation>
                         placeholder.markdown(f"**Chatbot:** {result}")
 
         if not is_followup and options: # Logic for processing initial recommendation
-            if "Recommended option:" in result and "Reason:" in result:
-                # Be careful with multiple "Recommended option:" or "Reason:"
-                try:
-                    rec_text_part = result.split("Recommended option:")[1]
-                    reasoning_part = rec_text_part.split("Reason:")
-                    rec_text = reasoning_part[0].strip()
-                    reasoning = reasoning_part[1].strip()
-                except IndexError: # Fallback if expected format isn't strictly followed by LLM
-                    rec_text = result
-                    reasoning = "Based on overall analysis."
+
+            match = re.search(r"Recommended option:\s*(.*?)\s*Reason:\s*(.*)", result, re.DOTALL)
+            if match:
+                rec_text = match.group(1).strip()
+                reasoning = match.group(2).strip()
             else:
-                rec_text = result
-                reasoning = "Based on overall analysis of options and dashboard trends."
+                rec_text = result.strip()
+                reasoning = "Based on overall analysis of options and dashboard trends"
 
             st.session_state.original_recommendation = {
                 'text': rec_text,
