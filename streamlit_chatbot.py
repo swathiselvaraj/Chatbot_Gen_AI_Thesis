@@ -336,8 +336,6 @@ def get_gpt_recommendation(
         # Load and flatten JSON data only if it's a follow-up
         if is_followup:
             json_data_path = "data/dashboard_data.json"
-            try:
-                
 
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
