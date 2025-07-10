@@ -507,18 +507,15 @@ if st.button("Get Recommendation"):
 #     st.markdown("---")
 
 
-user_input = st.text_input("Ask a follow-up question:")
+
+user_input = st.text_input("Ask a follow‑up question:")
 if st.button("Send") and user_input.strip():
     update_interaction_time()
     st.session_state.conversation.append(("user", user_input))
-
     st.session_state.usage_data['total_questions_asked'] += 1
 
-
-    referenced_option = extract_referenced_option(user_input, options) # Call it once here
-
-    option_num = options.index(referenced_option) + 1 if referenced_option else None
-
+    referenced = extract_referenced_option(user_input, options)
+    option_num = options.index(referenced) + 1 if referenced in options else None
 
     if user_input.lower().strip() in ['help', '?']:
         response = (
@@ -529,27 +526,21 @@ if st.button("Send") and user_input.strip():
             "Ask me anything about the supermarket data!"
         )
         answered_relevantly = True
-    elif referenced_option: # Check if a referenced_option was found (it will be truthy if not None)
+    else:
+        # === FIXED: This now calls the GPT function for follow‑ups ===
         response, answered_relevantly = get_gpt_recommendation(
-            question_text,
+            question=question_text,
             options=options,
             is_followup=True,
-            referenced_option=option_num, # Pass the found option
+            follow_up_question=user_input,
+            referenced_option=option_num,
             user_input_for_logging=user_input
         )
-    else: # If no help requested and no option was referenced
-        response, answered_relevantly = get_gpt_recommendation(
-            question_text,
-            options=options,
-            is_followup=True,
-            user_input_for_logging=user_input
-        )
-
 
     st.session_state.conversation.append(("assistant", response))
     end_interaction_and_accumulate_time()
 
-    # Log this individual interaction, WITHOUT chatbot_response_text
+    # Log this individual interaction
     log_individual_chatbot_interaction(
         current_survey_question_text=question_text,
         user_input_text=user_input,
