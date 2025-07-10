@@ -335,7 +335,7 @@ def get_gpt_recommendation(
                 st.warning(f"Warning: Error decoding JSON from {json_data_path}. Chatbot will operate without specific data context.")
                 prompt_context_data = "" # No data available
 
-
+            Follow-up: {follow_up_question}
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
             if original_rec:
@@ -360,6 +360,8 @@ Context:
 
 {''.join(context_parts) if context_parts else ''}
 {f"- Referenced option: {referenced_option}" if referenced_option is not None else ''}
+
+User's Follow-up Question: {follow_up_question}
 
 Rules:
 1. First, check if the question pertains to the JSON data. If it does, use the data to provide your answer.
