@@ -292,16 +292,25 @@ def log_individual_chatbot_interaction(
         st.error(f"Failed to log individual interaction to Firestore: {str(e)}")
 
 
-def get_gpt_recommendation(
-   question: str,
-   options: List[str] = None,
-   is_followup: bool = False,
-   follow_up_question: Optional[str] = None,
-   referenced_option: Optional[int] = None,
-   user_input_for_logging: Optional[str] = None,
-) -> Tuple[str, bool]:
- # Return type now includes bool for answered_relevantly
+import json
+import re
+import time
+from typing import List, Optional, Tuple
+import streamlit as st
+from your_module import flatten_json  # Replace with actual module if needed
 
+def get_gpt_recommendation(
+    question: str,
+    options: List[str] = None,
+    is_followup: bool = False,
+    follow_up_question: Optional[str] = None,
+    referenced_option: Optional[int] = None,
+    user_input_for_logging: Optional[str] = None,
+) -> Tuple[str, bool]:
+    # Return type includes bool for answered_relevantly
+
+    json_data_path = "data/dashboard_data.json"
+    prompt_context_data = ""
 
     try:
         if 'chat_history' not in st.session_state:
@@ -311,44 +320,30 @@ def get_gpt_recommendation(
         if not options:
             options = st.session_state.get('original_options') or []
 
+        # Load and flatten JSON
         try:
             with open(json_data_path, 'r') as file:
                 json_data = json.load(file)
                 flat_data = flatten_json(json_data)
-                # Decide on the best format for prompt_context_data
-                # Option 1: Compact, space-separated (your original attempt)
-                # prompt_context_data = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
-                # Option 2: More readable JSON block (recommended for clarity)
                 prompt_context_data = f"\nSupermarket Data (flattened JSON):\n```json\n{json.dumps(flat_data, indent=2)}\n```"
-                # Option 3: Bulleted list for readability (if not too large)
-                # prompt_context_data = "\nAvailable Data (key: value):\n" + "\n".join([f"- {k}: {v}" for k,v in flat_data.items()])
-                
-
         except FileNotFoundError:
             st.warning(f"Warning: Data file not found at {json_data_path}. Chatbot will operate without specific data context.")
-            prompt_context_data = "" # No data available
         except json.JSONDecodeError:
             st.warning(f"Warning: Error decoding JSON from {json_data_path}. Chatbot will operate without specific data context.")
-            prompt_context_data = "" # No data available
 
-
-        
-        # Load and flatten JSON data only if it's a follow-up
         if is_followup:
-            json_data_path = "data/dashboard_data.json"
-
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
+
             if original_rec:
                 context_parts.append(
                     f"Earlier Recommendation:\n"
-                    f"Recommended option: {original_rec['text']}\n"
-                    f"Reason: {original_rec['reasoning']}\n"
+                    f"Recommended option: {original_rec.get('text', '')}\n"
+                    f"Reason: {original_rec.get('reasoning', '')}\n"
                 )
-            # Always include the data context if it was loaded for follow-ups
+
             if prompt_context_data:
                 context_parts.append(prompt_context_data)
-            
 
             prompt_content = f"""You are a chatbot that answers questions strictly related to supermarket scenarios, including sales, marketing, and data insights provided in a specific JSON file. Your responses must always adhere to the following rules and context.
 
@@ -357,7 +352,7 @@ Context:
 - Options:
 {chr(10).join(options)}
 
-{''.join(context_parts) if context_parts else ''}
+{''.join(context_parts)}
 {f"- Referenced option: {referenced_option}" if referenced_option is not None else ''}
 
 User's Follow-up Question: {follow_up_question}
@@ -377,9 +372,8 @@ Limit every response to 50 words or fewer.
 
 Respond in this format:
 <your answer here>
-
 """
-        else: # Initial question
+        else:
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
             prompt_content = f"""{prompt_context_data}
 
@@ -422,8 +416,7 @@ Reason: <short explanation, max 50 words>
                         result += content_part
                         placeholder.markdown(f"**Chatbot:** {result}")
 
-        if not is_followup and options: # Logic for processing initial recommendation
-
+        if not is_followup and options:
             match = re.search(r"Recommended option:\s*(.*?)\s*Reason:\s*(.*)", result, re.DOTALL)
             if match:
                 rec_text = match.group(1).strip()
@@ -438,8 +431,8 @@ Reason: <short explanation, max 50 words>
                 'options': options.copy(),
                 'timestamp': time.time()
             }
-       
-       # Determine if the chatbot answered relevantly based on its response
+
+        # Determine if the chatbot answered relevantly based on its response
         answered_relevantly = "Please ask a question related to the survey" not in result
 
         messages.append({"role": "assistant", "content": result})
@@ -449,7 +442,6 @@ Reason: <short explanation, max 50 words>
 
     except Exception as e:
         st.error(f"An unexpected error occurred: {e}")
-        # Log the full traceback for debugging in a real application
         import traceback
         st.error(traceback.format_exc())
         return "An internal error occurred. Please try again later.", False
