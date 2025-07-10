@@ -400,11 +400,6 @@ Recommended option: <option number or text>
 Reason: <short explanation, max 50 words>
 """
 
-Format:
-Recommended option: <option number or text>
-Reason: <short explanation>
-"""
-
         messages.append({"role": "user", "content": prompt_content})
 
         stream = client.chat.completions.create(
