@@ -312,13 +312,13 @@ def get_gpt_recommendation(
             options = st.session_state.get('original_options') or []
 
         with open(json_data_path, 'r') as file:
-                    json_data = json.load(file)
-                flat_data = flatten_json(json_data)
+            json_data = json.load(file)
+            flat_data = flatten_json(json_data)
                 # Decide on the best format for prompt_context_data
                 # Option 1: Compact, space-separated (your original attempt)
                 # prompt_context_data = " ".join([f"{k}:{v}" for k,v in flat_data.items()])
                 # Option 2: More readable JSON block (recommended for clarity)
-                prompt_context_data = f"\nSupermarket Data (flattened JSON):\n```json\n{json.dumps(flat_data, indent=2)}\n```"
+            prompt_context_data = f"\nSupermarket Data (flattened JSON):\n```json\n{json.dumps(flat_data, indent=2)}\n```"
                 # Option 3: Bulleted list for readability (if not too large)
                 # prompt_context_data = "\nAvailable Data (key: value):\n" + "\n".join([f"- {k}: {v}" for k,v in flat_data.items()])
                 
