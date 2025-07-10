@@ -326,7 +326,7 @@ def get_gpt_recommendation(
                 prompt_context_data = f"\nSupermarket Data (flattened JSON):\n```json\n{json.dumps(flat_data, indent=2)}\n```"
                 # Option 3: Bulleted list for readability (if not too large)
                 # prompt_context_data = "\nAvailable Data (key: value):\n" + "\n".join([f"- {k}: {v}" for k,v in flat_data.items()])
-                st.markdown(f"**json data:** { prompt_context_data}")
+                
 
             except FileNotFoundError:
                 st.warning(f"Warning: Data file not found at {json_data_path}. Chatbot will operate without specific data context.")
@@ -347,6 +347,8 @@ def get_gpt_recommendation(
             # Always include the data context if it was loaded for follow-ups
             if prompt_context_data:
                 context_parts.append(prompt_context_data)
+            
+             st.markdown(f"**context part:** {context_parts}")
 
 
             prompt_content = f"""You are a chatbot that answers questions strictly related to supermarket scenarios, including sales, marketing, and data insights provided in a specific JSON file. Your responses must always adhere to the following rules and context.
