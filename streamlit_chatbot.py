@@ -311,7 +311,7 @@ def get_gpt_recommendation(
         if options is None:
             options = st.session_state.get('original_options', [])
 
-        prompt_context_data = "" # Initialize outside if/else for broader scope if needed
+        
         # Load and flatten JSON data only if it's a follow-up
         if is_followup:
             json_data_path = "data/dashboard_data.json"
