@@ -311,12 +311,7 @@ def get_gpt_recommendation(
         if not options:
             options = st.session_state.get('original_options') or []
 
-        
-        # Load and flatten JSON data only if it's a follow-up
-        if is_followup:
-            json_data_path = "data/dashboard_data.json"
-            try:
-                with open(json_data_path, 'r') as file:
+        with open(json_data_path, 'r') as file:
                     json_data = json.load(file)
                 flat_data = flatten_json(json_data)
                 # Decide on the best format for prompt_context_data
@@ -335,6 +330,13 @@ def get_gpt_recommendation(
                 st.warning(f"Warning: Error decoding JSON from {json_data_path}. Chatbot will operate without specific data context.")
                 prompt_context_data = "" # No data available
 
+
+        
+        # Load and flatten JSON data only if it's a follow-up
+        if is_followup:
+            json_data_path = "data/dashboard_data.json"
+            try:
+                
 
             original_rec = st.session_state.get("original_recommendation")
             context_parts = []
@@ -380,12 +382,22 @@ Respond in this format:
 """
         else: # Initial question
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
-            prompt_content = f"""Survey Question: {question}
+            prompt_content = f"""{prompt_context_data}
+            
+Survey Question: {question}
 
 Available Options:
 {options_text}
 
-Please recommend the best option with reasoning (limit to 50 words).
+Instructions:
+Using the provided supermarket data above, analyze the question and options carefully.
+Select the best option based on the available information in the JSON data and sound reasoning.
+(limit to 50 words)
+
+Format:
+Recommended option: <option number or text>
+Reason: <short explanation, max 50 words>
+"""
 
 Format:
 Recommended option: <option number or text>
