@@ -350,22 +350,37 @@ Context:
 
 User's Follow-up Question: {follow_up_question}
 
-Rules:
-1. First, check if the question pertains to the JSON data. If it does, use the data to provide your answer.
-2. If not, check if the topic is relevant to supermarket scenarios, including staffing decisions, retail operations, logistics, marketing, or sales.
-3. If the question is about the original question, the four options, or challenges to the recommended solution:
-   - Use all available context to justify the recommended option with clear, logical reasoning grounded in operational efficiency, real-world supermarket workflows, effective sales and marketing strategies, and staff capacity.
-   - Highlight why the recommended option is more practical or sustainable than alternatives, considering factors such as staff utilization, customer wait times, and service quality.
-4. If a user suggests an alternative option, acknowledge their reasoning but explain clearly and concisely why the recommended option is better. Use principles from retail operations, staff utilization, queue management, effective sales and marketing strategies, or the provided data to support your response.
-5. If the question does not match any of the above categories, strictly respond with:
-   "Please ask a question related to the survey." Do not change this sentence.
-6. If the user asks "why" regarding the recommendation, explain the reasoning provided in the context. Where relevant, clarify feasibility in terms of staffing capacity, service quality, flexibility, and customer experience—not just literal possibility.
+Follow these rules in order:
 
-Limit every response to 50 words or fewer.
+1. If the question directly relates to the JSON data, use that data to answer.
+2. Else if it relates to supermarket scenarios (e.g. staffing, operations, logistics, marketing, or sales), respond based on general principles from those domains.
+3. Else if it is about the original question, the four options, or critiques of the recommended solution:
+   - Use all available context.
+   - Justify the recommended option with logical reasoning based on:
+     - Operational efficiency
+     - Real-world supermarket workflows
+     - Effective sales and marketing strategies
+     - Staff capacity and service quality
+   - Explain why the recommended option is more practical/sustainable than the alternatives.
+4. Else if the user proposes a different option:
+   - Acknowledge their reasoning.
+   - Explain clearly why the original recommendation is stronger, using relevant operational principles or data.
+5. Else if the user asks “why” regarding the recommendation:
+   - Refer to the context and clarify reasoning.
+   - Emphasize factors like staffing feasibility, service quality, flexibility, and customer experience.
+6. Else:
+   Respond only with:
+   > "Please ask a question related to the survey."  
+   Do not change this sentence.
+
+Additional constraints:
+- Limit all responses to **50 words or fewer**.
+- Use clear, concise language.
+- Stick to the structure above; do not skip steps or reorder rules.
 
 Respond in this format:
 <your answer here>
-"""
+
         else:
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
             prompt_content = f"""{prompt_context_data}
