@@ -380,7 +380,7 @@ Additional constraints:
 
 Respond in this format:
 <your answer here>
-
+"""
         else:
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
             prompt_content = f"""{prompt_context_data}
