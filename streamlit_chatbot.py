@@ -405,6 +405,7 @@ Available Options:
 Recommended option: <option number or exact text of the chosen option>
 Reason: <your short, data-backed explanation>
 "
+"""
 
         messages.append({"role": "user", "content": prompt_content})
 
