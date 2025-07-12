@@ -352,31 +352,23 @@ User's Follow-up Question: {follow_up_question}
 
 Follow these rules in order:
 
-1. If the question directly relates to the JSON data, use that data to answer.
-2. Else if it relates to supermarket scenarios (e.g. staffing, operations, logistics, marketing, or sales), respond based on general principles from those domains.
-3. Else if it is about the original question, the four options, or critiques of the recommended solution:
-   - Use all available context.
-   - Justify the recommended option with logical reasoning based on:
-     - Operational efficiency
-     - Real-world supermarket workflows
-     - Effective sales and marketing strategies
-     - Staff capacity and service quality
-   - Explain why the recommended option is more practical/sustainable than the alternatives.
-4. Else if the user proposes a different option:
-   - Acknowledge their reasoning.
-   - Explain clearly why the original recommendation is stronger, using relevant operational principles or data.
-5. Else if the user asks “why” regarding the recommendation:
-   - Refer to the context and clarify reasoning.
-   - Emphasize factors like staffing feasibility, service quality, flexibility, and customer experience.
-6. Else:
-   Respond only with:
-   > "Please ask a question related to the survey."  
-   Do not change this sentence.
+1.  **If the question directly relates to the provided JSON data:** Use that data to answer the question.
+2.  **If the question relates to general supermarket scenarios** (e.g., staffing, operations, logistics, marketing, or sales) but not directly to the JSON data: Respond based on general principles from those domains.
+3.  **If the question is about the original survey question, the four options, or critiques of the recommended solution:**
+    * Use all available context.
+    * Justify the recommended option with logical reasoning based on operational efficiency, real-world supermarket workflows, effective sales and marketing strategies, and staff capacity/service quality.
+    * Explain why the recommended option is more practical or sustainable than the alternatives.
+4.  **If the user proposes a different option:**
+    * Acknowledge their reasoning.
+    * Clearly explain why the original recommendation is stronger, using relevant operational principles or data.
+5.  **If the user asks "why" regarding the recommendation:**
+    * Refer to the context and clarify the reasoning.
+    * Emphasize factors like staffing feasibility, service quality, flexibility, and customer experience.
+6.  **For any other question not covered by the above rules:** Respond *only* with: "Please ask a question related to the survey." Do not modify this sentence.
 
-Additional constraints:
-- Limit all responses to **50 words or fewer**.
-- Use clear, concise language.
-- Stick to the structure above; do not skip steps or reorder rules.
+**Additional constraints for all responses:**
+* Limit all responses to **50 words or fewer**.
+* Use clear, concise language.
 
 Respond in this format:
 <your answer here>
@@ -390,16 +382,29 @@ Survey Question: {question}
 Available Options:
 {options_text}
 
-Instructions:
-Using the provided supermarket data above, analyze the question and options carefully.
-Select the best option based on the available information in the JSON data and sound reasoning.
-(limit to 50 words)
+---
 
-Format:
-Recommended option: <option number or text>
+**Instructions for Recommendation:**
 
-Reason: <short explanation, max 50 words>
-"""
+1.  **Analyze the "Survey Question" and "Available Options" thoroughly.**
+2.  **Refer strictly to the provided supermarket data** (from `prompt_context_data`) as your primary source for analysis and justification.
+3.  **Evaluate each "Available Option"** against the data and the survey question.
+4.  **Select the single best option.**
+5.  **Provide a concise reason** for your selection, clearly linking it to insights derived from the provided data or generally accepted principles of supermarket operations, sales, or efficiency.
+
+---
+
+**Constraints:**
+* Your entire response (including "Recommended option" and "Reason") must be **50 words or fewer**.
+* Focus on practicality, operational efficiency, potential for sales increase, or customer satisfaction as drivers for your reasoning.
+* Do NOT include any external information not present in the provided data or general supermarket knowledge.
+
+---
+
+**Response Format:**
+Recommended option: <option number or exact text of the chosen option>
+Reason: <your short, data-backed explanation>
+"
 
         messages.append({"role": "user", "content": prompt_content})
 
