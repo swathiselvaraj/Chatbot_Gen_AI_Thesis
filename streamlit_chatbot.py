@@ -17,16 +17,12 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from fuzzywuzzy import fuzz
-
-
-# --- NEW: Firebase Firestore Imports ---
 from google.cloud import firestore
 from google.oauth2 import service_account
 
-# --- NEW: Firebase Firestore Client Initialization ---
+# --- Firebase Firestore Client Initialization ---
 @st.cache_resource
 def get_firestore_client():
-    """Initializes and returns a Cloud Firestore client."""
     try:
         key_dict = json.loads(st.secrets["firestore"]["textkey"])
         creds = service_account.Credentials.from_service_account_info(key_dict)
@@ -38,6 +34,7 @@ def get_firestore_client():
         st.stop()
 
 db = get_firestore_client()
+#name of the database main collection 
 CHATBOT_LOGS_COLLECTION = "chatbot_interaction_logs"
 logs_ref = db.collection(CHATBOT_LOGS_COLLECTION)
 
@@ -55,6 +52,8 @@ while len(options) < 4:
 option_mapping = {f"option {i+1}": options[i] for i in range(4)}
 option_mapping.update({f"option{i+1}": options[i] for i in range(4)})
 participant_id = query_params.get("pid", str(uuid.uuid4()))
+
+#session state initialization
 
 if 'conversation' not in st.session_state:
     st.session_state.conversation = []
@@ -104,7 +103,7 @@ if 'get_recommendation_used' not in st.session_state:
 if 'followup_used' not in st.session_state:
     st.session_state.followup_used = False
 
-# --- Utility Functions (unchanged) ---
+# Utility Functions
 def normalize_numbers(text: str) -> str:
    return re.sub(r'\b\d+\b', lambda m: num2words(int(m.group())), text)
 
@@ -120,12 +119,11 @@ def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5
     return False
 
 @st.cache_resource
-# --- Utility Functions ---
 def normalize_numbers(text: str) -> str:
    """Converts numerical digits in text to their word form."""
    return re.sub(r'\b\d+\b', lambda m: num2words(int(m.group())), text)
 
-
+#checks for matches in option relates questions
 def has_continuous_match(option_text: str, user_input: str, min_len=2, max_len=5) -> bool:
    """
    Checks for continuous n-gram matches between option text and user input.
@@ -185,7 +183,7 @@ def extract_referenced_option(user_input: str, options: List[str]) -> Optional[s
            return opt
 
 
-   # Optional: Check explicit "option N" patterns (e.g., "option 1")
+   # Check explicit "option N" patterns (e.g., "option 1")
    explicit_option_patterns = [
        r'\b(?:option|opt|choice|selection)\s*(\d+)',
    ]
@@ -403,6 +401,7 @@ Available Options:
 
 **Response Format:**
 Recommended option: <option number or exact text of the chosen option>
+
 Reason: <your short, data-backed explanation>
 "
 """
