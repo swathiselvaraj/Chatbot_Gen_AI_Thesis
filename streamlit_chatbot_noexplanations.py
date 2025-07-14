@@ -391,7 +391,8 @@ Available Options:
 4.  **Select the single best option.**
 
 ---
-
+**Contraint:**
+Strictly only display the recommended option with its text
 **Response Format:**
 Recommended option: <option number and exact text of the chosen option>
 """
