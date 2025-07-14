@@ -392,15 +392,8 @@ Available Options:
 
 ---
 
-**Constraints:**
-* Your entire response must be **50 words or fewer**.
-* Focus on practicality, operational efficiency, potential for sales increase, or customer satisfaction as drivers for your reasoning.
-* Do NOT include any external information not present in the provided data or general supermarket knowledge.
-
----
-
 **Response Format:**
-Recommended option: <option number or exact text of the chosen option>
+Recommended option: <option number and exact text of the chosen option>
 """
 
         messages.append({"role": "user", "content": prompt_content})
