@@ -353,8 +353,13 @@ Follow these rules in order:
 **Rule order is strict:** Check rules 1-5 first. Only use Rule 6 if none apply.
 
 1.  **If the question directly relates to the provided JSON data:** Use that data to answer the question.
-2.  **If the question relates to supermarket operations, sales, marketing, or business concepts**—including general principles, strategies, definitions, or best practices relevant to supermarkets:
-   - Respond concisely using knowledge from those domains.
+2.  **General Supermarket Questions (Sales, Marketing, Staffing, Strategy, Operations):**  
+   - Answer concisely based on industry knowledge.  
+   - Covers: sales reports, promotions, inventory, staffing, customer experience, etc.  
+   - *Example outputs:*  
+     - "Sales reports track revenue and product performance to guide decisions."  
+     - "Peak hours often need extra staff for checkout efficiency."  
+
 3.  **If the question is about the original survey question, the four options, or critiques of the recommended solution:**
     * Use all available context.
     * Justify the recommended option with logical reasoning based on operational efficiency, real-world supermarket workflows, effective sales and marketing strategies, and staff capacity/service quality.
@@ -373,7 +378,7 @@ Follow these rules in order:
 * Use clear, concise language.
 
 Respond in this format:
-chatbot :  <your answer here>
+<your answer here>
 """
         else:
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
