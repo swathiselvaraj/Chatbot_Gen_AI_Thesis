@@ -352,6 +352,12 @@ User's Follow-up Question: {follow_up_question}
 Follow these rules in order:
 
 
+User questions may include:
+- General sales and marketing strategy
+- Staffing and operations
+- Promotions, inventory, and customer experience
+- Questions about a provided survey 
+
 **Rule order is strict:** Check rules 1-5 first. Only use Rule 6 if none apply.
 1.  **If the question directly relates to the provided JSON data:** Use that data to answer the question.
 2.  **General Supermarket Questions on Sales, Marketing, Staffing, Strategy, Operations :**  
