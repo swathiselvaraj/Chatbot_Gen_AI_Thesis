@@ -353,7 +353,7 @@ Follow these rules in order:
 **Rule order is strict:** Check rules 1-5 first. Only use Rule 6 if none apply.
 
 1.  **If the question directly relates to the provided JSON data:** Use that data to answer the question.
-2.  2. **If the question relates to supermarket operations, sales, marketing, or business concepts**—including general principles, strategies, definitions, or best practices relevant to supermarkets:
+2.  **If the question relates to supermarket operations, sales, marketing, or business concepts**—including general principles, strategies, definitions, or best practices relevant to supermarkets:
    - Respond concisely using knowledge from those domains.
 3.  **If the question is about the original survey question, the four options, or critiques of the recommended solution:**
     * Use all available context.
