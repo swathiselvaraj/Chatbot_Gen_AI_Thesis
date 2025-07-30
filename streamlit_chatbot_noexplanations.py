@@ -376,7 +376,7 @@ User questions may include:
 5.  **If the user asks "why" regarding the recommendation:**
     * Refer to the context and clarify the reasoning.
     * Emphasize factors like staffing feasibility, service quality, flexibility, and customer experience.
-6.  **For any other question not covered by the above rules:** Respond *only* with: "Please ask a question related to the survey or supermarket scenario." Do not modify this sentence.
+6.  **For any other question not covered by the above rules:** Respond *only* with: "Please ask a different question." Do not modify this sentence.
 
 
 **Additional constraints for all responses:**
@@ -451,7 +451,7 @@ Recommended option: <option number and exact text of the chosen option>
             }
 
         # Determine if the chatbot answered relevantly based on its response
-        answered_relevantly = "Please ask a question related to the survey or supermarket scenario." not in result
+        answered_relevantly = "Please ask a different question." not in result
 
         messages.append({"role": "assistant", "content": result})
         st.session_state.chat_history = messages[-30:]
