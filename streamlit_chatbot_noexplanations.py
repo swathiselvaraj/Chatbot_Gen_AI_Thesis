@@ -352,7 +352,8 @@ User's Follow-up Question: {follow_up_question}
 Follow these rules in order:
 
 1.  **If the question directly relates to the provided JSON data:** Use that data to answer the question.
-2.  **If the question relates to general supermarket scenarios** (e.g., staffing, operations, logistics, marketing, or sales) but not directly to the JSON data: Respond based on general principles from those domains.
+2.  2. **If the question relates to supermarket operations, sales, marketing, or business concepts**—including general principles, strategies, definitions, or best practices relevant to supermarkets:
+   - Respond concisely using knowledge from those domains.
 3.  **If the question is about the original survey question, the four options, or critiques of the recommended solution:**
     * Use all available context.
     * Justify the recommended option with logical reasoning based on operational efficiency, real-world supermarket workflows, effective sales and marketing strategies, and staff capacity/service quality.
