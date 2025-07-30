@@ -20,7 +20,7 @@ from fuzzywuzzy import fuzz
 from google.cloud import firestore
 from google.oauth2 import service_account
 
-# --- Firebase Firestore Client Initialization ---
+# --- Firebase Firestore Client Initialization -
 @st.cache_resource
 def get_firestore_client():
     try:
