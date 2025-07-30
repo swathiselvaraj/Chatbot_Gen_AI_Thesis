@@ -350,6 +350,7 @@ Context:
 User's Follow-up Question: {follow_up_question}
 
 Follow these rules in order:
+**Rule order is strict:** Check rules 1-5 first. Only use Rule 6 if none apply.
 
 1.  **If the question directly relates to the provided JSON data:** Use that data to answer the question.
 2.  2. **If the question relates to supermarket operations, sales, marketing, or business concepts**—including general principles, strategies, definitions, or best practices relevant to supermarkets:
@@ -365,6 +366,7 @@ Follow these rules in order:
     * Refer to the context and clarify the reasoning.
     * Emphasize factors like staffing feasibility, service quality, flexibility, and customer experience.
 6.  **For any other question not covered by the above rules:** Respond *only* with: "Please ask a question related to the survey." Do not modify this sentence.
+**Rule order is strict:** Check rules 1-5 first. Only use Rule 6 if none apply.  
 
 **Additional constraints for all responses:**
 * Limit all responses to **50 words or fewer**.
