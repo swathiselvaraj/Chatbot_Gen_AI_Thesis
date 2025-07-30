@@ -349,8 +349,6 @@ Context:
 User's Follow-up Question: {follow_up_question}
 
 Follow these rules in order:
-
-
 User questions may include:
 - General sales and marketing strategy
 - Staffing and operations
