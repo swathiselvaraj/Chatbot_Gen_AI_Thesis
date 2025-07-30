@@ -371,7 +371,7 @@ Follow these rules in order:
 * Use clear, concise language.
 
 Respond in this format:
-<your answer here>
+chatbot :  <your answer here>
 """
         else:
             options_text = "\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]) if options else ""
