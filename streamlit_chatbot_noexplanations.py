@@ -349,24 +349,39 @@ Context:
 
 User's Follow-up Question: {follow_up_question}
 
-Follow these rules in this exact order:
+Follow these rules in order:
 
-1. If the question refers to provided JSON data, answer using that data.
-2. If the question is about supermarket sales, marketing, strategy, staffing, promotions, inventory, or operations:
-   - Answer concisely based on standard industry knowledge.
-   - Examples:
-     - "A sales report summarizes revenue and product performance."
-     - "Marketing strategy includes pricing, promotions, and customer outreach."
-3. If the question refers to a specific survey, its options, or a proposed change:
-   - Justify the best choice using business logic, staffing efficiency, and customer service quality.
-4. If the user asks "why" about a survey recommendation:
-   - Provide reasoning based on feasibility, service impact, and operational benefits.
-5. If the question does not match any category above:
-   - Respond only with: **"Please ask a question related to the survey."**
 
-Constraints:
-- All answers must be **50 words or fewer**
-- Use clear, professional, and simple language.
+User questions may include:
+- General sales and marketing strategy
+- Staffing and operations
+- Promotions, inventory, and customer experience
+- Questions about a provided survey 
+
+**Rule order is strict:** Check rules 1-5 first. Only use Rule 6 if none apply.
+1.  **If the question directly relates to the provided JSON data:** Use that data to answer the question.
+2.  **General Supermarket Questions on Sales, Marketing, Staffing, Strategy, Operations :**  
+   - Answer concisely based on industry knowledge.  
+   - Covers: sales reports, promotions, inventory, staffing, customer experience, general marketing strategy.  
+   - *Example outputs:*  
+     - "Sales reports track revenue and product performance to guide decisions."  
+     - "Peak hours often need extra staff for checkout efficiency."  
+3.  **If the question is about the original survey question, the four options, or critiques of the recommended solution:**
+    * Use all available context.
+    * Justify the recommended option with logical reasoning based on operational efficiency, real-world supermarket workflows, effective sales and marketing strategies, and staff capacity/service quality.
+    * Explain why the recommended option is more practical or sustainable than the alternatives.
+4.  **If the user proposes a different option:**
+    * Acknowledge their reasoning.
+    * Clearly explain why the original recommendation is stronger, using relevant operational principles or data.
+5.  **If the user asks "why" regarding the recommendation:**
+    * Refer to the context and clarify the reasoning.
+    * Emphasize factors like staffing feasibility, service quality, flexibility, and customer experience.
+6.  **For any other question not covered by the above rules:** Respond *only* with: "Please ask a different question." Do not modify this sentence.
+
+
+**Additional constraints for all responses:**
+* Limit all responses to **50 words or fewer**.
+* Use clear, concise language.
 
 Respond in this format:
 <your answer here>
@@ -436,7 +451,7 @@ Recommended option: <option number and exact text of the chosen option>
             }
 
         # Determine if the chatbot answered relevantly based on its response
-        answered_relevantly = "Please ask a question related to the survey" not in result
+        answered_relevantly = "Please ask a different question" not in result
 
         messages.append({"role": "assistant", "content": result})
         st.session_state.chat_history = messages[-30:]
